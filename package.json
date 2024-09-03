@@ -1,12 +1,12 @@
 {
-  "name": "unfmla_cqd",
+  "name": "basebot-discordjs",
   "version": "1.1.0",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "type": "commonjs",
-  "author": "Puparia",
+  "author": "Pupariaa",
   "license": "MIT",
   "description": "",
   "dependencies": {

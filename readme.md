@@ -10,7 +10,7 @@
 #### into config.env
 - add env variable: channelname : channelid
 
-into src/common/Static.js:
+into src/common/Statics.js:
 - add channelname into typedef
 ```js
 /**
