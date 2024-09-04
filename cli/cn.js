@@ -45,7 +45,7 @@ function updateEnvVariable(key, value, configPath) {
         console.log(`Updated '${key}' in config.env.`);
     } else {
         // If the key does not exist, append it
-        configContent += `\n${key}= "${value}"`;
+        configContent += `\n${key}="${value}"`;
         console.log(`Added '${key}' to config.env.`);
     }
 
@@ -132,7 +132,7 @@ function addChannel(type, channelName, channelId) {
         console.log(`The channel '${sanitizedChannelName}' already exists in config.env.`);
         return;
     }
-    configContent += `\n${sanitizedChannelName}= "${channelId}"`;
+    configContent += `\n${sanitizedChannelName}="${channelId}"`;
     fs.writeFileSync(configPath, configContent, 'utf8');
     console.log(`Channel '${sanitizedChannelName}' added to config.env.`);
 
