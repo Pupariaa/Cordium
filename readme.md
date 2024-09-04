@@ -37,8 +37,10 @@ cn --forum --name "your forum chanel name" --id "your forum channel id"
 //in any file
 const client = global.client
 ```
-#
-#
+<br>
+<br>
+<br> 
+
 ### Send a message in a channel
 Async method, returns an object in promise
 ```js
@@ -53,8 +55,10 @@ Async method, returns an object in promise
 await global.client.sendMessageToChannel('channelname', 'content');
 ```
 return discord.js [Messages:Class](https://discord.js.org/docs/packages/discord.js/14.14.1/Message:Class)
-#
-#
+
+<br>
+<br>
+
 ### Retrieve a member’s object from the Discord API
 Async method, returns an object in promise
 ```js
@@ -68,8 +72,10 @@ return discord.js [GuildMember:Class](https://discord.js.org/docs/packages/disco
 const member = await global.client.getMemberById('id');
 ```
 return discord.js [GuildMember:Class](https://discord.js.org/docs/packages/discord.js/14.14.1/GuildMember:Class)
-#
-#
+
+<br>
+<br>
+
 ### Retrieve a channel's object from the Discord API
 Async then method, returns an object
 ```js
@@ -91,7 +97,7 @@ return discord.js [TextChannel:Class](https://discord.js.org/docs/packages/disco
 > You can check if a member has a particular role without worrying about the id of the role, as long as it is defined in " *types/global.t.ts* " in the GuidMember interface
 >
 > Also verify that you have defined the function in the prototypes " *src/common/Prototypes/Client.js* "
-#
+<br>
 
 Returns an boolean
 To use on the discord.js [GuildMember:Class](https://discord.js.org/docs/packages/discord.js/14.14.1/GuildMember:Class) object
@@ -100,13 +106,16 @@ To use on the discord.js [GuildMember:Class](https://discord.js.org/docs/package
 //in any file
 member.client.isAdministrator();
 ```
-#
-#
-#
+<br>
+<br>
+<br>
+
 ## Extras
 ### Attachments
 > It is possible to retrieve the attachments of messages during their sending and retrieve them later via the index
-#
+
+<br>
+
 #### Capture and save attachments
 
 To be used on the discord.js [Messages:Class](https://discord.js.org/docs/packages/discord.js/14.14.1/Message:Class) object
@@ -132,7 +141,9 @@ returned object
   }
 }
 ```
-#
+
+<br>
+
 #### Find attachments with the id of a message
 Async method, returns an object in promise
 ```js
@@ -154,8 +165,9 @@ returned object
   }
 }
 ```
-#
-#
+<br>
+<br>
+
 ### Logs recorded in a dated file 
 > It is important to declare the resources needed at the beginning of the script in which you want to implement this feature
 
@@ -165,7 +177,8 @@ const filePath = 'path/of/your/file.js';
 require('../../logutils') // for commands handlers
 
 ```
-#
+<br>
+
 #### Implement one of these lines according to your needs
 ```js
 //in any file
@@ -179,7 +192,8 @@ console.info(`${filePath} - Line ${__line} (${functionName}): Your information o
 //in any file
 console.log(`${filePath} - Line ${__line} (${functionName}): Your information of the type of process :`, log);
 ```
-#
+<br>
+
 > Find the logs in the " *src/common/logs* " folder, they are dated 
 
 
