@@ -84,3 +84,32 @@
 11:20:10 INFO: src/commands/CommandManager.js - Line 63 (deployCommands): Deploying commands to Discord API.
 11:20:10 INFO: src/commands/CommandManager.js - Line 68 (deployCommands): 1 commands deployed successfully.
 11:20:10 INFO: Discord bot is started
+19:01:11 INFO: Run in production
+19:01:11 INFO: src/commands/CommandManager.js - Line 11 (constructor): Initializing CommandHandler.
+19:01:11 INFO: src/commands/CommandManager.js - Line 23 (loadCommands): Loading commands.
+19:01:11 INFO: src/commands/CommandManager.js - Line 28 (loadCommands): Initialized client.commands collection.
+19:01:11 INFO: src/commands/CommandManager.js - Line 38 (loadCommands): Command loaded: ping
+19:01:11 INFO: src/commands/CommandManager.js - Line 63 (deployCommands): Deploying commands to Discord API.
+19:01:11 ERROR: src/commands/CommandManager.js - Line 70 (deployCommands): Error updating commands::DiscordAPIError[0]: 401: Unauthorized
+19:02:22 INFO: Run in production
+19:02:22 INFO: src/commands/CommandManager.js - Line 11 (constructor): Initializing CommandHandler.
+19:02:22 INFO: src/commands/CommandManager.js - Line 23 (loadCommands): Loading commands.
+19:02:22 INFO: src/commands/CommandManager.js - Line 28 (loadCommands): Initialized client.commands collection.
+19:02:22 INFO: src/commands/CommandManager.js - Line 38 (loadCommands): Command loaded: ping
+19:02:22 INFO: src/commands/CommandManager.js - Line 63 (deployCommands): Deploying commands to Discord API.
+19:02:23 INFO: src/commands/CommandManager.js - Line 68 (deployCommands): 1 commands deployed successfully.
+19:02:23 INFO: Discord bot is started
+19:02:49 INFO: C:\Users\fareo\Documents\Dev\Github\basebot-discordjs\src\common\Events\messageCreate.js - Line 21 (messageCreate): Message created by puparia in #général.
+19:02:49 LOG: --------------------------------------------SANDBOX OUTPUT START--------------------------------------------
+19:02:49 INFO: C:\Users\fareo\Documents\Dev\Github\basebot-discordjs\src\common\Events\messageCreate.js - Line 48 (messageCreate): Sandbox code executed.
+19:03:12 INFO: Run in production
+19:03:12 INFO: src/commands/CommandManager.js - Line 11 (constructor): Initializing CommandHandler.
+19:03:12 INFO: src/commands/CommandManager.js - Line 23 (loadCommands): Loading commands.
+19:03:12 INFO: src/commands/CommandManager.js - Line 28 (loadCommands): Initialized client.commands collection.
+19:03:12 INFO: src/commands/CommandManager.js - Line 38 (loadCommands): Command loaded: ping
+19:03:12 INFO: src/commands/CommandManager.js - Line 63 (deployCommands): Deploying commands to Discord API.
+19:03:12 INFO: src/commands/CommandManager.js - Line 68 (deployCommands): 1 commands deployed successfully.
+19:03:12 INFO: Discord bot is started
+19:03:16 INFO: C:\Users\fareo\Documents\Dev\Github\basebot-discordjs\src\common\Events\messageCreate.js - Line 21 (messageCreate): Message created by puparia in #général.
+19:03:16 LOG: --------------------------------------------SANDBOX OUTPUT START--------------------------------------------
+19:03:16 INFO: C:\Users\fareo\Documents\Dev\Github\basebot-discordjs\src\common\Events\messageCreate.js - Line 48 (messageCreate): Sandbox code executed.

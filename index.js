@@ -45,7 +45,7 @@ global.client.on('ready', async () => {
 
 
 
-    await global.Channel.send('name of channel', 'content')
+    // await global.Channel.send('name of channel', 'content')
 
 
     global.client.on(Events.InteractionCreate, async interaction => {
