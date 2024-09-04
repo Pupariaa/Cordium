@@ -7,25 +7,25 @@
 ```
 ### Add Environnements variables
 ```ps
-> cn init --token "yourToken" --id "yourClientID" --guid "yourGuildID" --rsrole "yourRestrictedRoleID"
+cn init --token "yourToken" --id "yourClientID" --guid "yourGuildID" --rsrole "yourRestrictedRoleID"
 ```
 
 ### Generate Link invitation
 ```ps
-> cn invite
+cn invite
 ```
 ### Add a channel in the codebase
 #### Add text channel
 ```ps
-> cn --text --name "your channel name" --id "your channel id"
+cn --text --name "your channel name" --id "your channel id"
 ```
 #### Add voice channel
 ```ps
-> cn --voice --name "your voice channel name" --id "your voice channel id"
+cn --voice --name "your voice channel name" --id "your voice channel id"
 ```
 #### Add forum channel
 ```ps
-> cn --forum --name "your forum chanel name" --id "your forum channel id"
+cn --forum --name "your forum chanel name" --id "your forum channel id"
 ```
 #
 #
@@ -170,11 +170,17 @@ require('../../logutils') // for commands handlers
 ```js
 //in any file
 console.error(`${filePath} - Line ${__line} (${functionName}): Your information of the type of process :`, error);
-
+```
+```js
+//in any file
 console.info(`${filePath} - Line ${__line} (${functionName}): Your information of the type of process :`, info);
-
+```
+```js
+//in any file
 console.log(`${filePath} - Line ${__line} (${functionName}): Your information of the type of process :`, log);
 ```
+#
+> Find the logs in the " *src/common/logs* " folder, they are dated 
 
 
 
