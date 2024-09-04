@@ -157,6 +157,9 @@ function addChannel(type, channelName, channelId) {
             typedefRegex,
             (match, p1, p2, p3) => {
                 console.log(`Updating typedef for ${type}...`);
+                if (p2 === ' ') {
+                    return `${p1} '${sanitizedChannelName}'}${p3}`;
+                }
                 return `${p1}${p2} | '${sanitizedChannelName}'}${p3}`;
             }
         );
@@ -172,6 +175,9 @@ function addChannel(type, channelName, channelId) {
                 channelNameTypedefRegex,
                 (match, p1, p2, p3) => {
                     console.log(`Updating ChannelName typedef...`);
+                    if (p2 === ' ') {
+                        return `${p1} '${sanitizedChannelName}'}${p3}`;
+                    }
                     return `${p1}${p2} | '${sanitizedChannelName}'}${p3}`;
                 }
             );
