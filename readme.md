@@ -27,9 +27,9 @@ cn --voice --name "your voice channel name" --id "your voice channel id"
 ```ps
 cn --forum --name "your forum chanel name" --id "your forum channel id"
 ```
-#
-#
-#
+<br>
+<br>
+<br>
 
 ## Basics utilisations
 ### In any file initialized after the Discord_instance.js has a client global variable
