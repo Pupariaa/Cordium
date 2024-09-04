@@ -132,7 +132,7 @@ function addChannel(type, channelName, channelId) {
         console.log(`The channel '${sanitizedChannelName}' already exists in config.env.`);
         return;
     }
-    configContent += `\n${sanitizedChannelName}=${channelId}`;
+    configContent += `\n${sanitizedChannelName}="${channelId}"`;
     fs.writeFileSync(configPath, configContent, 'utf8');
     console.log(`Channel '${sanitizedChannelName}' added to config.env.`);
 
