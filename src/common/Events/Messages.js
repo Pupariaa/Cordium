@@ -9,19 +9,20 @@ const DELETE_TIME_LIMIT = 30000;
 const restrictedUsers = new Set();
 const fs = require('fs');
 const vm = require('vm');
-require(path.resolve(__dirname, '../../logutils')); 
+require(path.resolve(__dirname, '../../logutils'));
 
-const filePath = path.resolve(__dirname, 'messageCreate.js'); 
+const filePath = path.resolve(__dirname, 'messageCreate.js');
 
 global.client.on('messageCreate', async (message) => {
     const functionName = 'messageCreate';
     try {
-        if (message.member?.isBot()) return; 
-        
+        if (message.member?.isBot()) return;
+
         console.info(`${filePath} - Line ${__line} (${functionName}): Message created by ${message.author.tag} in #${message.channel.name}.`);
 
         try {
-            global.triggers.nameOfTrigger(message)
+            //CLIMarker#06
+            await global.triggers.nameOfTrigger(message)
 
         } catch (err) {
             console.error(`${filePath} - Line ${__line} (${functionName}): Error in handling triggers:`, err);
@@ -51,7 +52,7 @@ global.client.on('messageCreate', async (message) => {
         }
 
         const userId = message.author.id;
-        if (!userMessages.has(userId)) { userMessages.set(userId, [])}
+        if (!userMessages.has(userId)) { userMessages.set(userId, []) }
 
         const now = Date.now();
         const timestamps = userMessages.get(userId);

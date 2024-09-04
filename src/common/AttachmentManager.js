@@ -72,6 +72,7 @@ class AttachmentManager {
     /**
      * Gère les attachments d'un message Discord.
      * @param {Object} message - Le message Discord contenant les attachments.
+     * @returns {Promise<object>} attachments
      */
     async handleAttachments(message) {
         if (message.attachments.size > 0) {
@@ -96,7 +97,10 @@ class AttachmentManager {
                 attachments.push(attachmentInfo);
             }
             this.saveAttachments(attachments);
+            return attachments
         }
+
+       
     }
 
     /**
@@ -104,7 +108,7 @@ class AttachmentManager {
      * @param {string} messageId - L'ID du message dont on veut récupérer les attachments.
      * @returns {Array} - Une liste des attachments associés au message.
      */
-    getAttachmentsByMessageId(messageId) {
+    getAttachments(messageId) {
         const attachments = this.loadAttachments();
         return attachments.filter(att => att.messageId === messageId);
     }

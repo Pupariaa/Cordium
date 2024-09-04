@@ -2,11 +2,28 @@
 'use-strict'
 const fs = require('fs')
 const path = require('path')
+const Discord = require('discord.js');
+const CommandHandler = require('../commands/CommandManager');
+
+
+function checkEnvVariables() {
+    const requiredVars = ['discord_cqd_token', 'discord_cqd_cid', 'discord_guid'];
+    const missingVars = requiredVars.filter(v => !process.env[v]);
+
+    if (missingVars.length > 0) {
+        console.error(`Missing required environment variables: ${missingVars.join(', ')}`);
+        console.error(`cn init --token "yourToken" --id "yourClientID" --guid "yourGuildID" --rsrole "yourRestrictedRoleID"`);
+
+        process.exit(1);
+    }
+}
+
 function getFormattedDate() {
     const date = new Date();
     const options = { timeZone: 'Europe/Paris', day: '2-digit', month: '2-digit', year: 'numeric' };
     return new Intl.DateTimeFormat('fr-FR', options).format(date).replace(/\//g, '-');
 }
+
 function getFormattedTime() {
     const date = new Date();
     const options = { timeZone: 'Europe/Paris', hour: '2-digit', minute: '2-digit', second: '2-digit' };
@@ -82,17 +99,18 @@ console.error = function (...args) {
 
     originalError(colors.FgRed, `[ERROR]`, colors.Reset, ...args);
 };
-
-
-const Discord = require('discord.js');
-const CommandHandler = require('../commands/CommandManager');
-
-
+if(process.env.prod){
+    console.info('Run in production')
+} else {
+    console.info('Run is dev')
+}
 /**
  * Class representing the CQD bot.
  */
 class CQD {
     constructor() {
+        checkEnvVariables();
+
         /**
          * Instance of the Discord client.
          * @type {Discord.Client}
@@ -118,7 +136,7 @@ class CQD {
         require('./Triggers/nameOfTrigger');
 
         const { Channels, Statics } = require('./Statics');
-        
+
         global.Channel = new Channels();
         global.Statics = new Statics();
 
@@ -137,7 +155,6 @@ class CQD {
         commandHandler.loadCommands();
         commandHandler.deployCommands();
     }
-
 }
 
 module.exports = CQD;

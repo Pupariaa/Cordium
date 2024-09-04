@@ -1,0 +1,79 @@
+[
+  {
+    "type": "interaction",
+    "datetime": 1725436767,
+    "userid": "938519682690977892",
+    "interactionname": "ping",
+    "extras": "[]"
+  },
+  {
+    "type": "message",
+    "datetime": 1725436768,
+    "userid": "1280797508200566804",
+    "messageid": "1280799372627673175",
+    "channelid": "1166519080791064636"
+  },
+  {
+    "type": "rolecreate",
+    "datetime": 1725441268,
+    "exectutor": "Unknown",
+    "rolename": "nouveau rôle",
+    "roleid": "1280818246441893918"
+  },
+  {
+    "type": "roleedit",
+    "datetime": 1725441278,
+    "exectutor": "Unknown",
+    "rolename": "Bella Fiora",
+    "roleid": "1280799256307044408"
+  },
+  {
+    "type": "roleedit",
+    "datetime": 1725441278,
+    "exectutor": "Unknown",
+    "rolename": "Echo Shade",
+    "roleid": "1269074327253286922"
+  },
+  {
+    "type": "roleedit",
+    "datetime": 1725441278,
+    "exectutor": "Unknown",
+    "rolename": "nouveau rôle",
+    "roleid": "1219029326184583238"
+  },
+  {
+    "type": "roleedit",
+    "datetime": 1725441278,
+    "exectutor": "Unknown",
+    "rolename": "Spectacte",
+    "roleid": "1185765169998069760"
+  },
+  {
+    "type": "roleedit",
+    "datetime": 1725441278,
+    "exectutor": "Unknown",
+    "rolename": "back",
+    "roleid": "1171203876326740126"
+  },
+  {
+    "type": "roleedit",
+    "datetime": 1725441278,
+    "exectutor": "Unknown",
+    "rolename": "front",
+    "roleid": "1171203868365951017"
+  },
+  {
+    "type": "roleedit",
+    "datetime": 1725441278,
+    "exectutor": "Unknown",
+    "rolename": "adm",
+    "roleid": "1166520353363861584"
+  },
+  {
+    "type": "roleedit",
+    "datetime": 1725441278,
+    "exectutor": "Unknown",
+    "rolename": "Restricted",
+    "roleid": "1280818246441893918"
+  }
+]

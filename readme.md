@@ -1,199 +1,185 @@
-## Configure a envs
-#### into config.env
-- discord_cqd_token : "a discord bot token"
-- discord_cqd_id : "a discord bot id"
-- discord_guid : "a guid of your discord server"
-- restrictRole : "roleId" create a restricted role
+# Discord.js base bot
+## Init this project
 
-
-## Add a text chat to the global global.Channel.send(channename, content)
-#### into config.env
-- add env variable: channelname : channelid
-
-into src/common/Statics.js:
-- add channelname into typedef
-```js
-/**
- * @typedef {channename} TextChannelNames
- */
+### Execute init
+```ps
+> npm run init
 ```
-and 
-```ts
-/**
- * @typedef {channename} ChannelName
- */
+### Add Environnements variables
+```ps
+> cn init --token "yourToken" --id "yourClientID" --guid "yourGuildID" --rsrole "yourRestrictedRoleID"
 ```
 
-```js
-this.channels = {
-    channename: process.env.channelname
-};
+### Generate Link invitation
+```ps
+> cn invite
 ```
-
-## Add Messages triggers
-#### into src/common/Triggers
-- create a file 
-copy-past a basecode
-
-```js
-global.triggers = global.triggers || {};
-global.triggers.yourTrigger = async function yourTrigger(message) {
-    //Your code
-};
-module.exports = {}
+### Add a channel in the codebase
+#### Add text channel
+```ps
+> cn --text --name "your channel name" --id "your channel id"
 ```
-#### into types/global.t.ts
-```js
-declare global {
-  namespace NodeJS {
-    interface Global {
-      triggers: {
-        yourTrigger: (message: any) => Promise<void>;
-
-      }
-    }
-  }
-  var triggers: {
-    yourTrigger: (message: any) => Promise<void>;
-  };
-};
+#### Add voice channel
+```ps
+> cn --voice --name "your voice channel name" --id "your voice channel id"
 ```
-
-### Global property
-
-### send a message
-#### into any files
-```js
-await global.channel.send('channelname', 'content');
+#### Add forum channel
+```ps
+> cn --forum --name "your forum chanel name" --id "your forum channel id"
 ```
+#
+#
+#
 
-### get a client
-#### into any files
+## Basics utilisations
+### In any file initialized after the Discord_instance.js has a client global variable
 ```js
+//in any file
 const client = global.client
 ```
-
-
-# Commands Handlers 
-#### into src/commands/hendlers
-
-- create a new file "name of command".js
-copy-past basecode 
+#
+#
+### Send a message in a channel
+Async method, returns an object in promise
 ```js
-const {SlashCommandBuilder} = require('discord.js');
+//in any file
+await global.Channel.send('channename', 'content');
+```
+return discord.js [Messages:Class](https://discord.js.org/docs/packages/discord.js/14.14.1/Message:Class)
+#### Other methods with directly Discord API
+Async method, returns an object in promise
+```js
+//in any file
+await global.client.sendMessageToChannel('channelname', 'content');
+```
+return discord.js [Messages:Class](https://discord.js.org/docs/packages/discord.js/14.14.1/Message:Class)
+#
+#
+### Retrieve a member’s object from the Discord API
+Async method, returns an object in promise
+```js
+//in any file
+const member = await global.client.getUserByUsername('username');
+```
+return discord.js [GuildMember:Class](https://discord.js.org/docs/packages/discord.js/14.14.1/GuildMember:Class)
 
-const filePath = 'src/commands/handlers/ping.js';
-require('../../logutils')
+```js
+//in any file
+const member = await global.client.getMemberById('id');
+```
+return discord.js [GuildMember:Class](https://discord.js.org/docs/packages/discord.js/14.14.1/GuildMember:Class)
+#
+#
+### Retrieve a channel's object from the Discord API
+Async then method, returns an object
+```js
+//in any file
+global.client.findChannelByName(channelname).then(channelObject => {
+  //use a object
+});
+```
+or async
 
-module.exports = {
-    data: new SlashCommandBuilder()
-        .setName('ping')
-        .setDescription(`ping the bot`),
+Async method, returns an object in promise
+```js
+//in any file
+const channel = await global.client.findChannelByName(channelname);
+```
+return discord.js [TextChannel:Class](https://discord.js.org/docs/packages/discord.js/main/TextChannel:Class)
 
-    /**
-     * Executes the 'ping' command.
-     * @param {Object} interaction - The interaction object from Discord.js.
-     */
-    async execute(interaction) {
-        const functionName = 'execute';
-        try {
-            await interaction.reply('pong')
-        } catch (err) {
-            console.error(`${filePath} - Line ${__line} (${functionName}): Error executing command:`, err);
-        }
-    }
-};
+### Check the status of a member with definitions
+> You can check if a member has a particular role without worrying about the id of the role, as long as it is defined in " *types/global.t.ts* " in the GuidMember interface
+>
+> Also verify that you have defined the function in the prototypes " *src/common/Prototypes/Client.js* "
+#
 
+Returns an boolean
+To use on the discord.js [GuildMember:Class](https://discord.js.org/docs/packages/discord.js/14.14.1/GuildMember:Class) object
+
+```js
+//in any file
+member.client.isAdministrator();
+```
+#
+#
+#
+## Extras
+### Attachments
+> It is possible to retrieve the attachments of messages during their sending and retrieve them later via the index
+#
+#### Capture and save attachments
+
+To be used on the discord.js [Messages:Class](https://discord.js.org/docs/packages/discord.js/14.14.1/Message:Class) object
+
+Async method, returns an object in promise
+```js
+//in any file
+await global.attachment.handleAttachments(message);
+```
+returned object
+
+```js
+{
+  {
+    type: typeFile,
+    channelId: message.channel.id,
+    messageId: message.id,
+    filename: uniqueId,
+    originalFilename: originalFilename,
+    url: filePath,
+    userid: message.author.id,
+    username: message.author.username
+  }
+}
+```
+#
+#### Find attachments with the id of a message
+Async method, returns an object in promise
+```js
+//in any file
+await global.attachment.getAttachments(message.id);
+```
+returned object
+```js
+{
+  {
+    type: typeFile,
+    channelId: message.channel.id,
+    messageId: message.id,
+    filename: uniqueId,
+    originalFilename: originalFilename,
+    url: filePath,
+    userid: message.author.id,
+    username: message.author.username
+  }
+}
+```
+#
+#
+### Logs recorded in a dated file 
+> It is important to declare the resources needed at the beginning of the script in which you want to implement this feature
+
+```js
+//in any file
+const filePath = 'path/of/your/file.js';
+require('../../logutils') // for commands handlers
+
+```
+#
+#### Implement one of these lines according to your needs
+```js
+//in any file
+console.error(`${filePath} - Line ${__line} (${functionName}): Your information of the type of process :`, error);
+
+console.info(`${filePath} - Line ${__line} (${functionName}): Your information of the type of process :`, info);
+
+console.log(`${filePath} - Line ${__line} (${functionName}): Your information of the type of process :`, log);
 ```
 
 
-# Logs
-## Console logger
-### basics
-#### into any files
-```js
-console.log('log')
-```
-#### into any files
-```js
-console.error('error')
-```
-#### into any files
-```js
-console.info('info')
-```
-
-### With more infos
-#### into any files
-```js
-//before, include a method and filename
-require(path.resolve(__dirname, '../../logutils'));
-const filePath = path.resolve(__dirname, 'yourfile.js');
 
 
-console.error(`${filePath} - Line ${__line} (${functionName}): Error executing:`, err);
-```
 
-# sandbox
-#### into src/comon/sandbox
 
-specify your code
-
-type a !sb command on any channel on your server
-
-don't restart the bot
-
-# Prototypes
-## hasRole
-## GuidMembers.prototypes
-####  into any files
-```js
-global.client.hasRole(rolename)
-```
-
-## isAdministrator and more roles
-#### into src/common/Prototypes/GuidMember.js
-set a role name of props
-```js
-GuildMember.prototype.isModerator = function() {
-    return this.hasRole('moderator');
-};
-```
-
-#### into any files
-```js
-member.client.isAdministrator()
-```
-
-## Client.prototypes
-#### into any files
-```js
-global.client.fetchGuildsInfo().then(guildInfos => {})
-//or 
-const guildInfo = await global.client.fetchGuildsInfo()
-```
-```js
-global.client.registerCommand(...data).then(command => {})
-//or
-const commandData = await global.client.registerCommand(...data)
-```
-
-```js
-global.client.findChannelByName(channelname).then(channelObject => {})
-//or
-const channel = await global.client.findChannelByName(channelname)
-```
-
-```js
-await global.client.sendMessageToChannel(channelname, content)
-```
-
-```js
-const member = global.client.getUserByUsername(username)
-```
-
-```js
-const member = global.client.getMemberById(userid)
-```
 
 

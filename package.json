@@ -3,7 +3,12 @@
   "version": "1.1.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "init": "powershell -ExecutionPolicy Bypass -File ./init.ps1",
+    "run-prod": "set prod=true && node index.js"
+  },
+  "bin": {
+    "cn": "./cli //cn_add.js"
   },
   "type": "commonjs",
   "author": "Pupariaa",
@@ -55,6 +60,7 @@
     "sql": "^0.78.0",
     "uuid": "^10.0.0",
     "vm": "^0.1.0",
+    "yargs": "^17.7.2",
     "ytdl-core": "^4.11.5"
   }
 }

@@ -5,8 +5,9 @@ const { Events } = require('discord.js');
 
 
 global.client.on('ready', async () => {
+    
     require('./eventsLoggers');
-    console.info('Server is started');
+    console.info('Discord bot is started');
 
 
     process.on('uncaughtException', (err) => {
@@ -41,7 +42,7 @@ global.client.on('ready', async () => {
     require('./src/common/Events/RoleUpdate');
     require('./src/common/Events/Interactions');
     require('./src/common/Events/VoiceUpdate');
-  
+
 
 
     await global.Channel.send('name of channel', 'content')

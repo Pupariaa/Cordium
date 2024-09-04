@@ -16,16 +16,16 @@ const { PermissionOverwrites } = require("discord.js");
 
 
 /**
- * @typedef { } TextChannelNames
+ * @typedef {  | 'textChannelName'} TextChannelNames
  */
 /**
- * @typedef {} VoiceChannelNames
+ * @typedef { } VoiceChannelNames
  */
 /**
- * @typedef {} ForumChannelNames
+ * @typedef { } ForumChannelNames
  */
 /**
- * @typedef {} ChannelName
+ * @typedef {  | 'textChannelName'} ChannelName
  */
 class BaseChannel {
     constructor(guild) {
@@ -61,9 +61,9 @@ class BaseChannel {
 class TextChannels extends BaseChannel {
     constructor(guild) {
         super(guild);
-        this.channels = {
-           //Declare ChannelNames->ChannelsId of config.env
-
+        this.channels = {//Declare ChannelNames->ChannelsId of config.env,
+            //CLIMarker#01
+            textChannelName: process.env.textChannelName,
         };
     }
 
@@ -90,7 +90,7 @@ class VoiceChannels extends BaseChannel {
     constructor(guild) {
         super(guild);
         this.channels = {
-            //Declare VoicesNames->VoicesId from config.env
+            //CLIMarker#02
         };
     }
 
@@ -118,7 +118,7 @@ class ForumChannels extends BaseChannel {
     constructor(client) {
         super(client);
         this.channels = {
-            //Declare ForumsNames->ForumsId from config.env
+            //CLIMarker#03
         };
     }
 
@@ -139,7 +139,7 @@ class Statics {
         this.channels = {
             text: new TextChannels(this.guild),
             voice: new VoiceChannels(this.guild)
-        }; 
+        };
     }
 }
 
@@ -179,16 +179,16 @@ class Channels {
 
 
         if (channel) {
-            
-                try {
-                    return await channel.send(data);
-                } catch (error) {
-                    global.client.error(`Failed to send message to channel "${channelName}": ${error}`)
-                    return null;
-                }
+
+            try {
+                return await channel.send(data);
+            } catch (error) {
+                global.client.error(`Failed to send message to channel "${channelName}": ${error}`)
+                return null;
             }
+        }
     }
-    
+
     /**
      * @property {string} name - The name of the channel to be created.
      * @property {ChannelType} type - The type of the channel (text, voice, forum).
@@ -204,7 +204,7 @@ class Channels {
      * Creates a new channel in the guild.
      * @returns {Promise<Object|null>} - The created channel object or null if an error occurs.
      */
-    
+
 
 }
 

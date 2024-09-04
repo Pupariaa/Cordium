@@ -1,14 +1,8 @@
 // globals.d.ts
 import { Guild, GuildMember, Message, Channel, Collection, TextChannel, ButtonStyle } from 'discord.js';
 import { Client, GatewayIntentBits, Partials, Events, ChannelType, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
-import Captcha from '../src/common/Captcha';
-import Portail from '../src/common/Portail';
-import Bank from '../src/common/Bank';
 import AttachmentManager from '../src/common/AttachmentManager';
 import { Channels, Statics } from '../src/common/Statics';
-import Tickets from '../src/common/Tickets'
-import { Counting } from '../games/counting';
-import Members from '../src/common/Members';
 
 
 declare module 'discord.js' {
@@ -42,12 +36,15 @@ declare global {
     interface Global {
       triggers: {
         nameOfTrigger: (message: any) => Promise<void>;
+        //CLIMarker#04
 
       }
     }
   }
   var triggers: {
     nameOfTrigger: (message: any) => Promise<void>;
+    //CLIMarker#05
+
   };
 
 
