@@ -134,6 +134,9 @@ class CQD {
 
         //Import triggers
         require('./Triggers/nameOfTrigger');
+        //CLIMarker#07
+        
+        
 
         const { Channels, Statics } = require('./Statics');
 

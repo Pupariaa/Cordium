@@ -16,7 +16,7 @@ const { PermissionOverwrites } = require("discord.js");
 
 
 /**
- * @typedef {  | 'textChannelName'} TextChannelNames
+ * @typedef { } TextChannelNames
  */
 /**
  * @typedef { } VoiceChannelNames
@@ -25,7 +25,7 @@ const { PermissionOverwrites } = require("discord.js");
  * @typedef { } ForumChannelNames
  */
 /**
- * @typedef {  | 'textChannelName'} ChannelName
+ * @typedef { } ChannelName
  */
 class BaseChannel {
     constructor(guild) {
@@ -63,7 +63,6 @@ class TextChannels extends BaseChannel {
         super(guild);
         this.channels = {//Declare ChannelNames->ChannelsId of config.env,
             //CLIMarker#01
-            textChannelName: process.env.textChannelName,
         };
     }
 
