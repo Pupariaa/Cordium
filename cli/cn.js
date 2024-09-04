@@ -121,121 +121,107 @@ module.exports = {};
 // Function to add a channel to the config and Statics.js
 function addChannel(type, channelName, channelId) {
     const sanitizedChannelName = sanitizeName(channelName);
-    const configPath = path.join(__dirname, '../config.env');
-    const staticsPath = path.join(__dirname, '../src/common/Statics.js');
 
     console.log(`Adding channel '${sanitizedChannelName}' with ID '${channelId}' as ${type}...`);
 
-    // Update config.env
-    let configContent = fs.readFileSync(configPath, 'utf8');
-    if (configContent.includes(`${sanitizedChannelName}=`)) {
-        console.log(`The channel '${sanitizedChannelName}' already exists in config.env.`);
-        return;
-    }
-    configContent += `\n${sanitizedChannelName}="${channelId}"`;
-    fs.writeFileSync(configPath, configContent, 'utf8');
-    console.log(`Channel '${sanitizedChannelName}' added to config.env.`);
-
     // Update Statics.js
+    const staticsPath = path.join(__dirname, '../src/common/Statics.js');
     let staticsContent = fs.readFileSync(staticsPath, 'utf8');
-    let typedefRegex, commentMarker;
-
-    if (type === 'text') {
-        typedefRegex = /(\* @typedef {)([^}]*)}( TextChannelNames)/s;
-        commentMarker = '//CLIMarker#01';
-    } else if (type === 'voice') {
-        typedefRegex = /(\* @typedef {)([^}]*)}( VoiceChannelNames)/s;
-        commentMarker = '//CLIMarker#02';
-    } else if (type === 'forum') {
-        typedefRegex = /(\* @typedef {)([^}]*)}( ForumChannelNames)/s;
-        commentMarker = '//CLIMarker#03';
-    }
-
-    // Add to the typedef in Statics.js
+    let typedefRegex = new RegExp(`(\\* @typedef {)([^}]*)} (${type})`, 's');
     if (typedefRegex.test(staticsContent)) {
+        let exists = false;
         staticsContent = staticsContent.replace(
             typedefRegex,
             (match, p1, p2, p3) => {
-                console.log(`Updating typedef for ${type}...`);
-                if (p2 === ' ') {
-                    return `${p1} '${sanitizedChannelName}'}${p3}`;
+                if (p2.includes(sanitizedChannelName)) {
+                    exists = true;
+                    return match;
                 }
-                return `${p1}${p2} | '${sanitizedChannelName}'}${p3}`;
+                if (p2 === '') {
+                    return `${p1}'${sanitizedChannelName}'} ${p3}`;
+                }
+                return `${p1}${p2} | '${sanitizedChannelName}'} ${p3}`;
             }
         );
+        if (exists) {
+            console.log(`Channel '${sanitizedChannelName}' already exists in ${staticsPath}.`);
+        } else {
+            fs.writeFileSync(staticsPath, staticsContent, 'utf8');
+            console.log(`Channel '${sanitizedChannelName}' added to ${staticsPath}.`);
+        }
     } else {
         console.error(`Failed to find typedef for ${type} in Statics.js.`);
     }
 
-    // Add to the ChannelName typedef if needed
-    if (type === 'text' || type === 'forum') {
-        const channelNameTypedefRegex = /(\* @typedef {)([^}]*)}( ChannelName)/s;
-        if (channelNameTypedefRegex.test(staticsContent)) {
-            staticsContent = staticsContent.replace(
-                channelNameTypedefRegex,
-                (match, p1, p2, p3) => {
-                    console.log(`Updating ChannelName typedef...`);
-                    if (p2 === ' ') {
-                        return `${p1} '${sanitizedChannelName}'}${p3}`;
-                    }
-                    return `${p1}${p2} | '${sanitizedChannelName}'}${p3}`;
-                }
-            );
-        } else {
-            console.error('Failed to find typedef for ChannelName in Statics.js.');
+    // Update channels.json
+    const channelsPath = path.join(__dirname, '../channels.json');
+    const channels = JSON.parse(fs.readFileSync(channelsPath, 'utf8'));
+    if (channels[type][sanitizedChannelName]) {
+        console.log(`Channel '${sanitizedChannelName}' already exists in ${channelsPath}.`);
+        return;
+    }
+    channels[type][sanitizedChannelName] = channelId;
+    fs.writeFileSync(channelsPath, JSON.stringify(channels, null, 4), 'utf-8');
+    console.log(`Channel '${sanitizedChannelName}' added to ${channelsPath}.`);
+}
+
+function removeStringFromUnion(str, valueToRemove) {
+    const regex = new RegExp(`'${valueToRemove}'(\\s*\\|\\s*)?`, 'g');
+    return str.replace(regex, '').replace(/\s*\|\s*$/, '');
+}
+
+function findKeyByValue(dictionary, value) {
+    for (const [key, val] of Object.entries(dictionary)) {
+        if (val === value) {
+            return key;
         }
     }
-
-    // Add to the channels section
-    const commentRegex = new RegExp(`(${commentMarker})([^]*)`, 's');
-    if (commentRegex.test(staticsContent)) {
-        staticsContent = staticsContent.replace(
-            commentRegex,
-            (match, p1, p2) => {
-                console.log(`Adding channel to ${type} section...`);
-                return `${p1}\n            ${sanitizedChannelName}: process.env.${sanitizedChannelName},${p2}`;
-            }
-        );
-    } else {
-        console.error(`Failed to find comment marker for ${type} in Statics.js.`);
-    }
-
-    fs.writeFileSync(staticsPath, staticsContent, 'utf8');
-    console.log(`Channel '${sanitizedChannelName}' added to ${staticsPath}.`);
+    return null;
 }
 
 // Function to remove a channel from the config and Statics.js
 function removeChannel(type, channelId) {
-    const configPath = path.join(__dirname, '../config.env');
-    const staticsPath = path.join(__dirname, '../src/common/Statics.js');
-
     console.log(`Removing channel with ID '${channelId}' as ${type}...`);
 
-    // Update config.env
-    let configContent = fs.readFileSync(configPath, 'utf8');
-    const configRegex = new RegExp(`^.*${channelId}.*$`, 'gm');
-    if (!configContent.match(configRegex)) {
-        console.log(`Channel with ID '${channelId}' does not exist in config.env.`);
-        return;
+    // Update channels.json
+    const channelsPath = path.join(__dirname, '../channels.json');
+    const channels = JSON.parse(fs.readFileSync(channelsPath, 'utf8'));
+    const sanitizedChannelName = findKeyByValue(channels[type], channelId);
+    if (!sanitizedChannelName) {
+        console.log(`Channel with ID '${channelId}' already didn't exists in ${channelsPath}.`);
+        return false;
     }
-    configContent = configContent.replace(configRegex, '').trim();
-    fs.writeFileSync(configPath, configContent, 'utf8');
-    console.log(`Channel with ID '${channelId}' removed from config.env.`);
+    delete channels[type][sanitizedChannelName];
+    fs.writeFileSync(channelsPath, JSON.stringify(channels, null, 4), 'utf-8');
+    console.log(`Channel '${sanitizedChannelName}' removed from ${channelsPath}.`);
 
     // Update Statics.js
+    const staticsPath = path.join(__dirname, '../src/common/Statics.js');
     let staticsContent = fs.readFileSync(staticsPath, 'utf8');
-    const channelRegex = new RegExp(`(\\s+\\w+:\\sprocess\\.env\\.(\\w+),\\s+)?`, 'g');
-
-    staticsContent = staticsContent.replace(channelRegex, (match, p1, p2) => {
-        if (p2 && p2 === sanitizeName(channelId)) {
-            console.log(`Removing channel from ${type} section...`);
-            return ''; // Remove this line if ID matches
+    let typedefRegex = new RegExp(`(\\* @typedef {)([^}]*)} (${type})`, 's');
+    if (typedefRegex.test(staticsContent)) {
+        let exists = false;
+        staticsContent = staticsContent.replace(
+            typedefRegex,
+            (match, p1, p2, p3) => {
+                if (!p2.includes(sanitizedChannelName)) {
+                    return match;
+                }
+                exists = true;
+                return `${p1}${removeStringFromUnion(p2, sanitizedChannelName)}} ${p3}`;
+            }
+        );
+        if (!exists) {
+            console.log(`Channel '${sanitizedChannelName}' already didn't exist in ${staticsPath}.`);
+        } else {
+            fs.writeFileSync(staticsPath, staticsContent, 'utf8');
+            console.log(`Channel '${sanitizedChannelName}' removed from ${staticsPath}.`);
         }
-        return match;
-    });
+    } else {
+        console.error(`Failed to find typedef for ${type} in Statics.js.`);
+    }
 
-    fs.writeFileSync(staticsPath, staticsContent, 'utf8');
-    console.log(`Channel with ID '${channelId}' removed from ${staticsPath}.`);
+    return true;
 }
 function generateInviteLink() {
     const clientId = process.env.discord_cqd_cid;
@@ -266,15 +252,14 @@ function initBotConfig(token, clientId, guid, restrictRole) {
 
 // Handling commands
 if (argv._[0] === 'add') {
-    if (argv.text) addChannel('text', argv.name, argv.id);
-    else if (argv.voice) addChannel('voice', argv.name, argv.id);
-    else if (argv.forum) addChannel('forum', argv.name, argv.id);
+    if (argv.text) addChannel('TextChannelNames', argv.name, argv.id);
+    else if (argv.voice) addChannel('VoiceChannelNames', argv.name, argv.id);
+    else if (argv.forum) addChannel('ForumChannelNames', argv.name, argv.id);
     else console.log('Please specify a valid channel type: --text, --voice, or --forum.');
 } else if (argv._[0] === 'remove') {
-    if (argv.text) removeChannel('text', argv.id);
-    else if (argv.voice) removeChannel('voice', argv.id);
-    else if (argv.forum) removeChannel('forum', argv.id);
-    else console.log('Please specify a valid channel type: --text, --voice, or --forum.');
+    if (removeChannel('TextChannelNames', argv.id)) return;
+    if (removeChannel('VoiceChannelNames', argv.id)) return;
+    if (removeChannel('ForumChannelNames', argv.id)) return;
 } else if (argv._[0] === 'create') {
     if (argv.triggers) createTrigger(argv.triggers);
     else console.log('Please provide a valid trigger function definition: --triggers "functionName(message)"');

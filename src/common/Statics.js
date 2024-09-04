@@ -2,6 +2,7 @@
 'use-strict'
 
 const { PermissionOverwrites } = require("discord.js");
+const fs = require('fs');
 
 /*!
  * UNFMLA-CQD Project
@@ -25,7 +26,7 @@ const { PermissionOverwrites } = require("discord.js");
  * @typedef {} ForumChannelNames
  */
 /**
- * @typedef {} ChannelName
+ * @typedef {TextChannelNames | VoiceChannelNames | ForumChannelNames} ChannelName
  */
 class BaseChannel {
     constructor() {}
@@ -53,9 +54,7 @@ class BaseChannel {
 class TextChannels extends BaseChannel {
     constructor() {
         super();
-        this.channels = {//Declare ChannelNames->ChannelsId of config.env,
-            //CLIMarker#01
-        };
+        this.channels = JSON.parse(fs.readFileSync('../../channels.json', 'utf-8')).text_channels;
     }
 
     /**
@@ -71,9 +70,7 @@ class TextChannels extends BaseChannel {
 class VoiceChannels extends BaseChannel {
     constructor() {
         super();
-        this.channels = {
-            //CLIMarker#02
-        };
+        this.channels = JSON.parse(fs.readFileSync('../../channels.json', 'utf-8')).voice_channels;
     }
 
     /**
@@ -90,9 +87,7 @@ class VoiceChannels extends BaseChannel {
 class ForumChannels extends BaseChannel {
     constructor() {
         super();
-        this.channels = {
-            //CLIMarker#03
-        };
+        this.channels = JSON.parse(fs.readFileSync('../../channels.json', 'utf-8')).forum_channels;
     }
 
     /**

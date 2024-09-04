@@ -199,21 +199,7 @@ console.log(`${filePath} - Line ${__line} (${functionName}): Your information of
 <br>
 
 ### Other extra options
-#### Remove text channel
+#### Remove channel
 ```ps
-cn remove --text --name "your channel name" --id "your channel id"
+cn remove --id "your channel id"
 ```
-#### Remove voice channel
-```ps
-cn remove --voice --name "your voice channel name" --id "your voice channel id"
-```
-#### Remove forum channel
-```ps
-cn remove --forum --name "your forum chanel name" --id "your forum channel id"
-```
-
-
-
-
-
-
