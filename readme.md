@@ -17,15 +17,15 @@ cn invite
 ### Add a channel in the codebase
 #### Add text channel
 ```ps
-cn --text --name "your channel name" --id "your channel id"
+cn add --text --name "your channel name" --id "your channel id"
 ```
 #### Add voice channel
 ```ps
-cn --voice --name "your voice channel name" --id "your voice channel id"
+cn add --voice --name "your voice channel name" --id "your voice channel id"
 ```
 #### Add forum channel
 ```ps
-cn --forum --name "your forum chanel name" --id "your forum channel id"
+cn add --forum --name "your forum chanel name" --id "your forum channel id"
 ```
 <br>
 <br>
@@ -195,8 +195,22 @@ console.log(`${filePath} - Line ${__line} (${functionName}): Your information of
 <br>
 
 > Find the logs in the " *src/common/logs* " folder, they are dated 
+<br>
+<br>
 
-
+### Other extra options
+#### Remove text channel
+```ps
+cn remove --text --name "your channel name" --id "your channel id"
+```
+#### Remove voice channel
+```ps
+cn remove --voice --name "your voice channel name" --id "your voice channel id"
+```
+#### Remove forum channel
+```ps
+cn remove --forum --name "your forum chanel name" --id "your forum channel id"
+```
 
 
 
