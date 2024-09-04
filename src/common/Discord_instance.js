@@ -138,10 +138,9 @@ class CQD {
         
         
 
-        const { Channels, Statics } = require('./Statics');
+        const { Channels } = require('./Statics');
 
         global.Channel = new Channels();
-        global.Statics = new Statics();
 
         const AttachmentManager = require('./AttachmentManager');
         global.attachment = new AttachmentManager();

@@ -26,6 +26,7 @@ global.client.on('ready', async () => {
     const guild = global.client.guilds.cache.get(process.env.discord_guid);
     const invites = await guild.invites.fetch();
     invites.forEach(invite => global.client.invitesCache.set(invite.code, invite.uses));
+    global.guild = guild;
 
     require('./src/common/Events/MemberJoin');
     require('./src/common/Events/MemberLeft');

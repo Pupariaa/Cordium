@@ -2,7 +2,7 @@
 import { Guild, GuildMember, Message, Channel, Collection, TextChannel, ButtonStyle } from 'discord.js';
 import { Client, GatewayIntentBits, Partials, Events, ChannelType, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
 import AttachmentManager from '../src/common/AttachmentManager';
-import { Channels, Statics } from '../src/common/Statics';
+import { Channels } from '../src/common/Statics';
 
 
 declare module 'discord.js' {
@@ -51,7 +51,6 @@ declare global {
   var client: Client;
   var attachment: AttachmentManager;
   var Channel: Channels;
-  var Statics: Statics;
   var client: Client;
   var GatewayIntentBits: typeof GatewayIntentBits;
   var Partials: typeof Partials;
