@@ -3,3 +3,4 @@ config.env
 events.json
 src/sandbox/index.js
 package-lock.json
+src/common/logs
