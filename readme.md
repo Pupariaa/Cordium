@@ -3,7 +3,7 @@
 
 ### Execute init
 ```ps
-> npm run init
+npm run init
 ```
 ### Add Environnements variables
 ```ps
