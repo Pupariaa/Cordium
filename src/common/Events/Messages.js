@@ -17,6 +17,7 @@ global.client.on('messageCreate', async (message) => {
     const functionName = 'messageCreate';
     try {
         if (message.member?.isBot()) return;
+        if (message.guildId !== global.guildId) return;
 
         console.info(`${filePath} - Line ${__line} (${functionName}): Message created by ${message.author.tag} in #${message.channel.name}.`);
 
