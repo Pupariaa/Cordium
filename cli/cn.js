@@ -154,7 +154,7 @@ function addChannel(type, channelName, channelId) {
     }
 
     // Update channels.json
-    const channelsPath = path.join(__dirname, '../channels.json');
+    const channelsPath = path.join(__dirname, '../../channels.json');
     const channels = JSON.parse(fs.readFileSync(channelsPath, 'utf8'));
     if (channels[type][sanitizedChannelName]) {
         console.log(`Channel '${sanitizedChannelName}' already exists in ${channelsPath}.`);
@@ -184,7 +184,7 @@ function removeChannel(type, channelId) {
     console.log(`Removing channel with ID '${channelId}' as ${type}...`);
 
     // Update channels.json
-    const channelsPath = path.join(__dirname, '../channels.json');
+    const channelsPath = path.join(__dirname, '../../channels.json');
     const channels = JSON.parse(fs.readFileSync(channelsPath, 'utf8'));
     const sanitizedChannelName = findKeyByValue(channels[type], channelId);
     if (!sanitizedChannelName) {
