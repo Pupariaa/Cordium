@@ -54,7 +54,7 @@ class BaseChannel {
 class TextChannels extends BaseChannel {
     constructor() {
         super();
-        this.channels = JSON.parse(fs.readFileSync('../../channels.json', 'utf-8')).text_channels;
+        this.channels = JSON.parse(fs.readFileSync('channels.json', 'utf-8')).TextChannelNames;
     }
 
     /**
@@ -70,7 +70,7 @@ class TextChannels extends BaseChannel {
 class VoiceChannels extends BaseChannel {
     constructor() {
         super();
-        this.channels = JSON.parse(fs.readFileSync('../../channels.json', 'utf-8')).voice_channels;
+        this.channels = JSON.parse(fs.readFileSync('channels.json', 'utf-8')).VoiceChannelNames;
     }
 
     /**
@@ -87,7 +87,7 @@ class VoiceChannels extends BaseChannel {
 class ForumChannels extends BaseChannel {
     constructor() {
         super();
-        this.channels = JSON.parse(fs.readFileSync('../../channels.json', 'utf-8')).forum_channels;
+        this.channels = JSON.parse(fs.readFileSync('channels.json', 'utf-8')).ForumChannelNames;
     }
 
     /**
@@ -109,6 +109,13 @@ class Channels {
         };
     }
 
+    async get(channelName) {
+        let channel = await this.channels.text.get(channelName);
+        !channel ? channel = await this.channels.voice.get(channelName) : null;
+        !channel ? channel = await this.channels.forum.get(channelName) : null;
+        return channel;
+    }
+
     /**
      * @typedef {Object} ForumData
      * @property {string} title - The title of the thread to create.
@@ -123,11 +130,7 @@ class Channels {
      * @returns {Promise<Message|ForumChannels|null>} - The message or thread sent, or null if it does not exist.
      */
     async send(channelName, data) {
-        let channel;
-
-        channel = await this.channels.text.get(channelName);
-        !channel ? channel = await this.channels.voice.get(channelName) : null
-        !channel ? channel = await this.channels.forum.get(channelName) : null
+        const channel = await this.get(channelName);
 
         if (channel) {
 
