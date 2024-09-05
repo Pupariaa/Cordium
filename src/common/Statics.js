@@ -144,6 +144,33 @@ class Channels {
     }
 
     /**
+     * Fetch all messages from a channel.
+     * @param {ChannelName} channelName - The name of the channel to fetch from.
+     * @returns {Promise<Message[] | null>} - The messages fetched. If the channel does not exist, or is not a text channel, returns null.
+     */
+    async fetchAll(channelName) {
+        const channel = await this.get(channelName);
+        if (channel.type !== 0) {
+            return null;
+        }
+        let lastId = null;
+        let fetchedMessages = [];
+        const r = [];
+        do {
+            fetchedMessages = Array.from((await channel.messages.fetch({ limit: 100, before: lastId })).values());
+            if (fetchedMessages.length === 0) {
+                break;
+            }
+            fetchedMessages.sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+            lastId = fetchedMessages[0].id;
+            for (let i = fetchedMessages.length - 1; i >= 0; i--) {
+                r.unshift(fetchedMessages[i]);
+            }
+        } while (fetchedMessages.length === 100);
+        return r;
+    }
+
+    /**
      * @property {string} name - The name of the channel to be created.
      * @property {ChannelType} type - The type of the channel (text, voice, forum).
      * @property {string} [parentId] - The ID of the parent category (optional).
