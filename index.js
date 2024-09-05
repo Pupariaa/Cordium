@@ -44,11 +44,6 @@ global.client.on('ready', async () => {
     require('./src/common/Events/Interactions');
     require('./src/common/Events/VoiceUpdate');
 
-
-
-    // await global.Channel.send('name of channel', 'content')
-
-
     global.client.on(Events.InteractionCreate, async interaction => {
         if (!interaction.isChatInputCommand()) return;
         const command = interaction.client.commands.get(interaction.commandName);
@@ -58,7 +53,6 @@ global.client.on('ready', async () => {
             return;
         }
         try {
-            // await interaction.reply('Commands disable')
             await command.execute(interaction);
         } catch (error) {
             console.error(`DISCORD: Not exectuable command ${interaction.commandName} ${error}.`)
