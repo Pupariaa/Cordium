@@ -26,7 +26,7 @@ const fs = require('fs');
  * @typedef {} ForumChannelNames
  */
 /**
- * @typedef {TextChannelNames | VoiceChannelNames | ForumChannelNames} ChannelName
+ * @typedef {'TextChannelNames' | 'VoiceChannelNames' | 'ForumChannelNames'} ChannelName
  */
 class BaseChannel {
     constructor() {}
@@ -109,6 +109,11 @@ class Channels {
         };
     }
 
+    /**
+     * Returns the channel object if the key exists.
+     * @param {ChannelName} channelName - The name of the channel to retrieve.
+     * @returns {Promise<Object|null>} - The channel or null object if it does not exist.
+     */
     async get(channelName) {
         let channel = await this.channels.text.get(channelName);
         !channel ? channel = await this.channels.voice.get(channelName) : null;
@@ -145,7 +150,7 @@ class Channels {
 
     /**
      * Fetch all messages from a channel.
-     * @param {ChannelName} channelName - The name of the channel to fetch from.
+     * @param {TextChannelNames} channelName - The name of the channel to fetch from.
      * @returns {Promise<Message[] | null>} - The messages fetched. If the channel does not exist, or is not a text channel, returns null.
      */
     async fetchAll(channelName) {

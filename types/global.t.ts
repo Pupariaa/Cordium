@@ -4,33 +4,6 @@ import { Client, GatewayIntentBits, Partials, Events, ChannelType, PermissionFla
 import AttachmentManager from '../src/common/AttachmentManager';
 import { Channels } from '../src/common/Statics';
 
-
-declare module 'discord.js' {
-  interface Client {
-    registerCommand: (commandName: string, callback: (message: Message, args: string[]) => void) => void;
-    executeCommand: (commandName: string, message: Message, args: string[]) => void;
-
-    findChannelByName: (channelName: string) => Channel | null;
-    sendMessageToChannel: (channelName: string, message: string) => Promise<void>;
-    broadcastMessage: (message: string) => Promise<void>;
-    getUserByUsername: (username: string) => Promise<GuildMember | null>;
-    fetchGuildsInfo: () => Array<{ name: string; id: string; channels: Array<{ name: string; id: string; type: string }> }>;
-    setupAutoReconnect: () => void;
-    getMemberById: (userId: string) => GuildMember | null;
-
-    rateLimitCheck: () => void;
-  }
-  interface GuildMember {
-    hasRole(roleName: string): boolean;
-    isModerator(): boolean;
-    isAdministrator(): boolean;
-    isHelper(): boolean;
-    isAnimator(): boolean;
-    isFondator(): boolean;
-    isBot(): boolean;
-  }
-}
-
 declare global {
   namespace NodeJS {
     interface Global {

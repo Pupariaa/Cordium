@@ -78,3 +78,5 @@ Client.prototype.rateLimitCheck = function() {
         global.client.warning(`Rate limit hit! Timeout: ${info.timeout}, Limit: ${info.limit}, Method: ${info.method}, Path: ${info.path}`);
     });
 };
+
+
