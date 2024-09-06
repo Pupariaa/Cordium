@@ -1,17 +1,33 @@
 // Declaration Imports 
-const { Events, EmbedBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { Events } = require('discord.js');
 const path = require('path')
-const fs = require('fs');
 
+require('puparia.getlines.js')
+const filePath = path.resolve(__dirname, 'interactions.js')
 
 
 global.client.on(Events.InteractionCreate, async interaction => {
     if (interaction.isModalSubmit()) {
-        
-    } else if (interaction.isStringSelectMenu()) {
+        try {
 
+        } catch(e){
+            console.error(`${filePath} - Line ${__line} (isModaleSubmit):`, e);
+
+        }
+    } else if (interaction.isStringSelectMenu()) {
+        try {
+
+        } catch(e){
+            console.error(`${filePath} - Line ${__line} (isStringSelectMenu):`, e);
+
+        }
     } else if (interaction.isButton()) {
-       
+        try {
+
+        } catch(e){
+            console.error(`${filePath} - Line ${__line} (isButton):`, e);
+
+        }
     }
 
 })

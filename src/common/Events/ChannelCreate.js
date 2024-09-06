@@ -1,16 +1,15 @@
 //@ts-check
 'use strict';
-const filePath = 'src/common/Events/channelCreate.js';
 const path = require('path');
-require(path.resolve(__dirname, '../../logutils'));
+const filePath = path.resolve(__dirname, 'channelCreate.js');
+require('puparia.getlines.js')
 
 global.client.on('channelCreate', async (channel) => {
-    const functionName = 'channelCreate';
     try {
-        console.info(`${filePath} - Line ${__line} (${functionName}): Channel created: ${channel.name} (ID: ${channel.id}).`);
+        console.info(`${filePath} - Line ${__line} (channelCreate): Channel created: ${channel.name} (ID: ${channel.id}).`);
 
     } catch (error) {
-        console.error(`${filePath} - Line ${__line} (${functionName}): Error handling channel creation:`, error);
+        console.error(`${filePath} - Line ${__line} (channelCreate): Error handling channel creation:`, error);
     }
 });
 

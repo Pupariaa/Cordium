@@ -1,16 +1,15 @@
 //@ts-check
 'use strict';
 const path = require('path');
-require(path.resolve(__dirname, '../../logutils')); 
+require('puparia.getlines.js')
 const filePath = path.resolve(__dirname, 'inviteCreate.js'); 
 
 global.client.on('inviteCreate', async (invite) => {
-    const functionName = 'inviteCreate';
     try {
-        console.info(`${filePath} - Line ${__line} (${functionName}): Invite created: ${invite.url} (Code: ${invite.code}).`);
+        console.info(`${filePath} - Line ${__line} (inviteCreate): Invite created: ${invite.url} (Code: ${invite.code}).`);
        
     } catch (error) {
-        console.error(`${filePath} - Line ${__line} (${functionName}): Error handling invite creation:`, error);
+        console.error(`${filePath} - Line ${__line} (inviteCreate): Error handling invite creation:`, error);
     }
 });
 

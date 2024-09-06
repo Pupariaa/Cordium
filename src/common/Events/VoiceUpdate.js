@@ -2,8 +2,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const { PermissionFlagsBits, ChannelType } = require('discord.js');
-require(path.resolve(__dirname, '../../logutils')); 
+require('puparia.getlines.js')
 const filePath = path.resolve(__dirname, 'voiceStateUpdate.js');
 
 const createdVoiceChannels = new Map();
@@ -14,23 +13,22 @@ if (fs.existsSync(createdVoiceChannelsPath)) {
 }
 
 global.client.on('voiceStateUpdate', async (oldState, newState) => {
-    const functionName = 'voiceStateUpdate';
     const timestamp = Math.floor(new Date().getTime() / 1000);
     const guild = newState.guild;
     
     try {
         const member = global.Members.readAccount(newState.member.user.id); 
         if (!oldState.channel && newState.channel) {//Join
-            console.info(`${filePath} - Line ${__line} (${functionName}): User ${newState.member.user.tag} joined voice channel ${newState.channel.name}.`);
+            console.info(`${filePath} - Line ${__line} (voiceStateUpdate): User ${newState.member.user.tag} joined voice channel ${newState.channel.name}.`);
 
         }
 
         if (oldState.channel && !newState.channel) {//Left
-            console.info(`${filePath} - Line ${__line} (${functionName}): User ${oldState.member.user.tag} left voice channel ${oldState.channel.name}.`);        
+            console.info(`${filePath} - Line ${__line} (voiceStateUpdate): User ${oldState.member.user.tag} left voice channel ${oldState.channel.name}.`);        
         }
 
     } catch (error) {
-        console.error(`${filePath} - Line ${__line} (${functionName}): Error handling voice state update:`, error);
+        console.error(`${filePath} - Line ${__line} (voiceStateUpdate): Error handling voice state update:`, error);
     }
 });
 
