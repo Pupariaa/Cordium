@@ -1,77 +1,71 @@
 // globals.d.ts
-
-import { 
-  Client, 
-  GatewayIntentBits, 
-  Partials, 
-  Events, 
-  ChannelType, 
-  PermissionFlagsBits, 
-  EmbedBuilder, 
-  ActionRowBuilder, 
-  ButtonBuilder, 
-  ButtonStyle, 
-  StringSelectMenuBuilder, 
-  ModalBuilder, 
-  TextInputBuilder, 
-  TextInputStyle,
-  Guild,
-  GuildMember,
-  Message,
-  Channel,
-  Collection,
-  TextChannel
-} from 'discord.js';
+import { Guild, GuildMember, Message, Channel, Collection, TextChannel, ButtonStyle } from 'discord.js';
+import { Client, GatewayIntentBits, Partials, Events, ChannelType, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
 import AttachmentManager from '../src/common/AttachmentManager';
 import { Channels } from '../src/common/Statics';
+
+
+declare module 'discord.js' {
+  interface Client {
+    registerCommand: (commandName: string, callback: (message: Message, args: string[]) => void) => void;
+    executeCommand: (commandName: string, message: Message, args: string[]) => void;
+
+    findChannelByName: (channelName: string) => Channel | null;
+    sendMessageToChannel: (channelName: string, message: string) => Promise<void>;
+    broadcastMessage: (message: string) => Promise<void>;
+    getUserByUsername: (username: string) => Promise<GuildMember | null>;
+    fetchGuildsInfo: () => Array<{ name: string; id: string; channels: Array<{ name: string; id: string; type: string }> }>;
+    setupAutoReconnect: () => void;
+    getMemberById: (userId: string) => GuildMember | null;
+
+    rateLimitCheck: () => void;
+  }
+  interface GuildMember {
+    hasRole(roleName: string): boolean;
+    isModerator(): boolean;
+    isAdministrator(): boolean;
+    isHelper(): boolean;
+    isAnimator(): boolean;
+    isFondator(): boolean;
+    isBot(): boolean;
+  }
+}
 
 declare global {
   namespace NodeJS {
     interface Global {
       triggers: {
-        nameOfTrigger: (message: Message) => Promise<void>;  // Use specific type from discord.js
-        // CLIMarker#04
-      };
-      client: Client;
-      attachment: AttachmentManager;
-      Channel: Channels;  // Correctly typed Channel as Channels
-      GatewayIntentBits: typeof GatewayIntentBits;
-      Partials: typeof Partials;
-      ChannelType: typeof ChannelType;  // Fixed missing typeof
-      PermissionFlagsBits: typeof PermissionFlagsBits;
-      EmbedBuilder: typeof EmbedBuilder;
-      ActionRowBuilder: typeof ActionRowBuilder;
-      ButtonBuilder: typeof ButtonBuilder;
-      ButtonStyle: typeof ButtonStyle;
-      StringSelectMenuBuilder: typeof StringSelectMenuBuilder;
-      ModalBuilder: typeof ModalBuilder;
-      TextInputBuilder: typeof TextInputBuilder;
-      TextInputStyle: typeof TextInputStyle;
-      Events_IntegrationCreate: typeof Events.InteractionCreate;  // Fixed missing typeof
+        nameOfTrigger: (message: any) => Promise<void>;
+        //CLIMarker#04
+
+      }
     }
   }
-  
   var triggers: {
-    nameOfTrigger: (message: Message) => Promise<void>;  // Use specific type from discord.js
-    // CLIMarker#05
+    nameOfTrigger: (message: any) => Promise<void>;
+    //CLIMarker#05
+
   };
-  
+
+
   var client: Client;
   var attachment: AttachmentManager;
-  var Channel: Channels;  // Correctly typed Channel as Channels
+  var Channel: Channels;
+  var client: Client;
   var GatewayIntentBits: typeof GatewayIntentBits;
   var Partials: typeof Partials;
-  var ChannelType: typeof ChannelType;  // Fixed missing typeof
+  var ChannelType: ChannelType;
   var PermissionFlagsBits: typeof PermissionFlagsBits;
-  var EmbedBuilder: typeof EmbedBuilder;
-  var ActionRowBuilder: typeof ActionRowBuilder;
-  var ButtonBuilder: typeof ButtonBuilder;
-  var ButtonStyle: typeof ButtonStyle;
-  var StringSelectMenuBuilder: typeof StringSelectMenuBuilder;
-  var ModalBuilder: typeof ModalBuilder;
-  var TextInputBuilder: typeof TextInputBuilder;
-  var TextInputStyle: typeof TextInputStyle;
-  var Events_IntegrationCreate: typeof Events.InteractionCreate;  // Fixed missing typeof
+  var EmbedBuilder: EmbedBuilder;
+  var ActionRowBuilder: ActionRowBuilder;
+  var ButtonBuilder: ButtonBuilder;
+  var ButtonStyle: ButtonStyle;
+  var StringSelectMenuBuilder: StringSelectMenuBuilder;
+  var ModalBuilder: ModalBuilder;
+  var TextInputBuilder: TextInputBuilder;
+  var TextInputStyle: TextInputStyle;
+  var Events_IntegrationCreate: Events.InteractionCreate;
+
 }
 
 export { };
