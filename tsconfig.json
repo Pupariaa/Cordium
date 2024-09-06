@@ -4,5 +4,6 @@
       "allowJs": true,
       "noEmit": true
     },
-    "include": ["./types/globals.d.ts"]
+    "include": ["./types/globals.d.ts", "./types/globals.t.ts"],
+    
   }
