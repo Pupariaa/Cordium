@@ -28,7 +28,7 @@ class BaseChannel {
 
     /**
      * Returns the channel object from its environmental ID.
-     * @param {string} channelId - The channel ID to retrieve.
+     * @param {string | null} channelId - The channel ID to retrieve.
      * @returns {Promise<Object|null>} - The channel or null if it does not exist.
      */
     async getChannel(channelId) {
