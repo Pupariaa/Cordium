@@ -4,6 +4,7 @@ const fs = require('fs')
 const path = require('path')
 const Discord = require('discord.js');
 const CommandHandler = require('../commands/CommandManager');
+require('puparia.getlines.js')
 
 
 function checkEnvVariables() {
