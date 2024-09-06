@@ -1,116 +1,161 @@
 //@ts-check
-'use-strict'
+'use strict';
+
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 const { v4: uuidv4 } = require('uuid');
 const sanitizeFilename = require('sanitize-filename');
+require('puparia.getlines.js');
+const filePath = path.resolve(__dirname, 'AttachmentManager.js');
 
+/**
+ * AttachmentManager class handles the management of attachments in a Discord bot.
+ */
 class AttachmentManager {
-    constructor(client) {
-        this.client = client || global.client
+    constructor() {
+        this.client = global.client;
         this.attachmentsFile = path.join(__dirname, 'attachments.json');
     }
 
     /**
-     * Charge les attachments depuis le fichier JSON.
-     * @returns {Array} - Une liste des attachments.
+     * Loads attachments from a JSON file.
+     * @returns {Array} - A list of attachments.
      */
     loadAttachments() {
         try {
-            const data = fs.readFileSync(this.attachmentsFile);
+            const data = fs.readFileSync(this.attachmentsFile, 'utf8');
+            console.info(`${filePath} - Line ${__line} (loadAttachments): Loaded attachments successfully.`);
             return JSON.parse(data);
         } catch (error) {
+            console.error(`${filePath} - Line ${__line} (loadAttachments): Error loading attachments.`, error);
             return [];
         }
     }
 
     /**
-     * Sauvegarde les attachments dans le fichier JSON.
-     * @param {Array} attachments - La liste des attachments à sauvegarder.
+     * Saves attachments to a JSON file.
+     * @param {Array} attachments - The list of attachments to save.
      */
     saveAttachments(attachments) {
-        fs.writeFileSync(this.attachmentsFile, JSON.stringify(attachments, null, 2));
+        try {
+            fs.writeFileSync(this.attachmentsFile, JSON.stringify(attachments, null, 2));
+            console.info(`${filePath} - Line ${__line} (saveAttachments): Attachments saved successfully.`);
+        } catch (error) {
+            console.error(`${filePath} - Line ${__line} (saveAttachments): Error saving attachments.`, error);
+        }
     }
 
     /**
-     * Extrait le nom du fichier depuis une URL.
-     * @param {string} url - L'URL d'où extraire le nom du fichier.
-     * @returns {string} - Le nom du fichier.
+     * Extracts the filename from a URL.
+     * @param {string} url - The URL to extract the filename from.
+     * @returns {string} - The extracted and sanitized filename.
      */
     extractFilenameFromUrl(url) {
-        const parsedUrl = new URL(url);
-        const pathname = parsedUrl.pathname;
-        const filename = path.basename(pathname);
-        return sanitizeFilename(filename);
+        try {
+            const parsedUrl = new URL(url);
+            const pathname = parsedUrl.pathname;
+            const filename = path.basename(pathname);
+            console.info(`${filePath} - Line ${__line} (extractFilenameFromUrl): Filename extracted successfully.`);
+            return sanitizeFilename(filename);
+        } catch (error) {
+            console.error(`${filePath} - Line ${__line} (extractFilenameFromUrl): Error extracting filename.`, error);
+            return 'unknown';
+        }
     }
 
     /**
-     * Télécharge un fichier depuis une URL et le sauvegarde localement.
-     * @param {string} url - L'URL du fichier à télécharger.
-     * @param {string} filename - Le nom de fichier sous lequel sauvegarder le fichier.
-     * @returns {Promise<string>} - Le chemin vers le fichier téléchargé.
+     * Downloads a file from a URL and saves it locally.
+     * @param {string} url - The URL of the file to download.
+     * @param {string} filename - The filename to save the downloaded file as.
+     * @returns {Promise<string>} - The path to the downloaded file.
      */
     async downloadFile(url, filename) {
-        const response = await axios({
-            url,
-            method: 'GET',
-            responseType: 'stream',
-        });
+        try {
+            const response = await axios({
+                url,
+                method: 'GET',
+                responseType: 'stream',
+            });
 
-        const filePath = path.join(__dirname, 'downloads', filename);
-        const writer = fs.createWriteStream(filePath);
+            const filePath = path.join(__dirname, 'downloads', filename);
+            const writer = fs.createWriteStream(filePath);
 
-        response.data.pipe(writer);
+            response.data.pipe(writer);
 
-        return new Promise((resolve, reject) => {
-            writer.on('finish', () => resolve(filePath));
-            writer.on('error', reject);
-        });
+            console.info(`${filePath} - Line ${__line} (downloadFile): Download started for ${filename}.`);
+
+            return new Promise((resolve, reject) => {
+                writer.on('finish', () => {
+                    console.info(`${filePath} - Line ${__line} (downloadFile): Download completed for ${filename}.`);
+                    resolve(filePath);
+                });
+                writer.on('error', (error) => {
+                    console.error(`${filePath} - Line ${__line} (downloadFile): Error during download.`, error);
+                    reject(error);
+                });
+            });
+        } catch (error) {
+            console.error(`${filePath} - Line ${__line} (downloadFile): Error initiating download.`, error);
+            throw error;
+        }
     }
 
     /**
-     * Gère les attachments d'un message Discord.
-     * @param {Object} message - Le message Discord contenant les attachments.
-     * @returns {Promise<object>} attachments
+     * Handles attachments from a Discord message.
+     * @param {Object} message - The Discord message containing attachments.
+     * @returns {Promise<Array>} - A list of attachments processed.
      */
     async handleAttachments(message) {
-        if (message.attachments.size > 0) {
-            const attachments = this.loadAttachments();
-            for (const attachment of message.attachments.values()) {
+        try {
+            if (message.attachments.size > 0) {
+                const attachments = this.loadAttachments();
+                for (const attachment of message.attachments.values()) {
+                    const originalFilename = this.extractFilenameFromUrl(attachment.url);
+                    const uniqueId = uuidv4() + path.extname(originalFilename);
+                    const filePath = await this.downloadFile(attachment.url, uniqueId);
 
-                const originalFilename = this.extractFilenameFromUrl(attachment.url);
-                const uniqueId = uuidv4() + path.extname(originalFilename);
-                const filePath = await this.downloadFile(attachment.url, uniqueId);
+                    const attachmentInfo = {
+                        type: attachment.contentType ? attachment.contentType.split('/')[0] : 'file',
+                        channelId: message.channel.id,
+                        messageId: message.id,
+                        filename: uniqueId,
+                        originalFilename: originalFilename,
+                        url: filePath,
+                        userid: message.author.id,
+                        username: message.author.username,
+                    };
 
-                const attachmentInfo = {
-                    type: attachment.contentType ? attachment.contentType.split('/')[0] : 'file',
-                    channelId: message.channel.id,
-                    messageId: message.id,
-                    filename: uniqueId,
-                    originalFilename: originalFilename,
-                    url: filePath,
-                    userid: message.author.id,
-                    username: message.author.username
-                };
-
-                attachments.push(attachmentInfo);
+                    attachments.push(attachmentInfo);
+                }
+                this.saveAttachments(attachments);
+                console.info(`${filePath} - Line ${__line} (handleAttachments): Attachments handled successfully.`);
+                return attachments;
+            } else {
+                console.info(`${filePath} - Line ${__line} (handleAttachments): No attachments found in message.`);
+                return [];
             }
-            this.saveAttachments(attachments);
-            return attachments
+        } catch (error) {
+            console.error(`${filePath} - Line ${__line} (handleAttachments): Error handling attachments.`, error);
+            throw error;
         }
-
-       
     }
 
     /**
-     * Récupère les attachments associés à un message donné.
-     * @param {string} messageId - L'ID du message dont on veut récupérer les attachments.
-     * @returns {Array} - Une liste des attachments associés au message.
+     * Retrieves attachments associated with a given message.
+     * @param {string} messageId - The ID of the message to retrieve attachments for.
+     * @returns {Array} - A list of attachments associated with the message.
      */
     getAttachments(messageId) {
-        const attachments = this.loadAttachments();
-        return attachments.filter(att => att.messageId === messageId);
+        try {
+            const attachments = this.loadAttachments();
+            const filteredAttachments = attachments.filter(att => att.messageId === messageId);
+            console.info(`${filePath} - Line ${__line} (getAttachments): Attachments retrieved successfully for message ID ${messageId}.`);
+            return filteredAttachments;
+        } catch (error) {
+            console.error(`${filePath} - Line ${__line} (getAttachments): Error retrieving attachments.`, error);
+            return [];
+        }
     }
 }
 
