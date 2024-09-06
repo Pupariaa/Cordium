@@ -31,7 +31,6 @@ global.client.on('ready', async () => {
             console.error(`${__filename} - Line ${__line} (ready): Guild not found. Check the "discord_guid" in config.env.`);
             return;
         }
-
         const invites = await guild.invites.fetch();
         invites.forEach(invite => global.client.invitesCache.set(invite.code, invite.uses));
         global.guild = guild;

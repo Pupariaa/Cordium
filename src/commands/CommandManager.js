@@ -3,8 +3,9 @@ const path = require('path');
 const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v10');
 const { Collection } = require('discord.js');
-require('../logutils'); 
-const filePath = 'src/commands/CommandManager.js';
+require('puparia.getlines.js');
+const filePath = path.resolve(__dirname, 'CommandManager.js');
+
 
 class CommandHandler {
     constructor() {
