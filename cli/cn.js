@@ -248,6 +248,31 @@ function initBotConfig(token, clientId, guid, restrictRole) {
 
     console.log('Bot configuration initialized successfully.');
 }
+function addMemberCountChannel(channelName, channelId) {
+
+    if (!channelName.includes('{count}')) {
+        console.error(`Channel name must contain '{count}' where the member count should be displayed.`);
+        return;
+    }
+
+    console.log(`Setting up '${channelName}' as a member count channel with ID '${channelId}'...`);
+
+    // Update channels.json
+    const channelsPath = path.join(__dirname, '../channels.json');
+    const channels = JSON.parse(fs.readFileSync(channelsPath, 'utf8'));
+    if (channels['VoiceChannelNames'][channelName]) {
+        console.log(`Channel '${channelName}' already exists in ${channelsPath}.`);
+    } else {
+        channels['VoiceChannelNames'][channelName] = channelId;
+        fs.writeFileSync(channelsPath, JSON.stringify(channels, null, 4), 'utf-8');
+        console.log(`Channel '${channelName}' added to ${channelsPath}.`);
+    }
+    addChannel('TextChannelNames', 'membercount', channelId)
+    // Set the environment variable for member count channel ID
+    const configPath = path.join(__dirname, '../config.env');
+    updateEnvVariable('membercount', channelId, configPath);
+    console.log(`Environment variable 'membercount' set to '${channelId}'.`);
+}
 
 
 // Handling commands
@@ -271,6 +296,12 @@ if (argv._[0] === 'add') {
     }
 } else if (argv._[0] === 'invite') {
     generateInviteLink();
+} else if (argv._[0] === 'add-member-count') {
+    if (argv.name && argv.id) {
+        addMemberCountChannel(argv.name, argv.id);
+    } else {
+        console.log('Please provide both --name and --id options.');
+    }
 } else {
-    console.log('Invalid command. Use `cn add`, `cn remove`, `cn create`, `cn init`, or `cn invite` with the appropriate options.');
+    console.log('Invalid command. Use `cn add`, `cn remove`, `cn create`, `cn init`, `cn invite`, or `cn add-member-count` with the appropriate options.');
 }
