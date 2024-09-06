@@ -1,7 +1,7 @@
 const {SlashCommandBuilder} = require('discord.js');
 
 const filePath = 'src/commands/handlers/ping.js';
-require('../../logutils')
+require('puparia.getlines.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
