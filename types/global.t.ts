@@ -17,16 +17,11 @@ declare module 'discord.js' {
     fetchGuildsInfo: () => Array<{ name: string; id: string; channels: Array<{ name: string; id: string; type: string }> }>;
     setupAutoReconnect: () => void;
     getMemberById: (userId: string) => GuildMember | null;
-
-    rateLimitCheck: () => void;
+    getMemberCount: (includeBots: boolean) => BigInteger
+    rateLimitCheck: (includeBots: boolean) => void;
   }
   interface GuildMember {
     hasRole(roleName: string): boolean;
-    isModerator(): boolean;
-    isAdministrator(): boolean;
-    isHelper(): boolean;
-    isAnimator(): boolean;
-    isFondator(): boolean;
     isBot(): boolean;
   }
 }
