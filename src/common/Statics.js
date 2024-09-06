@@ -14,7 +14,7 @@ require('puparia.getlines.js')
  */
 
 /**
- * @typedef {Object} TextChannelNames
+ * @typedef {'text'} TextChannelNames
  * @typedef {Object} VoiceChannelNames
  * @typedef {Object} ForumChannelNames
  */
@@ -123,8 +123,7 @@ class Channels {
 
     /**
      * @typedef {Object} ForumData
-     * @property {string} title - The title of the thread to create.
-     * @property {string} log_type - The type of log for the thread.
+     * @property {string} title - The title of the thread to create..
      * @property {string} [content] - The content of the first thread message. Optional.
      */
 
