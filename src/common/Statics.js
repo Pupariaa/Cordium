@@ -14,7 +14,7 @@ require('puparia.getlines.js')
  */
 
 /**
- * @typedef {'text'} TextChannelNames
+ * @typedef {Object} TextChannelNames
  * @typedef {Object} VoiceChannelNames
  * @typedef {Object} ForumChannelNames
  */
@@ -139,7 +139,7 @@ class Channels {
             try {
                 return await channel.send(data);
             } catch (error) {
-                global.client.error(`Failed to send message to channel "${channelName}": ${error}`);
+                console.error(`${__filename} - Line ${__line} (send): Failed to send message to channel "${channelName}: `, error);
                 return null;
             }
         }
@@ -171,6 +171,29 @@ class Channels {
             }
         } while (fetchedMessages.length === 100);
         return result;
+    }
+
+    /**
+     * Rename a channel.
+     * @param {TextChannelNames} channelName - The name of the channel to rename.
+     * @param {string} newName - The new name for the channel.
+     * @returns {Promise<Object|null>} - The channel object, or null if it does not exist or if the rename failed.
+     */
+    async rename(channelName, newName) {
+        const channel = await this.get(channelName);
+        if (channel) {
+            try {
+                await channel.setName(newName);
+                console.info(`${__filename} - Line ${__line} (rename): Channel "${channelName}" renamed to "${newName}".`);
+
+                return channel;
+            } catch (error) {
+                console.error(`${__filename} - Line ${__line} (rename): Failed to rename channel "${channelName}":`, error);
+                return null;
+            }
+        }
+        console.error(`${__filename} - Line ${__line} (rename): Channel "${channelName}" not found.`);
+        return null;
     }
 }
 
