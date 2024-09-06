@@ -15,7 +15,7 @@ const filePath = path.resolve(__dirname, 'messageCreate.js');
 global.client.on('messageCreate', async (message) => {
     try {
         if (message.member?.isBot()) return;
-        if (message.guildId !== global.guildId) return;
+        // if (message.guildId !== global.guildId) return;
 
         console.info(`${filePath} - Line ${__line} (messageCreate): Message created by ${message.author.tag} in #${message.channel.name}.`);
 
