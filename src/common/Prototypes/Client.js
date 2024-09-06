@@ -78,5 +78,25 @@ Client.prototype.rateLimitCheck = function() {
         global.client.warning(`Rate limit hit! Timeout: ${info.timeout}, Limit: ${info.limit}, Method: ${info.method}, Path: ${info.path}`);
     });
 };
+Client.prototype.getMemberCount = function(includeBots = false) {
+    this.on('guildCreate', guild => {
+        updateMemberCount(guild, includeBots);
+    });
 
+    this.on('guildMemberAdd', member => {
+        updateMemberCount(member.guild, includeBots);
+    });
+
+    this.on('guildMemberRemove', member => {
+        updateMemberCount(member.guild, includeBots);
+    });
+
+    function updateMemberCount(guild, includeBots) {
+        const members = guild.members.cache;
+        const memberCount = includeBots
+            ? members.size
+            : members.filter(member => !member.user.bot).size;
+        return memberCount;
+    }
+};
 
