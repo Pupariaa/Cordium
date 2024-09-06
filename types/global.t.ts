@@ -1,6 +1,27 @@
 // globals.d.ts
-import { Guild, GuildMember, Message, Channel, Collection, TextChannel, ButtonStyle } from 'discord.js';
-import { Client, GatewayIntentBits, Partials, Events, ChannelType, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
+
+import { 
+  Client, 
+  GatewayIntentBits, 
+  Partials, 
+  Events, 
+  ChannelType, 
+  PermissionFlagsBits, 
+  EmbedBuilder, 
+  ActionRowBuilder, 
+  ButtonBuilder, 
+  ButtonStyle, 
+  StringSelectMenuBuilder, 
+  ModalBuilder, 
+  TextInputBuilder, 
+  TextInputStyle,
+  Guild,
+  GuildMember,
+  Message,
+  Channel,
+  Collection,
+  TextChannel
+} from 'discord.js';
 import AttachmentManager from '../src/common/AttachmentManager';
 import { Channels } from '../src/common/Statics';
 
@@ -8,37 +29,49 @@ declare global {
   namespace NodeJS {
     interface Global {
       triggers: {
-        nameOfTrigger: (message: any) => Promise<void>;
-        //CLIMarker#04
-
-      }
+        nameOfTrigger: (message: Message) => Promise<void>;  // Use specific type from discord.js
+        // CLIMarker#04
+      };
+      client: Client;
+      attachment: AttachmentManager;
+      Channel: Channels;  // Correctly typed Channel as Channels
+      GatewayIntentBits: typeof GatewayIntentBits;
+      Partials: typeof Partials;
+      ChannelType: typeof ChannelType;  // Fixed missing typeof
+      PermissionFlagsBits: typeof PermissionFlagsBits;
+      EmbedBuilder: typeof EmbedBuilder;
+      ActionRowBuilder: typeof ActionRowBuilder;
+      ButtonBuilder: typeof ButtonBuilder;
+      ButtonStyle: typeof ButtonStyle;
+      StringSelectMenuBuilder: typeof StringSelectMenuBuilder;
+      ModalBuilder: typeof ModalBuilder;
+      TextInputBuilder: typeof TextInputBuilder;
+      TextInputStyle: typeof TextInputStyle;
+      Events_IntegrationCreate: typeof Events.InteractionCreate;  // Fixed missing typeof
     }
   }
+  
   var triggers: {
-    nameOfTrigger: (message: any) => Promise<void>;
-    //CLIMarker#05
-
+    nameOfTrigger: (message: Message) => Promise<void>;  // Use specific type from discord.js
+    // CLIMarker#05
   };
-
-
+  
   var client: Client;
   var attachment: AttachmentManager;
-  var Channel: Channels;
-  var client: Client;
+  var Channel: Channels;  // Correctly typed Channel as Channels
   var GatewayIntentBits: typeof GatewayIntentBits;
   var Partials: typeof Partials;
-  var ChannelType: ChannelType;
+  var ChannelType: typeof ChannelType;  // Fixed missing typeof
   var PermissionFlagsBits: typeof PermissionFlagsBits;
-  var EmbedBuilder: EmbedBuilder;
-  var ActionRowBuilder: ActionRowBuilder;
-  var ButtonBuilder: ButtonBuilder;
-  var ButtonStyle: ButtonStyle;
-  var StringSelectMenuBuilder: StringSelectMenuBuilder;
-  var ModalBuilder: ModalBuilder;
-  var TextInputBuilder: TextInputBuilder;
-  var TextInputStyle: TextInputStyle;
-  var Events_IntegrationCreate: Events.InteractionCreate;
-
+  var EmbedBuilder: typeof EmbedBuilder;
+  var ActionRowBuilder: typeof ActionRowBuilder;
+  var ButtonBuilder: typeof ButtonBuilder;
+  var ButtonStyle: typeof ButtonStyle;
+  var StringSelectMenuBuilder: typeof StringSelectMenuBuilder;
+  var ModalBuilder: typeof ModalBuilder;
+  var TextInputBuilder: typeof TextInputBuilder;
+  var TextInputStyle: typeof TextInputStyle;
+  var Events_IntegrationCreate: typeof Events.InteractionCreate;  // Fixed missing typeof
 }
 
 export { };
