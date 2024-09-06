@@ -1,6 +1,6 @@
 const {SlashCommandBuilder} = require('discord.js');
-
-const filePath = 'src/commands/handlers/ping.js';
+const path = require('path')
+const filePath = path.resolve(__dirname, 'ping.js');
 require('puparia.getlines.js');
 
 module.exports = {
