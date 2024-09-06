@@ -5,7 +5,7 @@ const path = require('path')
 const Discord = require('discord.js');
 const CommandHandler = require('../commands/CommandManager');
 require('puparia.getlines.js')
-
+/// <reference path="../../types/global.d.ts" />
 
 function checkEnvVariables() {
     const requiredVars = ['discord_cqd_token', 'discord_cqd_cid', 'discord_guid'];
@@ -140,12 +140,15 @@ class CQD {
         
 
         const { Channels } = require('./Statics');
-
+        /** @type {import('../common/Statics').Channels} */
         global.Channel = new Channels();
 
         const AttachmentManager = require('./AttachmentManager');
+
+        /** @type {import('../common/AttachmentManager').AttachmentManager} */
         global.attachment = new AttachmentManager();
         this.loadCommands();
+
 
         return this.client;
     }
