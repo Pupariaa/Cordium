@@ -26,18 +26,16 @@ function logEvent(eventType, eventData) {
 
 
 
-global.client.on('guildMemberAdd', member => {
-    const guild = global.client.guilds.cache.first()
+global.client.on('guildMemberAdd', member => 
     logEvent('join', {
         userid: member.id,
-        currentMember: guild.memberCount
+        currentMember: global.guild.memberCount
     });
 });
 global.client.on('guildMemberRemove', member => {
-    const guild = global.client.guilds.cache.first()
     logEvent('left', {
         userid: member.id,
-        currentMember: guild.memberCount
+        currentMember: global.guild.memberCount
     });
 });
 

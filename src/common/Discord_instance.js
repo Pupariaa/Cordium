@@ -110,55 +110,42 @@ if(process.env.prod){
  */
 class CQD {
     constructor() {
-        checkEnvVariables();
+        try {
+            checkEnvVariables();
 
-        /**
-         * Instance of the Discord client.
-         * @type {Discord.Client}
-         */
-        this.client = new Discord.Client({ intents: 3276799, partials: ['MESSAGE', 'REACTION'] });
-        this.client.login(process.env.discord_cqd_token);
-        this.instantiate();
-    }
+            /**
+             * Instance of the Discord client.
+             * @type {Discord.Client}
+             */
+            global.client = new Discord.Client({ intents: 3276799, partials: ['MESSAGE', 'REACTION'] });
+            global.client.login(process.env.discord_cqd_token);
+            global.channels = JSON.parse(fs.readFileSync('channels.json', 'utf-8'));
 
-    /**
-     * Method to instantiate and initialize various classes and global variables.
-     * @returns {Discord.Client} - The initialized Discord client.
-     */
-    instantiate() {
-        global.client = this.client;
+            require('./Prototypes/GuildMember');
+            require('./Prototypes/Client');
+            require('./Exports/__discord');
 
-        require('./Prototypes/GuildMember');
-        require('./Prototypes/Client');
-        require('./Exports/__discord');
+            //Import triggers
+            require('./Triggers/nameOfTrigger');
+            //CLIMarker#07
+            
 
-        //Import triggers
-        require('./Triggers/nameOfTrigger');
-        //CLIMarker#07
-        
-        
+            const { Channels } = require('./Statics');
+            /** @type {import('../common/Statics').Channels} */
+            global.Channel = new Channels();
 
-        const { Channels } = require('./Statics');
-        /** @type {import('../common/Statics').Channels} */
-        global.Channel = new Channels();
+            const AttachmentManager = require('./AttachmentManager');
 
-        const AttachmentManager = require('./AttachmentManager');
-
-        /** @type {import('../common/AttachmentManager').AttachmentManager} */
-        global.Attachment = new AttachmentManager();
-        this.loadCommands();
-
-
-        return this.client;
-    }
-
-    /**
-     * Method to load commands.
-     */
-    loadCommands() {
-        const commandHandler = new CommandHandler();
-        commandHandler.loadCommands();
-        commandHandler.deployCommands();
+            /** @type {import('../common/AttachmentManager').AttachmentManager} */
+            global.Attachment = new AttachmentManager();
+            
+            const commandHandler = new CommandHandler();
+            commandHandler.loadCommands();
+            commandHandler.deployCommands();
+        } catch (err) {
+            const functionName = arguments.callee.name;
+            console.error(`${__filename} - Line ${__line} (${functionName}): Error executing command:`, err);
+        }
     }
 }
 

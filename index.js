@@ -26,17 +26,17 @@ global.client.on('ready', async () => {
 
         // Initialize invite cache
         global.client.invitesCache = new Map();
-        const guild = global.client.guilds.cache.get(process.env.discord_guid);
-        
-        if (!guild) {
+
+        // Get guild
+        global.guild = global.client.guilds.cache.get(process.env.discord_guid);
+        if (!global.guild) {
             console.error(`${__filename} - Line ${__line} (ready): Guild not found. Check the "discord_guid" in config.env.`);
-            return;
+            process.exit(1);
         }
-        const invites = await guild.invites.fetch();
+        
+        const invites = await global.guild.invites.fetch();
         invites.forEach(invite => global.client.invitesCache.set(invite.code, invite.uses));
-        global.guild = guild;
         console.info(`${__filename} - Line ${__line} (ready): Invites cache initialized.`);
-        global.channels = JSON.parse(fs.readFileSync('channels.json', 'utf-8'));
 
         // Load all event handlers
         [
