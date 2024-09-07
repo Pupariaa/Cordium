@@ -260,14 +260,14 @@ function addMemberCountChannel(channelName, channelId) {
     // Update channels.json
     const channelsPath = path.join(__dirname, '../channels.json');
     const channels = JSON.parse(fs.readFileSync(channelsPath, 'utf8'));
-    if (channels['VoiceChannelNames'][channelName]) {
+    if (channels['voice'][channelName]) {
         console.log(`Channel '${channelName}' already exists in ${channelsPath}.`);
     } else {
-        channels['VoiceChannelNames'][channelName] = channelId;
+        channels['voice'][channelName] = channelId;
         fs.writeFileSync(channelsPath, JSON.stringify(channels, null, 4), 'utf-8');
         console.log(`Channel '${channelName}' added to ${channelsPath}.`);
     }
-    addChannel('TextChannelNames', 'membercount', channelId)
+    addChannel('text', 'membercount', channelId)
     // Set the environment variable for member count channel ID
     const configPath = path.join(__dirname, '../config.env');
     updateEnvVariable('membercount', channelId, configPath);
@@ -277,14 +277,14 @@ function addMemberCountChannel(channelName, channelId) {
 
 // Handling commands
 if (argv._[0] === 'add') {
-    if (argv.text) addChannel('TextChannelNames', argv.name, argv.id);
-    else if (argv.voice) addChannel('VoiceChannelNames', argv.name, argv.id);
-    else if (argv.forum) addChannel('ForumChannelNames', argv.name, argv.id);
+    if (argv.text) addChannel('text', argv.name, argv.id);
+    else if (argv.voice) addChannel('voice', argv.name, argv.id);
+    else if (argv.forum) addChannel('forum', argv.name, argv.id);
     else console.log('Please specify a valid channel type: --text, --voice, or --forum.');
 } else if (argv._[0] === 'remove') {
-    if (removeChannel('TextChannelNames', argv.id)) return;
-    if (removeChannel('VoiceChannelNames', argv.id)) return;
-    if (removeChannel('ForumChannelNames', argv.id)) return;
+    if (removeChannel('text', argv.id)) return;
+    if (removeChannel('voice', argv.id)) return;
+    if (removeChannel('forum', argv.id)) return;
 } else if (argv._[0] === 'create') {
     if (argv.triggers) createTrigger(argv.triggers);
     else console.log('Please provide a valid trigger function definition: --triggers "functionName(message)"');
