@@ -26,12 +26,13 @@ function logEvent(eventType, eventData) {
 
 
 
-global.client.on('guildMemberAdd', member => 
+global.client.on('guildMemberAdd', member => {
     logEvent('join', {
         userid: member.id,
         currentMember: global.guild.memberCount
     });
 });
+
 global.client.on('guildMemberRemove', member => {
     logEvent('left', {
         userid: member.id,
