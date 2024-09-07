@@ -55,7 +55,7 @@ class BaseChannel {
 class TextChannels extends BaseChannel {
     constructor() {
         super();
-        this.channels = JSON.parse(fs.readFileSync('channels.json', 'utf-8')).TextChannelNames;
+        this.channels = JSON.parse(fs.readFileSync('channels.json', 'utf-8')).text;
     }
 
     /**
