@@ -14,9 +14,9 @@ require('puparia.getlines.js')
  */
 
 /**
- * @typedef {Object} TextChannelNames
- * @typedef {Object} VoiceChannelNames
- * @typedef {Object} ForumChannelNames
+ * @typedef {string} TextChannelNames
+ * @typedef {string} VoiceChannelNames
+ * @typedef {string} ForumChannelNames
  */
 
 /**
