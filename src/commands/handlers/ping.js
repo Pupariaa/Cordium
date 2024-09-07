@@ -1,6 +1,4 @@
 const {SlashCommandBuilder} = require('discord.js');
-const path = require('path')
-const filePath = path.resolve(__dirname, 'ping.js');
 require('puparia.getlines.js');
 
 module.exports = {
@@ -17,7 +15,7 @@ module.exports = {
         try {
             await interaction.reply('pong')
         } catch (err) {
-            console.error(`${filePath} - Line ${__line} (${functionName}): Error executing command:`, err);
+            console.error(`${__filename} - Line ${__line} (${functionName}): Error executing command:`, err);
         }
     }
 };
