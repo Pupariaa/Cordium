@@ -4,6 +4,7 @@
 require('dotenv').config({ path: './config.env' });
 const { Events } = require('discord.js');
 require('puparia.getlines.js');
+const fs = require('fs');
 
 const DiscordInstance = require('./src/common/Discord_instance');
 new DiscordInstance();
@@ -35,6 +36,7 @@ global.client.on('ready', async () => {
         invites.forEach(invite => global.client.invitesCache.set(invite.code, invite.uses));
         global.guild = guild;
         console.info(`${__filename} - Line ${__line} (ready): Invites cache initialized.`);
+        global.channels = JSON.parse(fs.readFileSync('channels.json', 'utf-8'));
 
         // Load all event handlers
         [
