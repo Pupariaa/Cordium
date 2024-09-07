@@ -148,11 +148,10 @@ class Channels {
 
     /**
      * Fetch all messages from a channel.
-     * @param {TextChannelNames} channelName - The name of the channel to fetch from.
+     * @param {Object} channel - The name of the channel to fetch from.
      * @returns {Promise<Object[] | null>} - The messages fetched. If the channel does not exist, or is not a text channel, returns null.
      */
-    async fetchAll(channelName) {
-        const channel = await this.get(channelName);
+    async fetchAll(channel) {
         if (!channel || channel.type !== 0) {
             return null;
         }
