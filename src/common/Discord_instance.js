@@ -127,7 +127,6 @@ class CQD {
      */
     instantiate() {
         global.client = this.client;
-        global.guild = this.client.guilds.cache.first();
 
         require('./Prototypes/GuildMember');
         require('./Prototypes/Client');
@@ -146,7 +145,7 @@ class CQD {
         const AttachmentManager = require('./AttachmentManager');
 
         /** @type {import('../common/AttachmentManager').AttachmentManager} */
-        global.attachment = new AttachmentManager();
+        global.Attachment = new AttachmentManager();
         this.loadCommands();
 
 
