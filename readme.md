@@ -123,7 +123,7 @@ To be used on the discord.js [Messages:Class](https://discord.js.org/docs/packag
 Async method, returns an object in promise
 ```js
 //in any file
-await global.attachment.handleAttachments(message);
+await global.Attachment.handleAttachments(message);
 ```
 returned object
 
@@ -148,7 +148,7 @@ returned object
 Async method, returns an object in promise
 ```js
 //in any file
-await global.attachment.getAttachments(message.id);
+await global.Attachment.getAttachments(message.id);
 ```
 returned object
 ```js

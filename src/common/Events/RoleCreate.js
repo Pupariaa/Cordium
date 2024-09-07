@@ -1,15 +1,13 @@
 //@ts-check
 'use strict';
-const path = require('path');
-require('puparia.getlines.js')
-const filePath = path.resolve(__dirname, 'roleCreate.js');
+require('puparia.getlines.js');
 
 global.client.on('roleCreate', async (role) => {
+    if (role.guild.id !== global.guild.id) return;
     try {
-        console.info(`${filePath} - Line ${__line} (roleCreate): Role created: ${role.name} (ID: ${role.id}).`);
-
+        console.info(`${__filename} - Line ${__line} (roleCreate): Role created: ${role.name} (ID: ${role.id}).`);
     } catch (error) {
-        console.error(`${filePath} - Line ${__line} (roleCreate): Error handling role creation event:`, error);
+        console.error(`${__filename} - Line ${__line} (roleCreate): Error handling role creation event:`, error);
     }
 });
 

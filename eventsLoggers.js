@@ -1,8 +1,6 @@
 const fs = require('fs');
 const path = require('path');
 
-
-
 const eventsFile = path.join(__dirname, 'events.json');
 function logEvent(eventType, eventData) {
     let events = [];

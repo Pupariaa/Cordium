@@ -1,15 +1,13 @@
 //@ts-check
 'use strict';
-const path = require('path');
-require('puparia.getlines.js')
-const filePath = path.resolve(__dirname, 'inviteCreate.js'); 
+require('puparia.getlines.js');
 
 global.client.on('inviteCreate', async (invite) => {
+    if (invite.guild.id !== global.guild.id) return;
     try {
-        console.info(`${filePath} - Line ${__line} (inviteCreate): Invite created: ${invite.url} (Code: ${invite.code}).`);
-       
+        console.info(`${__filename} - Line ${__line} (inviteCreate): Invite created: ${invite.url} (Code: ${invite.code}).`);
     } catch (error) {
-        console.error(`${filePath} - Line ${__line} (inviteCreate): Error handling invite creation:`, error);
+        console.error(`${__filename} - Line ${__line} (inviteCreate): Error handling invite creation:`, error);
     }
 });
 

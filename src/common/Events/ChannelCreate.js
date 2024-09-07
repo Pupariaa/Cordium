@@ -1,15 +1,13 @@
 //@ts-check
 'use strict';
-const path = require('path');
-const filePath = path.resolve(__dirname, 'channelCreate.js');
-require('puparia.getlines.js')
+require('puparia.getlines.js');
 
 global.client.on('channelCreate', async (channel) => {
+    if (channel.guild.id !== global.guild.id) return;
     try {
-        console.info(`${filePath} - Line ${__line} (channelCreate): Channel created: ${channel.name} (ID: ${channel.id}).`);
-
+        console.info(`${__filename} - Line ${__line} (channelCreate): Channel created: ${channel.name} (ID: ${channel.id}).`);
     } catch (error) {
-        console.error(`${filePath} - Line ${__line} (channelCreate): Error handling channel creation:`, error);
+        console.error(`${__filename} - Line ${__line} (channelCreate): Error handling channel creation:`, error);
     }
 });
 

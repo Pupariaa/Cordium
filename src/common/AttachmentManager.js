@@ -1,13 +1,11 @@
 //@ts-check
 'use strict';
-
+require('puparia.getlines.js');
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 const { v4: uuidv4 } = require('uuid');
 const sanitizeFilename = require('sanitize-filename');
-require('puparia.getlines.js');
-const filePath = path.resolve(__dirname, 'AttachmentManager.js');
 
 /**
  * AttachmentManager class handles the management of attachments in a Discord bot.
@@ -25,10 +23,10 @@ class AttachmentManager {
     loadAttachments() {
         try {
             const data = fs.readFileSync(this.attachmentsFile, 'utf8');
-            console.info(`${filePath} - Line ${__line} (loadAttachments): Loaded attachments successfully.`);
+            console.info(`${__filename} - Line ${__line} (loadAttachments): Loaded attachments successfully.`);
             return JSON.parse(data);
         } catch (error) {
-            console.error(`${filePath} - Line ${__line} (loadAttachments): Error loading attachments.`, error);
+            console.error(`${__filename} - Line ${__line} (loadAttachments): Error loading attachments.`, error);
             return [];
         }
     }
@@ -40,9 +38,9 @@ class AttachmentManager {
     saveAttachments(attachments) {
         try {
             fs.writeFileSync(this.attachmentsFile, JSON.stringify(attachments, null, 2));
-            console.info(`${filePath} - Line ${__line} (saveAttachments): Attachments saved successfully.`);
+            console.info(`${__filename} - Line ${__line} (saveAttachments): Attachments saved successfully.`);
         } catch (error) {
-            console.error(`${filePath} - Line ${__line} (saveAttachments): Error saving attachments.`, error);
+            console.error(`${__filename} - Line ${__line} (saveAttachments): Error saving attachments.`, error);
         }
     }
 
@@ -56,10 +54,10 @@ class AttachmentManager {
             const parsedUrl = new URL(url);
             const pathname = parsedUrl.pathname;
             const filename = path.basename(pathname);
-            console.info(`${filePath} - Line ${__line} (extractFilenameFromUrl): Filename extracted successfully.`);
+            console.info(`${__filename} - Line ${__line} (extractFilenameFromUrl): Filename extracted successfully.`);
             return sanitizeFilename(filename);
         } catch (error) {
-            console.error(`${filePath} - Line ${__line} (extractFilenameFromUrl): Error extracting filename.`, error);
+            console.error(`${__filename} - Line ${__line} (extractFilenameFromUrl): Error extracting filename.`, error);
             return 'unknown';
         }
     }
@@ -83,20 +81,20 @@ class AttachmentManager {
 
             response.data.pipe(writer);
 
-            console.info(`${filePath} - Line ${__line} (downloadFile): Download started for ${filename}.`);
+            console.info(`${__filename} - Line ${__line} (downloadFile): Download started for ${filename}.`);
 
             return new Promise((resolve, reject) => {
                 writer.on('finish', () => {
-                    console.info(`${filePath} - Line ${__line} (downloadFile): Download completed for ${filename}.`);
+                    console.info(`${__filename} - Line ${__line} (downloadFile): Download completed for ${filename}.`);
                     resolve(filePath);
                 });
                 writer.on('error', (error) => {
-                    console.error(`${filePath} - Line ${__line} (downloadFile): Error during download.`, error);
+                    console.error(`${__filename} - Line ${__line} (downloadFile): Error during download.`, error);
                     reject(error);
                 });
             });
         } catch (error) {
-            console.error(`${filePath} - Line ${__line} (downloadFile): Error initiating download.`, error);
+            console.error(`${__filename} - Line ${__line} (downloadFile): Error initiating download.`, error);
             throw error;
         }
     }
@@ -129,14 +127,14 @@ class AttachmentManager {
                     attachments.push(attachmentInfo);
                 }
                 this.saveAttachments(attachments);
-                console.info(`${filePath} - Line ${__line} (handleAttachments): Attachments handled successfully.`);
+                console.info(`${__filename} - Line ${__line} (handleAttachments): Attachments handled successfully.`);
                 return attachments;
             } else {
-                console.info(`${filePath} - Line ${__line} (handleAttachments): No attachments found in message.`);
+                console.info(`${__filename} - Line ${__line} (handleAttachments): No attachments found in message.`);
                 return [];
             }
         } catch (error) {
-            console.error(`${filePath} - Line ${__line} (handleAttachments): Error handling attachments.`, error);
+            console.error(`${__filename} - Line ${__line} (handleAttachments): Error handling attachments.`, error);
             throw error;
         }
     }
@@ -150,10 +148,10 @@ class AttachmentManager {
         try {
             const attachments = this.loadAttachments();
             const filteredAttachments = attachments.filter(att => att.messageId === messageId);
-            console.info(`${filePath} - Line ${__line} (getAttachments): Attachments retrieved successfully for message ID ${messageId}.`);
+            console.info(`${__filename} - Line ${__line} (getAttachments): Attachments retrieved successfully for message ID ${messageId}.`);
             return filteredAttachments;
         } catch (error) {
-            console.error(`${filePath} - Line ${__line} (getAttachments): Error retrieving attachments.`, error);
+            console.error(`${__filename} - Line ${__line} (getAttachments): Error retrieving attachments.`, error);
             return [];
         }
     }

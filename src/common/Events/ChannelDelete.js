@@ -1,15 +1,13 @@
 //@ts-check
 'use strict';
-const path = require('path');
-require('puparia.getlines.js')
-const filePath = path.resolve(__dirname, 'channelDelete.js');
+require('puparia.getlines.js');
 
 global.client.on('channelDelete', async (channel) => {
+    if (channel.guild.id !== global.guild.id) return;
     try {
-        console.info(`${filePath} - Line ${__line} (channelDelete): Channel deleted: ${channel.name} (ID: ${channel.id}).`);
-
+        console.info(`${__filename} - Line ${__line} (channelDelete): Channel deleted: ${channel.name} (ID: ${channel.id}).`);
     } catch (error) {
-        console.error(`${filePath} - Line ${__line} (channelDelete): Error handling channel deletion:`, error);
+        console.error(`${__filename} - Line ${__line} (channelDelete): Error handling channel deletion:`, error);
     }
 });
 

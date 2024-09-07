@@ -1,9 +1,8 @@
 //@ts-check
 'use strict';
-
+require('puparia.getlines.js');
 require('dotenv').config({ path: './config.env' });
 const { Events } = require('discord.js');
-require('puparia.getlines.js');
 const fs = require('fs');
 
 const DiscordInstance = require('./src/common/Discord_instance');
@@ -33,6 +32,8 @@ global.client.on('ready', async () => {
             console.error(`${__filename} - Line ${__line} (ready): Guild not found. Check the "discord_guid" in config.env.`);
             process.exit(1);
         }
+        global.client.guilds.cache.clear();
+        global.client.guilds.cache.set(process.env.discord_guid, global.guild);
         
         const invites = await global.guild.invites.fetch();
         invites.forEach(invite => global.client.invitesCache.set(invite.code, invite.uses));
