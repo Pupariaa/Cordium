@@ -1,4 +1,5 @@
-const {SlashCommandBuilder} = require('discord.js');
+'use strict';
+const { SlashCommandBuilder } = require('discord.js');
 require('puparia.getlines.js');
 
 module.exports = {

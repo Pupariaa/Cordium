@@ -1,66 +1,85 @@
 // globals.d.ts
-import { Guild, GuildMember, Message, Channel, Collection, TextChannel, ButtonStyle } from 'discord.js';
-import { Client, GatewayIntentBits, Partials, Events, ChannelType, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
+import {
+	Guild, GuildMember, Message, Channel, Collection, TextChannel, ButtonStyle,
+	Client, GatewayIntentBits, Partials, ChannelType, PermissionFlagsBits,
+	EmbedBuilder, ActionRowBuilder, ButtonBuilder, StringSelectMenuBuilder, ModalBuilder,
+	TextInputBuilder, TextInputStyle
+} from 'discord.js';
 import AttachmentManager from '../src/common/AttachmentManager';
 import { Channels } from '../src/common/Statics';
 
-
 declare module 'discord.js' {
-  interface Client {
-    registerCommand: (commandName: string, callback: (message: Message, args: string[]) => void) => void;
-    executeCommand: (commandName: string, message: Message, args: string[]) => void;
+	interface Client {
+		registerCommand(commandName: string, callback: (message: Message, args: string[]) => void): void;
+		executeCommand(commandName: string, message: Message, args: string[]): void;
 
-    findChannelByName: (channelName: string) => Channel | null;
-    sendMessageToChannel: (channelName: string, message: string) => Promise<void>;
-    broadcastMessage: (message: string) => Promise<void>;
-    getUserByUsername: (username: string) => Promise<GuildMember | null>;
-    fetchGuildsInfo: () => Array<{ name: string; id: string; channels: Array<{ name: string; id: string; type: string }> }>;
-    setupAutoReconnect: () => void;
-    getMemberById: (userId: string) => GuildMember | null;
-    getMemberCount: (includeBots: boolean) => BigInteger
-    rateLimitCheck: (includeBots: boolean) => void;
-  }
-  interface GuildMember {
-    hasRole(roleName: string): boolean;
-    isBot(): boolean;
-  }
+		findChannelByName(channelName: string): Channel | null;
+		sendMessageToChannel(channelName: string, message: string): Promise<void>;
+		broadcastMessage(message: string): Promise<void>;
+		getUserByUsername(username: string): Promise<GuildMember | null>;
+		fetchGuildsInfo(): Array<{
+			name: string;
+			id: string;
+			channels: Array<{
+				name: string;
+				id: string;
+				type: string;
+			}>;
+		}>;
+		setupAutoReconnect(): void;
+		getMemberById(userId: string): GuildMember | null;
+		getMemberCount(includeBots: boolean): BigInteger
+		rateLimitCheck(includeBots: boolean): void;
+	}
+
+	interface Events {
+		createReportEvent(filename: string): ((line: number, eventName: string, ...args: any[]) => void);
+	}
+
+	interface Guild {
+		fetchAllAuditLogs(): Promise<Collection<any>>;
+	}
+
+	interface GuildMember {
+		hasRole(roleName: string): boolean;
+		isBot(): boolean;
+	}
 }
 
 declare global {
-  namespace NodeJS {
-    interface Global {
-      triggers: {
-        nameOfTrigger: (message: any) => Promise<void>;
-        //CLIMarker#04
+	namespace NodeJS {
+		interface Global {
+			triggers: {
+				nameOfTrigger(message: any): Promise<void>;
+				//CLIMarker#04
 
-      }
-    }
-  }
-  var triggers: {
-    nameOfTrigger: (message: any) => Promise<void>;
-    //CLIMarker#05
+			}
+		}
+	}
+	var triggers: {
+		nameOfTrigger(message: any): Promise<void>;
+		//CLIMarker#05
 
-  };
+	};
 
 
-  var client: Client;
-  var attachment: AttachmentManager;
-  var Channel: Channels;
-  var client: Client;
-  var GatewayIntentBits: typeof GatewayIntentBits;
-  var Partials: typeof Partials;
-  var ChannelType: ChannelType;
-  var PermissionFlagsBits: typeof PermissionFlagsBits;
-  var EmbedBuilder: EmbedBuilder;
-  var ActionRowBuilder: ActionRowBuilder;
-  var ButtonBuilder: ButtonBuilder;
-  var ButtonStyle: ButtonStyle;
-  var StringSelectMenuBuilder: StringSelectMenuBuilder;
-  var ModalBuilder: ModalBuilder;
-  var TextInputBuilder: TextInputBuilder;
-  var TextInputStyle: TextInputStyle;
-  var Events_IntegrationCreate: Events.InteractionCreate;
+	var client: Client;
+	var attachment: AttachmentManager;
+	var Channel: Channels;
+	var GatewayIntentBits: typeof GatewayIntentBits;
+	var Partials: typeof Partials;
+	var ChannelType: ChannelType;
+	var PermissionFlagsBits: typeof PermissionFlagsBits;
+	var EmbedBuilder: EmbedBuilder;
+	var ActionRowBuilder: ActionRowBuilder;
+	var ButtonBuilder: ButtonBuilder;
+	var ButtonStyle: ButtonStyle;
+	var StringSelectMenuBuilder: StringSelectMenuBuilder;
+	var ModalBuilder: ModalBuilder;
+	var TextInputBuilder: TextInputBuilder;
+	var TextInputStyle: TextInputStyle;
+	var Events_IntegrationCreate: Events.InteractionCreate;
 
 }
 
-export { };
+export {};

@@ -5,8 +5,8 @@ require('dotenv').config({ path: './config.env' });
 const { Events } = require('discord.js');
 const fs = require('fs');
 
-const DiscordInstance = require('./src/common/Discord_instance');
-new DiscordInstance();
+const CQD = require('./src/common/Discord_instance');
+new CQD();
 
 // Global error handling
 process.on('uncaughtException', (err) => {
@@ -32,8 +32,6 @@ global.client.on('ready', async () => {
             console.error(`${__filename} - Line ${__line} (ready): Guild not found. Check the "discord_guid" in config.env.`);
             process.exit(1);
         }
-        global.client.guilds.cache.clear();
-        global.client.guilds.cache.set(process.env.discord_guid, global.guild);
         
         const invites = await global.guild.invites.fetch();
         invites.forEach(invite => global.client.invitesCache.set(invite.code, invite.uses));
@@ -41,21 +39,30 @@ global.client.on('ready', async () => {
 
         // Load all event handlers
         [
-            './src/common/Events/MemberJoin',
-            './src/common/Events/MemberLeft',
-            './src/common/Events/Messages',
             './src/common/Events/ChannelCreate',
-            './src/common/Events/ChannelUpdate',
             './src/common/Events/ChannelDelete',
+            './src/common/Events/ChannelUpdate',
+
             './src/common/Events/GuildBanAdd',
-            './src/common/Events/InvitCreate',
-            './src/common/Events/InvitDelete',
+            './src/common/Events/GuildBanRemove',
+
+            './src/common/Events/GuildMemberAdd',
+            './src/common/Events/GuildMemberRemove',
+
+            './src/common/Events/GuildRoleCreate',
+            './src/common/Events/GuildRoleDelete',
+            './src/common/Events/GuildRoleUpdate',
+
+            './src/common/Events/InteractionCreate',
+
+            './src/common/Events/InviteCreate',
+            './src/common/Events/InviteDelete',
+
+            './src/common/Events/MessageCreate',
             './src/common/Events/MessageDelete',
             './src/common/Events/MessageUpdate',
-            './src/common/Events/RoleCreate',
-            './src/common/Events/RoleUpdate',
-            './src/common/Events/Interactions',
-            './src/common/Events/VoiceUpdate'
+            
+            './src/common/Events/VoiceStateUpdate'
         ].forEach(eventPath => {
             try {
                 require(eventPath);

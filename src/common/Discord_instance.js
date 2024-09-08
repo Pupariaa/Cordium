@@ -59,9 +59,12 @@ const colors = {
     BgWhite: "\x1b[47m"
 };
 
+global.colors = colors;
+
 const originalLog = console.log;
 const originalInfo = console.info;
 const originalError = console.error;
+
 console.log = function (...args) {
     const formattedDate = getFormattedDate();
     const formattedTime = getFormattedTime();
@@ -87,6 +90,7 @@ console.info = function (...args) {
     fs.appendFileSync(logFilePath, message, 'utf8');
     originalInfo(colors.FgCyan, `[INFO]`, colors.Reset, ...args);
 };
+
 console.error = function (...args) {
     const formattedDate = getFormattedDate();
     const formattedTime = getFormattedTime();
@@ -100,6 +104,9 @@ console.error = function (...args) {
 
     originalError(colors.FgRed, `[ERROR]`, colors.Reset, ...args);
 };
+
+Array.range = (n) => [...Array(n).keys()];
+
 if(process.env.prod){
     console.info('Run in production')
 } else {
@@ -118,11 +125,12 @@ class CQD {
              * @type {Discord.Client}
              */
             global.client = new Discord.Client({ intents: 3276799, partials: ['MESSAGE', 'REACTION'] });
-            global.client.login(process.env.discord_cqd_token);
             global.channels = JSON.parse(fs.readFileSync('channels.json', 'utf-8'));
 
-            require('./Prototypes/GuildMember');
             require('./Prototypes/Client');
+            require('./Prototypes/GuildMember');
+            require('./Prototypes/Guild');
+            require('./Prototypes/Events');
             require('./Exports/__discord');
 
             //Import triggers
@@ -142,9 +150,10 @@ class CQD {
             const commandHandler = new CommandHandler();
             commandHandler.loadCommands();
             commandHandler.deployCommands();
+
+            global.client.login(process.env.discord_cqd_token);
         } catch (err) {
-            const functionName = arguments.callee.name;
-            console.error(`${__filename} - Line ${__line} (${functionName}): Error executing command:`, err);
+            console.error(`${__filename} - Line ${__line} (constructor): `, err);
         }
     }
 }

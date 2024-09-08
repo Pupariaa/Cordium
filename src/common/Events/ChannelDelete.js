@@ -1,13 +1,19 @@
 //@ts-check
 'use strict';
 require('puparia.getlines.js');
+const reportEvent = Events.createReportEvent(__filename);
 
-global.client.on('channelDelete', async (channel) => {
-    if (channel.guild.id !== global.guild.id) return;
+const event = Events.ChannelDelete;
+
+global.client.on(event, async (channel) => {
+    if (global.guild.id !== channel.guild.id) return;
+    let eventName = String(event);
+
     try {
-        console.info(`${__filename} - Line ${__line} (channelDelete): Channel deleted: ${channel.name} (ID: ${channel.id}).`);
-    } catch (error) {
-        console.error(`${__filename} - Line ${__line} (channelDelete): Error handling channel deletion:`, error);
+        const latestAuditLog = await global.guild.latestAuditLog();
+        reportEvent(__line, eventName, 'author.name', latestAuditLog?.executor.tag, 'channel.type', global.guild.channelTypeStr(channel.type), 'channel.name', channel.name);
+    } catch (err) {
+        console.error(`${__filename} - Line ${__line} (${eventName}): `, err);
     }
 });
 

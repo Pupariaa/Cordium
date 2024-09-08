@@ -1,31 +1,33 @@
 //@ts-check
 'use strict';
 require('puparia.getlines.js');
+const reportEvent = Events.createReportEvent(__filename);
 
-global.client.on('messageUpdate', async (oldMessage, newMessage) => {
-    if (newMessage.guild.id !== global.guild.id) return;
+const event = Events.MessageUpdate;
+
+global.client.on(event, async (oldMessage, newMessage) => {
+    if (global.guild.id !== newMessage.guild.id) return;
+    let eventName = String(event);
+
     try {
-        if (oldMessage.partial || newMessage.partial) {
-            console.warn(`${__filename} - Line ${__line} (messageUpdate): Cannot fetch details for partial messages.`);
-            return;
-        }
-        if (oldMessage.author?.bot || newMessage.author?.bot) {
-            console.info(`${__filename} - Line ${__line} (messageUpdate): Message updated by a bot, ignoring.`);
-            return;
-        }
+        // if (oldMessage.partial || newMessage.partial) {
+        //     console.warn(`${__filename} - Line ${__line} (${eventName}): Cannot fetch details for partial messages.`);
+        //     return;
+        // }
+        // if (oldMessage.author?.bot || newMessage.author?.bot) {
+        //     console.info(`${__filename} - Line ${__line} (${eventName}): Message updated by a bot, ignoring.`);
+        //     return;
+        // }
 
-        if (oldMessage.content === newMessage.content) {
-            console.info(`${__filename} - Line ${__line} (messageUpdate): Message content unchanged, no action needed.`);
-            return;
-        }
+        // if (oldMessage.content === newMessage.content) {
+        //     console.info(`${__filename} - Line ${__line} (${eventName}): Message content unchanged, no action needed.`);
+        //     return;
+        // }
 
-        console.info(`${__filename} - Line ${__line} (messageUpdate): Message updated in channel #${newMessage.channel.name} by ${newMessage.author.tag}.`);
-        console.info(`${__filename} - Line ${__line} (messageUpdate): Old Content: "${oldMessage.content}"`);
-        console.info(`${__filename} - Line ${__line} (messageUpdate): New Content: "${newMessage.content}"`);
-
-        await handleUpdatedMessageLog(oldMessage, newMessage);
-    } catch (error) {
-        console.error(`${__filename} - Line ${__line} (messageUpdate): Error handling message update event:`, error);
+        reportEvent(__line, eventName, 'author.name', newMessage.author.tag, 'channel', newMessage.channel.name, 'content', oldMessage.content, '->', newMessage.content);
+        // await handleUpdatedMessageLog(oldMessage, newMessage);
+    } catch (err) {
+        console.error(`${__filename} - Line ${__line} (${eventName}): `, err);
     }
 });
 
@@ -34,12 +36,12 @@ global.client.on('messageUpdate', async (oldMessage, newMessage) => {
  * @param {import('discord.js').Message} oldMessage - The original message object.
  * @param {import('discord.js').Message} newMessage - The updated message object.
  */
-async function handleUpdatedMessageLog(oldMessage, newMessage) {
-    try {
+// async function handleUpdatedMessageLog(oldMessage, newMessage) {
+//     try {
 
-    } catch (error) {
-        console.error(`${__filename} - Line ${__line} (handleUpdatedMessageLog): Error in handling updated message log:`, error);
-    }
-}
+//     } catch (error) {
+//         console.error(`${__filename} - Line ${__line} (handleUpdatedMessageLog): Error in handling updated message log:`, error);
+//     }
+// }
 
 module.exports = {};

@@ -1,4 +1,5 @@
-const { Collection, Client } = require('discord.js');
+'use strict';
+const { Client, Collection } = require('discord.js');
 
 Client.prototype.registerCommand = function(commandName, callback) {
     if (!this.commands) {
@@ -14,7 +15,6 @@ Client.prototype.executeCommand = function(commandName, message, args) {
         message.reply('Command not found.');
     }
 };
-
 
 Client.prototype.findChannelByName = function(channelName) {
     return global.guild.channels.cache.find(channel => channel.name === channelName) || null;

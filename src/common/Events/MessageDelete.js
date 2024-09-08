@@ -1,16 +1,22 @@
 //@ts-check
 'use strict';
 require('puparia.getlines.js');
+const reportEvent = Events.createReportEvent(__filename);
 
-global.client.on('messageDelete', async (message) => {
-    if (message.guild.id !== global.guild.id) return;
+const event = Events.MessageDelete;
+
+global.client.on(event, async (message) => {
+    if (global.guild.id !== message.guild.id) return;
+    let eventName = String(event);
+
     try {
         if (message.partial) {
-            console.warn(`${__filename} - Line ${__line} (messageDelete): Deleted message is partial, cannot fetch details.`);
-            return;
+            eventName += '.partial';
         }
-    } catch (error) {
-        console.error(`${__filename} - Line ${__line} (messageDelete): Error handling message delete event:`, error);
+        const latestAuditLog = await global.guild.latestAuditLog();
+        reportEvent(__line, eventName, 'author.name', latestAuditLog?.executor.tag, 'target.name', message.author.tag,'channel.name', message.channel.name, 'content', message.content);
+    } catch (err) {
+        console.error(`${__filename} - Line ${__line} (${eventName}): `, err);
     }
 });
 

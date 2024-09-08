@@ -1,3 +1,4 @@
+'use strict';
 global.triggers = global.triggers || {};
 
 global.triggers.nameOfTrigger = async function nameOfTrigger(message) {

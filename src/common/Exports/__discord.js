@@ -1,3 +1,4 @@
+'use strict';
 const Discord = require('discord.js');
 
   global.GatewayIntentBits = Discord.GatewayIntentBits;
@@ -12,5 +13,7 @@ const Discord = require('discord.js');
   global.TextInputBuilder = Discord.TextInputBuilder;
   global.TextInputStyle = Discord.TextInputStyle;
   global.GuildMember = Discord.GuildMember;
+  global.Guild = Discord.Guild;
+  global.Events = Discord.Events;
 
 module.exports  = {}

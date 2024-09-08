@@ -1,6 +1,6 @@
-import { Client } from 'discord.js';
-
 declare module 'discord.js' {
-    interface Client {
-    }
+    // interface Client {
+    // }
+    // interface Events {
+    // }
 }

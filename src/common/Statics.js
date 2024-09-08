@@ -3,6 +3,8 @@
 const fs = require('fs');
 require('puparia.getlines.js')
 
+const { AuditLogEvent } = require('discord.js');
+
 /*!
  * UNFMLA-CQD Project
  * Copyright (c) 2024 Puparia
@@ -39,17 +41,6 @@ class BaseChannel {
             return null;
         }
     }
-
-    /**
-     * Returns the ID of the channel based on its name.
-     * @param {string} channelName - The name of the channel to retrieve the ID for.
-     * @param {Object} dic - Dictionary containing channel names and IDs.
-     * @returns {Promise<string|null>} - The channel ID or null if it does not exist.
-     */
-    async getId(channelName, dic) {
-        const r = dic[channelName];
-        return r ? r : null;
-    }
 }
 
 class TextChannels extends BaseChannel {
@@ -64,7 +55,35 @@ class TextChannels extends BaseChannel {
      * @returns {Promise<Object|null>} - The text channel object or null if it does not exist.
      */
     async get(channelName) {
-        return this.getChannel(await this.getId(channelName, this.channels));
+        return this.getChannel(this.channels[channelName]);
+    }
+
+    /**
+     * Fetch all messages from a channel.
+     * @param {Object} channel - The name of the channel to fetch from.
+     * @returns {Promise<Object[] | null>} - The messages fetched. If the channel does not exist, or is not a text channel, returns null.
+     */
+    async fetchAllMessages(channel) {
+        const functionName = 'fetchAllMessages';
+        if (!channel || channel.type !== 0) {
+            console.warn(`${__filename} - Line ${__line} (${functionName}): Channel ${channel.name} is not a text channel.`);
+            return null;
+        }
+        let lastId = null;
+        let fetchedMessages = [];
+        const r = [];
+        do {
+            fetchedMessages = Array.from((await channel.messages.fetch({ limit: 100, before: lastId })).values());
+            if (fetchedMessages.length === 0) {
+                break;
+            }
+            fetchedMessages.sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+            lastId = fetchedMessages[0].id;
+            for (let i = fetchedMessages.length - 1; i >= 0; i--) {
+                r.unshift(fetchedMessages[i]);
+            }
+        } while (fetchedMessages.length === 100);
+        return r;
     }
 }
 
@@ -80,7 +99,7 @@ class VoiceChannels extends BaseChannel {
      * @returns {Promise<Object|null>} - The voice channel object or null if it does not exist.
      */
     async get(channelName) {
-        return this.getChannel(await this.getId(channelName, this.channels));
+        return this.getChannel(this.channels[channelName]);
     }
 }
 
@@ -96,17 +115,15 @@ class ForumChannels extends BaseChannel {
      * @returns {Promise<Object|null>} - The forum channel object or null if it does not exist.
      */
     async get(channelName) {
-        return this.getChannel(await this.getId(channelName, this.channels));
+        return this.getChannel(this.channels[channelName]);
     }
 }
 
 class Channels {
     constructor() {
-        this.channels = {
-            text: new TextChannels(),
-            voice: new VoiceChannels(),
-            forum: new ForumChannels()
-        };
+        this.text = new TextChannels();
+        this.voice = new VoiceChannels();
+        this.forum = new ForumChannels();
     }
 
     /**
@@ -115,9 +132,9 @@ class Channels {
      * @returns {Promise<Object|null>} - The channel or null object if it does not exist.
      */
     async get(channelName) {
-        let channel = await this.channels.text.get(channelName);
-        if (!channel) channel = await this.channels.voice.get(channelName);
-        if (!channel) channel = await this.channels.forum.get(channelName);
+        let channel = await this.text.get(channelName);
+        if (!channel) channel = await this.voice.get(channelName);
+        if (!channel) channel = await this.forum.get(channelName);
         return channel;
     }
 
@@ -134,12 +151,13 @@ class Channels {
      * @returns {Promise<Object|null>} - The message or thread sent, or null if it does not exist.
      */
     async send(channelName, data) {
+        const functionName = 'send';
         const channel = await this.get(channelName);
         if (channel) {
             try {
                 return await channel.send(data);
             } catch (error) {
-                console.error(`${__filename} - Line ${__line} (send): Failed to send message to channel "${channelName}: `, error);
+                console.error(`${__filename} - Line ${__line} (${functionName}): Failed to send message to channel "${channelName}: `, error);
                 return null;
             }
         }
@@ -147,51 +165,41 @@ class Channels {
     }
 
     /**
-     * Fetch all messages from a channel.
-     * @param {Object} channel - The name of the channel to fetch from.
-     * @returns {Promise<Object[] | null>} - The messages fetched. If the channel does not exist, or is not a text channel, returns null.
-     */
-    async fetchAll(channel) {
-        if (!channel || channel.type !== 0) {
-            return null;
-        }
-        let lastId = null;
-        let fetchedMessages = [];
-        const result = [];
-        do {
-            fetchedMessages = Array.from((await channel.messages.fetch({ limit: 100, before: lastId })).values());
-            if (fetchedMessages.length === 0) {
-                break;
-            }
-            fetchedMessages.sort((a, b) => a.createdTimestamp - b.createdTimestamp);
-            lastId = fetchedMessages[0].id;
-            for (let i = fetchedMessages.length - 1; i >= 0; i--) {
-                result.unshift(fetchedMessages[i]);
-            }
-        } while (fetchedMessages.length === 100);
-        return result;
-    }
-
-    /**
      * Rename a channel.
-     * @param {TextChannelNames} channelName - The name of the channel to rename.
+     * @param {Object} channel - The channel to rename.
      * @param {string} newName - The new name for the channel.
      * @returns {Promise<Object|null>} - The channel object, or null if it does not exist or if the rename failed.
      */
-    async rename(channelName, newName) {
-        const channel = await this.get(channelName);
+    async rename(channel, newName) {
+        const functionName = 'rename';
+        const channelName = channel.name;
         if (channel) {
             try {
                 await channel.setName(newName);
-                console.info(`${__filename} - Line ${__line} (rename): Channel "${channelName}" renamed to "${newName}".`);
+                console.info(`${__filename} - Line ${__line} (${functionName}): Channel "${channelName}" renamed to "${newName}".`);
 
                 return channel;
             } catch (error) {
-                console.error(`${__filename} - Line ${__line} (rename): Failed to rename channel "${channelName}":`, error);
+                console.error(`${__filename} - Line ${__line} (${functionName}): Failed to rename channel "${channelName}":`, error);
                 return null;
             }
         }
-        console.error(`${__filename} - Line ${__line} (rename): Channel "${channelName}" not found.`);
+        console.error(`${__filename} - Line ${__line} (${functionName}): Channel "${channelName}" not found.`);
+        return null;
+    }
+
+    /**
+     * Fetch the creator of a channel.
+     * @param {Object} channel - The channel to get the creator for.
+     * @returns {GuildMember|null} - The creator of the channel, or null if the audit log is not available or if the channel does not exist.
+     */
+    async getCreator(channel) {
+        // const functionName = 'getCreator';
+        let auditLogs = await global.guild.fetchAllAuditLogs();
+        if (!auditLogs) return null;
+        for (const entry of auditLogs) {
+            if (entry.action === AuditLogEvent.ChannelCreate && entry.target.id === channel.id) return entry.executor;
+        }
         return null;
     }
 }

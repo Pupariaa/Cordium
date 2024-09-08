@@ -3,15 +3,15 @@
 require('puparia.getlines.js');
 const reportEvent = Events.createReportEvent(__filename);
 
-const event = Events.ChannelUpdate;
+const event = Events.GuildBanRemove;
 
-global.client.on(event, async (oldChannel, newChannel) => {
-    if (global.guild.id !== newChannel.guild.id) return;
+global.client.on(event, async (ban) => {
+    if (global.guild.id !== ban.guild.id) return;
     let eventName = String(event);
 
     try {
         const latestAuditLog = await global.guild.latestAuditLog();
-        reportEvent(__line, eventName, 'author.name', latestAuditLog?.executor.tag, 'channel.type', global.guild.channelTypeStr(oldChannel.type), 'old.channel.name', oldChannel.nam, '->', newChannel.name);
+        reportEvent(__line, eventName, 'author.name', latestAuditLog?.executor.tag, 'user.name', ban.user.tag, 'reason', ban.reason, 'partial', ban.partial);
     } catch (err) {
         console.error(`${__filename} - Line ${__line} (${eventName}): `, err);
     }

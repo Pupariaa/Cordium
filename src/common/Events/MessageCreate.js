@@ -1,6 +1,8 @@
 //@ts-check
 'use strict';
 require('puparia.getlines.js');
+const reportEvent = Events.createReportEvent(__filename);
+
 const { Collection, EmbedBuilder } = require('discord.js');
 const fs = require('fs');
 const vm = require('vm');
@@ -11,19 +13,20 @@ const TIME_LIMIT = 7000;
 const DELETE_TIME_LIMIT = 30000;
 const restrictedUsers = new Set();
 
-global.client.on('messageCreate', async (message) => {
-    if (message.guild.id !== global.guild.id) return;
-    try {
-        if (message.member?.isBot()) return;
-        // if (message.guildId !== global.guildId) return;
+const event = Events.MessageCreate;
 
-        console.info(`${__filename} - Line ${__line} (messageCreate): Message created by ${message.author.tag} in #${message.channel.name}.`);
+global.client.on(event, async (message) => {
+    if (global.guild.id !== message.guild.id) return;
+    let eventName = String(event);
+
+    try {
+        reportEvent(__line, eventName, 'author.name', message.author.tag, 'channel.name', message.channel.name, 'content', message.content);
 
         try {
             //CLIMarker#06
             await global.triggers.nameOfTrigger(message)
         } catch (err) {
-            console.error(`${__filename} - Line ${__line} (messageCreate): Error in handling triggers:`, err);
+            console.error(`${__filename} - Line ${__line} (${eventName}): Error in triggers: `, err);
         }
 
         // Sandbox execution
@@ -43,9 +46,8 @@ global.client.on('messageCreate', async (message) => {
             const context = vm.createContext(sandbox);
             try {
                 vm.runInContext(code, context);
-                console.info(`${__filename} - Line ${__line} (messageCreate): Sandbox code executed.`);
             } catch (err) {
-                console.error(`${__filename} - Line ${__line} (messageCreate): Error executing sandbox code:`, err);
+                console.error(`${__filename} - Line ${__line} (${eventName}): Error executing sandbox code: `, err);
             }
         }
 
@@ -58,13 +60,13 @@ global.client.on('messageCreate', async (message) => {
         userMessages.get(userId).push(now);
 
         if (userMessages.get(userId).length > SPAM_THRESHOLD) {
-            console.warn(`${__filename} - Line ${__line} (messageCreate): User ${message.author.tag} exceeded spam threshold.`);
+            console.warn(`${__filename} - Line ${__line} (${eventName}): User ${message.author.tag} exceeded spam threshold.`);
             const guildMember = message.guild.members.cache.get(userId);
             if (guildMember) {
                 const restrictedRole = message.guild.roles.cache.get(process.env.restrictRole);
                 if (restrictedRole) {
                     await guildMember.roles.add(restrictedRole);
-                    console.info(`${__filename} - Line ${__line} (messageCreate): Restricted role added to ${message.author.tag}.`);
+                    console.info(`${__filename} - Line ${__line} (${eventName}): Restricted role added to ${message.author.tag}.`);
                     message.channel.send(`${message.author} a été restreint pour spam.`);
                     const spamMessages = await message.channel.messages.fetch({ limit: 100 });
                     const userSpamMessages = spamMessages.filter(
@@ -73,7 +75,7 @@ global.client.on('messageCreate', async (message) => {
 
                     userSpamMessages.forEach(msg => msg.delete().catch(error => {
                         if (error.code !== 10008) {
-                            console.error(`${__filename} - Line ${__line} (messageCreate): Failed to delete message:`, error);
+                            console.error(`${__filename} - Line ${__line} (${eventName}): Failed to delete message: `, error);
                         }
                     }));
 
@@ -86,13 +88,13 @@ global.client.on('messageCreate', async (message) => {
 
                     global.Channel.send('staff', { embeds: [embed] });
                     restrictedUsers.add(userId);
-                    console.info(`${__filename} - Line ${__line} (messageCreate): Spam messages deleted and logged for ${message.author.tag}.`);
+                    console.info(`${__filename} - Line ${__line} (${eventName}): Spam messages deleted and logged for ${message.author.tag}.`);
                 }
             }
             userMessages.delete(userId);
         }
-    } catch (e) {
-        console.error(`${__filename} - Line ${__line} (messageCreate): Error in messageCreate event handler:`, e);
+    } catch (err) {
+        console.error(`${__filename} - Line ${__line} (${eventName}): `, err);
     }
 });
 
