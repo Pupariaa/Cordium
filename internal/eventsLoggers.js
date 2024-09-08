@@ -43,8 +43,9 @@ const getAuditExecutor = async (guild, actionType, targetId) => {
             limit: 1,
             type: actionType,
         });
-        const auditEntry = fetchedLogs.entries.find(entry => entry.target.id === targetId);
-        return auditEntry ? auditEntry.executor.id : null;
+        console.log(fetchedLogs.entries.values().next().value.executorId)
+
+        return fetchedLogs.entries.values().next().value.executorId || null;
     } catch (error) {
         console.error(`Error fetching audit logs: ${error}`);
         return 'Unknown';
@@ -104,13 +105,14 @@ global.client.on('voiceStateUpdate', async (oldState, newState) => {
 
         });
     } else if (oldState.channelId && !newState.channelId) {
-        const executorId = await getAuditExecutor(oldState.guild, 32, oldState.channelId);
+        const executorId = await getAuditExecutor(oldState.guild, 27, oldState.id);
+
         global.Database.addVoiceStateUpdate({
             userId: oldState.id,
             oldChannelId: oldState.channelId,
             newChannelId: null,
             datetime: Date.now(),
-            executorId: executorId || oldState.member.id,
+            executorId: executorId,
             oldServerDeaf: oldState.serverDeaf,
             newServerDeaf:newState.serverDeaf,
             oldServerMute:oldState.serverMute,
@@ -127,7 +129,7 @@ global.client.on('voiceStateUpdate', async (oldState, newState) => {
 
         });
     } else if (oldState.channelId !== newState.channelId) {
-        const executorId = await getAuditExecutor(oldState.guild, 32, oldState.channelId);
+        const executorId = await getAuditExecutor(oldState.guild, 26, oldState.id);
 
         global.Database.addVoiceStateUpdate({
             userId: oldState.id,
@@ -150,7 +152,7 @@ global.client.on('voiceStateUpdate', async (oldState, newState) => {
             eventType: 2
         });
     } else if (oldState.serverDeaf !== newState.serverDeaf || oldState.serverMute !== newState.serverMute || oldState.selfMute !== newState.selfMute || oldState.selfDeaf !== newState.selfDeaf || oldState.streaming !== newState.streaming || oldState.selfVideo !== newState.selfVideo) {
-        const executorId = await getAuditExecutor(oldState.guild, 32, oldState.channelId);
+        const executorId = await getAuditExecutor(oldState.guild, 24, oldState.id);
 
         global.Database.addVoiceStateUpdate({
             userId: oldState.id,
@@ -195,13 +197,16 @@ global.client.on('guildBanAdd', async ban => {
     });
 });
 
-global.client.on('inviteCreate', invite => {
+global.client.on('inviteCreate',async invite => {
+    const executorId = await getAuditExecutor(invite.guild, 40, invite.code);
+
     global.Database.addInviteCreate({
-        userid: invite.inviter ? invite.inviter.id : 'Unknown',
+        userid: invite.inviter ? invite.inviter.id : null,
         code: invite.code,
         channelid: invite.channel.id,
         maxUses: invite.maxUses,
         expiresAt: invite.expiresTimestamp,
+        executorId: executorId
     });
 });
 
