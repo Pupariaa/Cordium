@@ -9,7 +9,7 @@ const filePath = path.resolve(__dirname, 'CommandManager.js');
 
 class CommandHandler {
     constructor() {
-        console.info(`${filePath} - Line ${__line} (constructor): Initializing CommandHandler.`);
+        console.info(`START: Initializing CommandHandler.`);
         this.client = global.client;
         this.commands = new Collection();
         this.commandsPath = path.join(__dirname, 'handlers');  // Use path.join for cross-platform compatibility
@@ -26,7 +26,7 @@ class CommandHandler {
             // Initialize client.commands if it doesn't exist
             if (!this.client.commands) {
                 this.client.commands = new Collection();
-                console.info(`START: Initialized client.commands collection`);
+                console.success(`START: Initialized client.commands collection`);
             }
 
             // Read command files from the handlers directory
@@ -36,7 +36,7 @@ class CommandHandler {
                     const command = require(path.join(this.commandsPath, file));
                     if ('data' in command && 'execute' in command) {
                         this.client.commands.set(command.data.name, command);
-                        console.info(`START: Command loaded: ${command.data.name}`);
+                        console.success(`START: Command loaded: ${command.data.name}`);
                     } else {
                         console.warn(`START: The command at ${file} is missing a required "data" or "execute" property.`);
                     }
@@ -46,7 +46,7 @@ class CommandHandler {
             }
 
         } catch (error) {
-            console.error(`START:  Error loading commands:`, error);
+            console.error(`START: Error loading commands:`, error);
         }
     }
 
@@ -66,7 +66,7 @@ class CommandHandler {
                 Routes.applicationGuildCommands(process.env.discord_cqd_cid, process.env.discord_guid),
                 { body: commands }
             );
-            console.info(`START:  ${data.length} commands deployed successfully.`);
+            console.success(`START: ${data.length} commands deployed successfully.`);
         } catch (error) {
             console.error(`START: : Error updating commands:`, error);
         }
