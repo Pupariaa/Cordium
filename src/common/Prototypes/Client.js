@@ -133,6 +133,11 @@ Client.prototype.getMemberCount = function (includeBots = false) {
         updateMemberCount(includeBots);
     });
 
+    /**
+     * Updates the member count of the client by filtering the guild members by bots
+     * @param {boolean} includeBots - Whether to include bots in the count
+     * @private
+     */
     function updateMemberCount(includeBots) {
         const members = global.guild.members.cache;
         this.memberCount = includeBots
