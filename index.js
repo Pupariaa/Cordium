@@ -21,7 +21,7 @@ global.client.on('ready', async () => {
     try {
         // Event Loggers
         require('./eventsLoggers');
-        console.info(`${__filename} - Line ${__line} (ready): Discord bot is started.`);
+        console.success(`START: Client connected`);
 
         // Initialize invite cache
         global.client.invitesCache = new Map();
@@ -29,13 +29,13 @@ global.client.on('ready', async () => {
         // Get guild
         global.guild = global.client.guilds.cache.get(process.env.discord_guid);
         if (!global.guild) {
-            console.error(`${__filename} - Line ${__line} (ready): Guild not found. Check the "discord_guid" in config.env.`);
+            console.error(`START: Guild not found. Check the "discord_guid" in config.env.`);
             process.exit(1);
         }
         
         const invites = await global.guild.invites.fetch();
         invites.forEach(invite => global.client.invitesCache.set(invite.code, invite.uses));
-        console.info(`${__filename} - Line ${__line} (ready): Invites cache initialized.`);
+        console.success(`START: Invites cache initialized.`);
 
         // Load all event handlers
         [
@@ -66,9 +66,9 @@ global.client.on('ready', async () => {
         ].forEach(eventPath => {
             try {
                 require(eventPath);
-                console.info(`${__filename} - Line ${__line} (ready): Loaded event handler from ${eventPath}.`);
+                console.success(`START: Loaded event handler from ${eventPath}.`);
             } catch (error) {
-                console.error(`${__filename} - Line ${__line} (ready): Error loading event handler from ${eventPath}.`, error);
+                console.error(`START: Error loading event handler from ${eventPath}.`, error);
             }
         });
 
@@ -98,6 +98,6 @@ global.client.on('ready', async () => {
         });
 
     } catch (error) {
-        console.error(`${__filename} - Line ${__line} (ready): Error during bot initialization.`, error);
+        console.error(`START: Error during bot initialization.`, error);
     }
 });
