@@ -7,7 +7,6 @@ Guild.prototype.fetchAllAuditLogs = async function() {
     const r = [];
     do {
         fetchedAuditLogs = Array.from((await this.fetchAuditLogs({ limit: 100, before: lastId })).entries);
-        console.log(fetchedAuditLogs.length);
         if (fetchedAuditLogs.length === 0) {
             break;
         }
