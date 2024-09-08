@@ -64,6 +64,10 @@ global.colors = colors;
 const originalLog = console.log;
 const originalInfo = console.info;
 const originalError = console.error;
+const originalWarn = console.warn;
+const originalSuccess = console.log;
+
+
 
 console.log = function (...args) {
     const formattedDate = getFormattedDate();
@@ -105,7 +109,32 @@ console.error = function (...args) {
     originalError(colors.FgRed, `[ERROR]`, colors.Reset, ...args);
 };
 
-Array.range = (n) => [...Array(n).keys()];
+console.warn = function (...args) {
+    const formattedDate = getFormattedDate();
+    const formattedTime = getFormattedTime();
+    const logsDir = path.join(__dirname, 'logs');
+    if (!fs.existsSync(logsDir)) {
+        fs.mkdirSync(logsDir);
+    }
+    const logFilePath = path.join(logsDir, `${formattedDate}.log`);
+    const message = `${formattedTime} WARN: ${args.join(':')}\n`;
+    fs.appendFileSync(logFilePath, message, 'utf8');
+
+    originalWarn(colors.FgYellow, `[WARN]`, colors.Reset, ...args);
+};
+console.success = function (...args) {
+    const formattedDate = getFormattedDate();
+    const formattedTime = getFormattedTime();
+    const logsDir = path.join(__dirname, 'logs');
+    if (!fs.existsSync(logsDir)) {
+        fs.mkdirSync(logsDir);
+    }
+    const logFilePath = path.join(logsDir, `${formattedDate}.log`);
+    const message = `${formattedTime} GOOD: ${args.join(':')}\n`;
+    fs.appendFileSync(logFilePath, message, 'utf8');
+
+    originalSuccess(colors.FgGreen, `[GOOD]`, colors.Reset, ...args);
+};
 
 if(process.env.prod){
     console.info('Run in production')
@@ -141,10 +170,12 @@ class CQD {
             const { Channels } = require('./Statics');
             /** @type {import('../common/Statics').Channels} */
             global.Channel = new Channels();
-
+            const Database = require('./Database');
+            /** @type {import('../common/Database')} */
+            global.Database = new Database();
             const AttachmentManager = require('./AttachmentManager');
 
-            /** @type {import('../common/AttachmentManager').AttachmentManager} */
+            /** @type {import('../common/AttachmentManager')} */
             global.Attachment = new AttachmentManager();
             
             const commandHandler = new CommandHandler();
