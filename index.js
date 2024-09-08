@@ -20,7 +20,7 @@ process.on('unhandledRejection', (reason, promise) => {
 global.client.on('ready', async () => {
     try {
         // Event Loggers
-        require('./eventsLoggers');
+        require('./internal/eventsLoggers');
         console.success(`START: Client connected`);
 
         // Initialize invite cache
