@@ -1,14 +1,15 @@
-'use strict';
-require('puparia.getlines.js');
 const fs = require('fs');
 const path = require('path');
 const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v10');
 const { Collection } = require('discord.js');
+require('puparia.getlines.js');
+const filePath = path.resolve(__dirname, 'CommandManager.js');
+
 
 class CommandHandler {
     constructor() {
-        console.info(`${__filename} - Line ${__line} (constructor): Initializing CommandHandler.`);
+        console.info(`${filePath} - Line ${__line} (constructor): Initializing CommandHandler.`);
         this.client = global.client;
         this.commands = new Collection();
         this.commandsPath = path.join(__dirname, 'handlers');  // Use path.join for cross-platform compatibility
@@ -20,12 +21,12 @@ class CommandHandler {
      */
     loadCommands() {
         try {
-            console.info(`${__filename} - Line ${__line} (loadCommands): Loading commands.`);
+            console.info(`START: Loading commands`);
 
             // Initialize client.commands if it doesn't exist
             if (!this.client.commands) {
                 this.client.commands = new Collection();
-                console.info(`${__filename} - Line ${__line} (loadCommands): Initialized client.commands collection.`);
+                console.info(`START: Initialized client.commands collection`);
             }
 
             // Read command files from the handlers directory
@@ -35,17 +36,17 @@ class CommandHandler {
                     const command = require(path.join(this.commandsPath, file));
                     if ('data' in command && 'execute' in command) {
                         this.client.commands.set(command.data.name, command);
-                        console.info(`${__filename} - Line ${__line} (loadCommands): Command loaded: ${command.data.name}`);
+                        console.info(`START: Command loaded: ${command.data.name}`);
                     } else {
-                        console.warn(`${__filename} - Line ${__line} (loadCommands): The command at ${file} is missing a required "data" or "execute" property.`);
+                        console.warn(`START: The command at ${file} is missing a required "data" or "execute" property.`);
                     }
                 } catch (error) {
-                    console.error(`${__filename} - Line ${__line} (loadCommands): Error loading command from file ${file}:`, error);
+                    console.error(`START: Error loading command from file ${file}:`, error);
                 }
             }
 
         } catch (error) {
-            console.error(`${__filename} - Line ${__line} (loadCommands): Error loading commands:`, error);
+            console.error(`START:  Error loading commands:`, error);
         }
     }
 
@@ -53,21 +54,21 @@ class CommandHandler {
      * Deploys the commands to the Discord application for a specific guild.
      */
     async deployCommands() {
-        const functionName = 'deployCommands';
+
         const commands = [];
 
         // Convert commands to a format suitable for Discord API
         this.client.commands.forEach(cmd => commands.push(cmd.data.toJSON()));
 
         try {
-            console.info(`${__filename} - Line ${__line} (${functionName}): Deploying commands to Discord API.`);
+            console.info(`START: Deploying commands to Discord API.`);
             const data = await this.rest.put(
                 Routes.applicationGuildCommands(process.env.discord_cqd_cid, process.env.discord_guid),
                 { body: commands }
             );
-            console.info(`${__filename} - Line ${__line} (${functionName}): ${data.length} commands deployed successfully.`);
+            console.info(`START:  ${data.length} commands deployed successfully.`);
         } catch (error) {
-            console.error(`${__filename} - Line ${__line} (${functionName}): Error updating commands:`, error);
+            console.error(`START: : Error updating commands:`, error);
         }
     }
 }
