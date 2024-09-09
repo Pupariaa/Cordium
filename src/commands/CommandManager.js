@@ -56,7 +56,11 @@ class CommandHandler {
         const commands = [];
 
         // Convert commands to a format suitable for Discord API
-        global.client.commands.forEach(cmd => commands.push(cmd.data.toJSON()));
+        for (const cmd of global.client.commands.values()) {
+            if (cmd.data.name !== 'test') {
+                commands.push(cmd.data.toJSON());
+            }
+        }
 
         try {
             console.info(`START: Deploying commands to Discord API.`);

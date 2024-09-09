@@ -22,7 +22,7 @@ module.exports = {
                 content: ''
             };
             for (const cmd of global.client.commands.values()) {
-                if (cmd.data.name !== cmdName) {
+                if (cmd.data.name !== cmdName && cmd.data.name !== 'test') {
                     replyObject.content += `${cmd.data.name} - ${cmd.data.description}\n`;
                 }
             }
