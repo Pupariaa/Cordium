@@ -16,7 +16,7 @@ module.exports = {
         try {
             await interaction.reply('pong')
         } catch (err) {
-            console.error(`${__filename} - Line ${__line} (${functionName}): Error executing command:`, err);
+            console.error(`${__filename} - Line ${__line} (${functionName}): `, err);
         }
     }
 };
