@@ -5,3 +5,4 @@ src/sandbox/index.js
 package-lock.json
 src/common/logs
 channels.json
+est.json
