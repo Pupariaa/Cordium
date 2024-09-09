@@ -30,7 +30,7 @@ async function getVoiceConnectionStatusWithEvents(voiceUpdates) {
         stillConnected: true,
         events: [],
         messages: [],
-        joinedChannelId: event.newChannelId,
+        connectedChannelId: event.newChannelId,
         disconnectedChannelId: null
       };
 
@@ -41,10 +41,10 @@ async function getVoiceConnectionStatusWithEvents(voiceUpdates) {
         connectEvents[userId].stillConnected = false;
         connectEvents[userId].disconnectedChannelId = event.oldChannelId;
 
-        const { joinedChannelId, disconnectedChannelId } = connectEvents[userId];
-        const channelIds = [joinedChannelId];
+        const { connectedChannelId, disconnectedChannelId } = connectEvents[userId];
+        const channelIds = [connectedChannelId];
 
-        if (disconnectedChannelId && disconnectedChannelId !== joinedChannelId) {
+        if (disconnectedChannelId && disconnectedChannelId !== connectedChannelId) {
           channelIds.push(disconnectedChannelId);
         }
 
@@ -84,8 +84,8 @@ async function getVoiceConnectionStatusWithEvents(voiceUpdates) {
 
 
   for (const session of Object.values(connectEvents)) {
-    const { joinedChannelId } = session;
-    const channelIds = [joinedChannelId];
+    const { connectedChannelId } = session;
+    const channelIds = [connectedChannelId];
     if (channelIds.length > 0) {
       const messages = await global.Database.getMessagesBetweenDates(
         session.userId,
