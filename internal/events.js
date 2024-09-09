@@ -2,8 +2,9 @@
 const fs = require('fs');
 const path = require('path');
 const {AuditLogEvent} = require('discord.js')
-
+const reportEvent = Events.createReportEvent(__filename);
 const eventsFile = path.join(__dirname, 'events.json');
+require('puparia.getlines.js');
 
 
 
@@ -70,7 +71,9 @@ global.client.on('guildMemberRemove', member => {
     });
 });
 
-global.client.on('messageCreate', message => {
+global.client.on('messageCreate', async message => {
+    const event = Events.MessageCreate;
+    let eventName = String(event);
     global.Database.addMessageCreate({
         userId: message.author.id,
         messageId: message.id,
@@ -82,6 +85,21 @@ global.client.on('messageCreate', message => {
         isReply: message.reference ? 1 : 0,
         replyToMessageId: message.reference ? message.reference.messageId : null,
     });
+    if (global.guild.id !== message.guild.id) return;
+    reportEvent(__line, eventName, 'author.name', message.author.tag, 'channel.name', message.channel.name, 'content', message.content);
+    try {
+        try {
+            //CLIMarker#06
+            await global.triggers.nameOfTrigger(message)
+        } catch (err) {
+            console.error(`${__filename} - Line ${__line} (${eventName}): Error in triggers: `, err);
+        }
+
+    
+    } catch (err) {
+        console.error(`${__filename} - Line ${__line} (${eventName}): `, err);
+    }
+    require('../src/common/Events/MessageCreate')(message);
 });
 
 global.client.on('voiceStateUpdate', async (oldState, newState) => {
@@ -354,7 +372,6 @@ global.client.on('emojiUpdate', async (oldEmoji, newEmoji) => {
 });
 
 global.client.on('messageReactionAdd', (reaction, user) => {
-    console.log(reaction._emoji)
     global.Database.addMessageReactionAdd({
         reactionId: reaction._emoji.id || 0,
         messageId: reaction.message.id,
