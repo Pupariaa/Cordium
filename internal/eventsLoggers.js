@@ -4,6 +4,9 @@ const path = require('path');
 const {AuditLogEvent} = require('discord.js')
 
 const eventsFile = path.join(__dirname, 'events.json');
+
+
+
 /**
  * Logs an event in the events.json file.
  * @param {string} eventType The type of event to log.
@@ -351,20 +354,25 @@ global.client.on('emojiUpdate', async (oldEmoji, newEmoji) => {
 });
 
 global.client.on('messageReactionAdd', (reaction, user) => {
+    console.log(reaction._emoji)
     global.Database.addMessageReactionAdd({
-        reactionId: reaction.emoji.id,
+        reactionId: reaction._emoji.id || 0,
         messageId: reaction.message.id,
         userId: user.id,
         datetime: Date.now(),
+        name: reaction._emoji.name
+
     });
 });
 
 global.client.on('messageReactionRemove', (reaction, user) => {
     global.Database.addMessageReactionRemove({
-        reactionId: reaction.emoji.id,
+        reactionId: reaction._emoji.id || 0,
         messageId: reaction.message.id,
         userId: user.id,
         datetime: Date.now(),
+        name: reaction._emoji.name
+
     });
 });
 
