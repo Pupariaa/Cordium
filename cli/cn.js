@@ -399,7 +399,7 @@ function createTrigger(triggerDefinition) {
     const triggersDir = path.join(__dirname, '../src/common/Triggers');
     const triggerFilePath = path.join(triggersDir, `${functionName}.js`);
     const typesFilePath = path.join(__dirname, '../types/global.t.ts');
-    const messagesFilePath = path.join(__dirname, '../src/common/Events/Messages.js');
+    const messagesFilePath = path.join(__dirname, '../internal/events.js');
 
     console.log(`Creating trigger '${functionName}'...`);
 
@@ -448,9 +448,9 @@ function createTrigger(triggerDefinition) {
             `${messageMarker}\n    await global.triggers.${functionName}(message);`
         );
         fs.writeFileSync(messagesFilePath, messagesContent, 'utf8');
-        console.log(`Trigger call '${functionName}' added to Messages.js.`);
+        console.log(`Trigger call '${functionName}' added to Events.`);
     } else {
-        console.log(`Trigger call '${functionName}' already exists in Messages.js.`);
+        console.log(`Trigger call '${functionName}' already exists in Events`);
     }
 }
 
