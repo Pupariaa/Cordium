@@ -79,7 +79,7 @@ console.log = function (...args) {
     const logFilePath = path.join(logsDir, `${formattedDate}.log`);
     const message = `${formattedTime} LOG: ${args.join(':')}\n`;
     fs.appendFileSync(logFilePath, message, 'utf8');
-    originalLog(colors.FgGreen, `[LOG]`, colors.Reset, ...args);
+    originalLog(colors.FgBlue, `${formattedTime} [LOG]`, colors.Reset, ...args);
 };
 
 console.info = function (...args) {
@@ -92,7 +92,7 @@ console.info = function (...args) {
     const logFilePath = path.join(logsDir, `${formattedDate}.log`);
     const message = `${formattedTime} INFO: ${args.join(':')}\n`;
     fs.appendFileSync(logFilePath, message, 'utf8');
-    originalInfo(colors.FgCyan, `[INFO]`, colors.Reset, ...args);
+    originalInfo(colors.FgCyan, `${formattedTime} [INFO]`, colors.Reset, ...args);
 };
 
 console.error = function (...args) {
@@ -106,7 +106,7 @@ console.error = function (...args) {
     const message = `${formattedTime} ERROR: ${args.join(':')}\n`;
     fs.appendFileSync(logFilePath, message, 'utf8');
 
-    originalError(colors.FgRed, `[ERROR]`, colors.Reset, ...args);
+    originalError(colors.FgRed, `${formattedTime} [ERROR]`, colors.Reset, ...args);
 };
 
 console.warn = function (...args) {
@@ -120,7 +120,7 @@ console.warn = function (...args) {
     const message = `${formattedTime} WARN: ${args.join(':')}\n`;
     fs.appendFileSync(logFilePath, message, 'utf8');
 
-    originalWarn(colors.FgYellow, `[WARN]`, colors.Reset, ...args);
+    originalWarn(colors.FgYellow, `${formattedTime} [WARN]`, colors.Reset, ...args);
 };
 console.success = function (...args) {
     const formattedDate = getFormattedDate();
@@ -133,7 +133,7 @@ console.success = function (...args) {
     const message = `${formattedTime} GOOD: ${args.join(':')}\n`;
     fs.appendFileSync(logFilePath, message, 'utf8');
 
-    originalSuccess(colors.FgGreen, `[GOOD]`, colors.Reset, ...args);
+    originalSuccess(colors.FgGreen, `${formattedTime} [GOOD]`, colors.Reset, ...args);
 };
 
 if(process.env.prod){
