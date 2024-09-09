@@ -12,10 +12,32 @@ const default_handler = (interaction, eventName) => {
 } 
 
 const event = Events.InteractionCreate;
+let eventName = String(event);
+
+function reportChatInputCommand(interaction) {
+    const functionName = 'reportChatInputCommand';
+    eventName += '.chatInputCommand';
+    try {
+        // console.log(JSON.stringify(interaction.options, null, 4));
+        let cmd = `/${interaction.commandName}`;
+        for (const option of interaction.options._hoistedOptions) {
+            switch (option.type) {
+                case 6:
+                    cmd += ` user: @${option.member.displayName}`;
+                    break;
+                default:
+                    console.warn(`${__filename} - Line ${__line} (${functionName}): unsupported option type: ${option.type}`);
+                    break;
+            }
+        }
+        reportEvent(__line, eventName, 'author.name', interaction.user.tag, 'client.name', interaction.client.user.tag, 'channel.name', interaction.channel.name, 'command', cmd);
+    } catch(err) {
+        console.error(`${__filename} - Line ${__line} (${eventName}): `, err);
+    }
+}
 
 global.client.on(event, async (interaction) => {
     if (global.guild.id !== interaction.member.guild.id) return;
-    let eventName = String(event);
 
     if (interaction.isAutocomplete()) {
         eventName += '.autocomplete';
@@ -30,8 +52,7 @@ global.client.on(event, async (interaction) => {
         eventName += '.modalSubmit';
         default_handler(interaction, eventName);
     } else if (interaction.isChatInputCommand()) {
-        eventName += '.chatInputCommand';
-        default_handler(interaction, eventName);
+        reportChatInputCommand(interaction);
     } else if (interaction.isUserContextMenuCommand()) {
         eventName += '.userContextMenuCommand';
         default_handler(interaction, eventName);
