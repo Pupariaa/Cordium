@@ -40,7 +40,7 @@ class Database {
       });
 
 
-      
+
 
   }
 
@@ -117,14 +117,14 @@ class Database {
       executorId: { type: DataTypes.BIGINT, allowNull: true },
     }, { tableName: 'EVENTS_emojiUpdate', timestamps: false });
 
-    // EVENTS_guidBanAdd Table
-    this.EVENTS_guidBanAdd = this.sequelize.define('EVENTS_guidBanAdd', {
+    // EVENTS_guildBanAdd Table
+    this.EVENTS_guildBanAdd = this.sequelize.define('EVENTS_guildBanAdd', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
       userid: { type: DataTypes.BIGINT, allowNull: true },
       reason: { type: DataTypes.STRING(255), allowNull: true },
       datetime: { type: DataTypes.BIGINT, allowNull: true },
       executorId: { type: DataTypes.BIGINT, allowNull: true },
-    }, { tableName: 'EVENTS_guidBanAdd', timestamps: false });
+    }, { tableName: 'EVENTS_guildBanAdd', timestamps: false });
 
     // EVENTS_guildMemberAdd Table
     this.EVENTS_guildMemberAdd = this.sequelize.define('EVENTS_guildMemberAdd', {
@@ -329,11 +329,27 @@ class Database {
       mb_offline: { type: DataTypes.INTEGER, allowNull: true },
       date: { type: DataTypes.BIGINT, allowNull: true },
     }, { tableName: 'STATS_globalServer', timestamps: false });
+
+    //EVENTS_guildMemberUpdate TABLE
+    this.EVENTS_guildMemberUpdate = this.sequelize.define('EVENTS_guildMemberUpdate', {
+      id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+      oldNickname: { type: DataTypes.STRING(64), allowNull: true },
+      newNickname: { type: DataTypes.STRING(64), allowNull: true },
+      oldDisplayName: { type: DataTypes.STRING(64), allowNull: true },
+      newDisplayName: { type: DataTypes.STRING(64), allowNull: true },
+      oldDisplayAvatarURL: { type: DataTypes.STRING(64), allowNull: true },
+      newDisplayAvatarURL: { type: DataTypes.STRING(64), allowNull: true },
+      oldRoles: { type: DataTypes.JSON, allowNull: true },
+      newRoles: { type: DataTypes.JSON, allowNull: true },
+
+
+      date: { type: DataTypes.BIGINT, allowNull: true },
+    }, { tableName: 'EVENTS_guildMemberUpdate', timestamps: false });
   }
 
 
 
-  
+
 
 
 
@@ -436,6 +452,16 @@ class Database {
     await this.addEntry(this.EVENTS_messageCreate, data, 'Message Create');
   }
 
+
+  /**
+   * Adds a new entry to the EVENTS_messageCreate table with the given data, tagged as a 'Guild Member Update' event.
+   * @param {object} data - The data to add to the table.
+   * @return {Promise<void>}
+   */
+  async addGuildMemberUpdate(data) {
+    await this.addEntry(this.EVENTS_guildMemberUpdate, data, 'Guild Member Update');
+  }
+
   /**
    * Adds a new entry to the EVENTS_voiceStateUpdate table.
    * @param {object} data - The data to add to the table.
@@ -455,12 +481,12 @@ class Database {
   }
 
   /**
-   * Adds a new entry to the EVENTS_guidBanAdd table.
+   * Adds a new entry to the EVENTS_guildBanAdd table.
    * @param {object} data - The data to add to the table.
    * @return {Promise<void>}
    */
-  async addGuidBanAdd(data) {
-    await this.addEntry(this.EVENTS_guidBanAdd, data, 'Guild Ban Add');
+  async addGuildBanAdd(data) {
+    await this.addEntry(this.EVENTS_guildBanAdd, data, 'Guild Ban Add');
   }
 
   /**
@@ -546,12 +572,12 @@ class Database {
   }
 
   /**
-   * Adds a new entry to the EVENTS_guidBanAdd table.
+   * Adds a new entry to the EVENTS_guildBanAdd table.
    * @param {object} data - The data to add to the table.
    * @return {Promise<void>}
    */
-  async addGuidBanRemove(data) {
-    await this.addEntry(this.EVENTS_guidBanAdd, data, 'Guild Ban Remove');
+  async addGuildBanRemove(data) {
+    await this.addEntry(this.EVENTS_guildBanAdd, data, 'Guild Ban Remove');
   }
 
   /**
