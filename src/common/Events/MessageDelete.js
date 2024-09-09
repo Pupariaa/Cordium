@@ -4,10 +4,10 @@ require('puparia.getlines.js');
 const reportEvent = Events.createReportEvent(__filename);
 
 const event = Events.MessageDelete;
+let eventName = String(event);
 
 global.client.on(event, async (message) => {
     if (global.guild.id !== message.guild.id) return;
-    let eventName = String(event);
 
     try {
         if (message.partial) {

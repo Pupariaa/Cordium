@@ -4,10 +4,10 @@ require('puparia.getlines.js');
 const reportEvent = Events.createReportEvent(__filename);
 
 const event = Events.MessageUpdate;
+let eventName = String(event);
 
 global.client.on(event, async (oldMessage, newMessage) => {
     if (global.guild.id !== newMessage.guild.id) return;
-    let eventName = String(event);
 
     try {
         // if (oldMessage.partial || newMessage.partial) {

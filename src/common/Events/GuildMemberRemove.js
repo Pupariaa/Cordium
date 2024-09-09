@@ -3,12 +3,13 @@
 require('puparia.getlines.js');
 const reportEvent = Events.createReportEvent(__filename);
 
-const { AuditLogEvent } = require('discord.js');
 const event = Events.GuildMemberRemove;
+let eventName = String(event);
+
+const { AuditLogEvent } = require('discord.js');
 
 global.client.on(event, async (member) => {
     if (global.guild.id !== member.guild.id) return;
-    let eventName = String(event);
 
     try {
         const latestAuditLog = await global.guild.latestAuditLog();

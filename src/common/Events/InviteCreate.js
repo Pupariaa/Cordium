@@ -4,10 +4,10 @@ require('puparia.getlines.js');
 const reportEvent = Events.createReportEvent(__filename);
 
 const event = Events.InviteCreate;
+let eventName = String(event);
 
 global.client.on(event, async (invite) => {
     if (global.guild.id !== invite.guild.id) return;
-    let eventName = String(event);
 
     try {
         const latestAuditLog = await global.guild.latestAuditLog();

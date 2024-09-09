@@ -4,10 +4,10 @@ require('puparia.getlines.js');
 const reportEvent = Events.createReportEvent(__filename);
 
 const event = Events.ChannelUpdate;
+let eventName = String(event);
 
 global.client.on(event, async (oldChannel, newChannel) => {
     if (global.guild.id !== newChannel.guild.id) return;
-    let eventName = String(event);
 
     try {
         const latestAuditLog = await global.guild.latestAuditLog();
