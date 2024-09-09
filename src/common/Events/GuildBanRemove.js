@@ -4,10 +4,10 @@ require('puparia.getlines.js');
 const reportEvent = Events.createReportEvent(__filename);
 
 const event = Events.GuildBanRemove;
+let eventName = String(event);
 
 global.client.on(event, async (ban) => {
     if (global.guild.id !== ban.guild.id) return;
-    let eventName = String(event);
 
     try {
         const latestAuditLog = await global.guild.latestAuditLog();

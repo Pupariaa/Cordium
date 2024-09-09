@@ -2,8 +2,10 @@
 const { SlashCommandBuilder } = require('discord.js');
 require('puparia.getlines.js');
 
-const cmdName = 'ping';
-const cmdDescription = 'ping the bot';
+const wait = require('node:timers/promises').setTimeout;
+
+const cmdName = 'test';
+const cmdDescription = 'test';
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -11,13 +13,20 @@ module.exports = {
         .setDescription(cmdDescription),
 
     /**
-     * Executes the 'ping' command.
+     * Executes the 'test' command.
      * @param {Object} interaction - The interaction object from Discord.js.
      */
     async execute(interaction) {
         const functionName = 'execute';
         try {
-            await interaction.reply(`pong (${Math.round((interaction.createdTimestamp - Date.now())/1000)}ms)`);
+            await interaction.reply({
+                ephemeral: true,
+                content: 'done'
+            });
+
+            await wait(1000);
+
+            interaction.deleteReply();
         } catch (err) {
             console.error(`${__filename} - Line ${__line} (${functionName}): `, err);
         }

@@ -3,6 +3,9 @@
 require('puparia.getlines.js');
 const reportEvent = Events.createReportEvent(__filename);
 
+const event = Events.MessageCreate;
+let eventName = String(event);
+
 const { Collection, EmbedBuilder } = require('discord.js');
 const fs = require('fs');
 const vm = require('vm');
@@ -13,11 +16,8 @@ const TIME_LIMIT = 7000;
 const DELETE_TIME_LIMIT = 30000;
 const restrictedUsers = new Set();
 
-const event = Events.MessageCreate;
-
 global.client.on(event, async (message) => {
     if (global.guild.id !== message.guild.id) return;
-    let eventName = String(event);
 
     try {
         reportEvent(__line, eventName, 'author.name', message.author.tag, 'channel.name', message.channel.name, 'content', message.content);

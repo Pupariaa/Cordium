@@ -40,7 +40,7 @@ const rh = async (req, res) => {
         if (e) {
             const eFolder = e.type === 'private' ? 'private' : 'public';
             const fPath = path.join(__dirname, 'endpoints', eFolder, `${ePath}.js`);
-            console.log(fPath)
+            // console.log(fPath);
             try {
                 if (fs.existsSync(fPath)) {
                     const eHandler = require(fPath);

@@ -101,6 +101,11 @@ class VoiceChannels extends BaseChannel {
     async get(channelName) {
         return this.getChannel(this.channels[channelName]);
     }
+
+    async getMembers(channel) {
+        if (!channel) return null;
+        return Array.from(channel.members.values());
+    }
 }
 
 class ForumChannels extends BaseChannel {

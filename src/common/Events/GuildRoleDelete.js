@@ -4,10 +4,10 @@ require('puparia.getlines.js');
 const reportEvent = Events.createReportEvent(__filename);
 
 const event = Events.GuildRoleDelete;
+let eventName = String(event);
 
 global.client.on(event, async (role) => {
     if (global.guild.id !== role.guild.id) return;
-    let eventName = String(event);
 
     try {
         const latestAuditLog = await global.guild.latestAuditLog();

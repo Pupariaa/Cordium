@@ -4,10 +4,10 @@ require('puparia.getlines.js');
 const reportEvent = Events.createReportEvent(__filename);
 
 const event = Events.GuildRoleUpdate;
+let eventName = String(event);
 
 global.client.on(event, async (oldRole, newRole) => {
     if (global.guild.id !== oldRole.guild.id) return;
-    let eventName = String(event);
 
     try {
         if (JSON.stringify(oldRole) === JSON.stringify(newRole)) return;

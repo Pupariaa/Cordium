@@ -4,10 +4,10 @@ require('puparia.getlines.js');
 const reportEvent = Events.createReportEvent(__filename);
 
 const event = Events.GuildMemberAdd;
+let eventName = String(event);
 
 global.client.on(event, async (member) => {
     if (global.guild.id !== member.guild.id) return;
-    let eventName = String(event);
 
     try {
         reportEvent(__line, eventName, 'user.name', member.user.tag);
@@ -15,6 +15,8 @@ global.client.on(event, async (member) => {
             let count = global.client.getMemberCount(false)
                 //TODO: global.Channel.rename('membercount', ?)
         }
+
+        // ------------------------------------------------------------------
     } catch (err) {
         console.error(`${__filename} - Line ${__line} (${eventName}): `, err);
     }
