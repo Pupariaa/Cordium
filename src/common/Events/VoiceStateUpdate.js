@@ -38,7 +38,7 @@ global.client.on(event, async (oldState, newState) => {
                 // console.log('latestAuditLog.createdTimestamp = ', latestAuditLog.createdTimestamp);
                 // console.log('now = ', now);
                 const DT = Math.abs(latestAuditLog.createdTimestamp - now);
-                console.log(DT, latestAuditLog.extra.count, count);
+                // console.log(DT, latestAuditLog.extra.count, count);
                 // console.log(members);
                 // console.log(state.member);
                 // console.log(latestAuditLog);

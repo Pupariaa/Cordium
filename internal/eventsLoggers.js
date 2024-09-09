@@ -43,7 +43,7 @@ const getAuditExecutor = async (guild, actionType, targetId) => {
             limit: 1,
             type: actionType,
         });
-        console.log(fetchedLogs.entries.values().next().value.executorId)
+        // console.log(fetchedLogs.entries.values().next().value.executorId);
 
         return fetchedLogs.entries.values().next().value.executorId || null;
     } catch (error) {
