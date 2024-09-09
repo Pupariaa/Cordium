@@ -3,7 +3,9 @@ const { SlashCommandBuilder, AttachmentBuilder } = require('discord.js');
 require('puparia.getlines.js');
 
 const wait = require('node:timers/promises').setTimeout;
+
 const cmdName = 'search';
+const cmdDescription = 'Run a search and report matches';
 
 function get_content(msg) {
     return [msg.content];
@@ -174,7 +176,7 @@ async function search(regex, types = null, channelsName = null) {
 module.exports = {
     data: new SlashCommandBuilder()
     .setName(cmdName)
-    .setDescription(`Run a search and report matches`)
+    .setDescription(cmdDescription)
     .addStringOption(option =>
         option.setName('regex')
             .setDescription('the regex to search for')

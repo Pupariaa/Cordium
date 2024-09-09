@@ -2,10 +2,13 @@
 const { SlashCommandBuilder } = require('discord.js');
 require('puparia.getlines.js');
 
+const cmdName = 'ping';
+const cmdDescription = 'ping the bot';
+
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('ping')
-        .setDescription(`ping the bot`),
+        .setName(cmdName)
+        .setDescription(cmdDescription),
 
     /**
      * Executes the 'ping' command.
