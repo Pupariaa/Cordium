@@ -33,7 +33,7 @@ class Database {
 
     this.defineModels();
     this.sequelize.authenticate()
-      .then(() => console.log('START: Database connection successful'))
+      .then(() => console.success('START: Database connection successful'))
       .catch(err => {
         global.databse = false
         console.error('START: Unable to connect to database', err)
@@ -402,7 +402,6 @@ class Database {
     try {
       if (this.connected) {
         await model.create(data);
-        console.log(`${description} entry added successfully.`);
       }
     } catch (error) {
       console.error(`Error adding ${description} entry:`, error);
