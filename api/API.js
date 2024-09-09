@@ -77,7 +77,7 @@ if (port && process.env.apienable && global.database) {
 
     const srv = http.createServer(app);
     srv.listen(port, () => {
-        console.log(`START: API is Running on port ${port}`);
+        console.success(`START: API is Running on port ${port}`);
     });
 } else {
     if (!global.database && process.env.dbhost) {
