@@ -1,4 +1,5 @@
-const { Sequelize, DataTypes } = require('sequelize');
+const { Sequelize, DataTypes, Op } = require('sequelize'); // Assurez-vous que Sequelize et Op sont importés
+
 
 class Database {
   /**
@@ -16,6 +17,7 @@ class Database {
    */
   constructor() {
     this.connected = true;
+    global.database = true
     if (!process.env.dbname || !process.env.dbhost || !process.env.dbuser || !process.env.dbpass || !process.env.dbport) {
       console.warn('START: Missing database parameters, no saved data, do cn --bdd help');
       this.connected = false;
@@ -32,16 +34,19 @@ class Database {
     this.defineModels();
     this.sequelize.authenticate()
       .then(() => console.log('START: Database connection successful'))
-      .catch(err => console.error('START: Unable to connect to database', err));
+      .catch(err => {
+        global.databse = false
+        console.error('START: Unable to connect to database', err)
+      });
   }
 
-/**
- * Defines all the models used in the database.
- *
- * This function is called by the constructor and defines all the models used in the database.
- *
- * @return {void}
- */
+  /**
+   * Defines all the models used in the database.
+   *
+   * This function is called by the constructor and defines all the models used in the database.
+   *
+   * @return {void}
+   */
   defineModels() {
     // DATA_channels Table
     this.DATA_channels = this.sequelize.define('DATA_channels', {
@@ -123,6 +128,8 @@ class Database {
       userid: { type: DataTypes.BIGINT, allowNull: true },
       joinedAt: { type: DataTypes.BIGINT, allowNull: true },
       nickname: { type: DataTypes.STRING(64), allowNull: true },
+      datetime: { type: DataTypes.BIGINT, allowNull: true },
+
     }, { tableName: 'EVENTS_guildMemberAdd', timestamps: false });
 
     // EVENTS_guildMemberRemove Table
@@ -130,6 +137,8 @@ class Database {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
       userid: { type: DataTypes.BIGINT, allowNull: true },
       leftedAt: { type: DataTypes.BIGINT, allowNull: true },
+      datetime: { type: DataTypes.BIGINT, allowNull: true },
+
     }, { tableName: 'EVENTS_guildMemberRemove', timestamps: false });
 
     // EVENTS_interactionCreate Table
@@ -150,6 +159,10 @@ class Database {
       userid: { type: DataTypes.BIGINT, allowNull: true },
       maxUses: { type: DataTypes.INTEGER, allowNull: true },
       expiresAt: { type: DataTypes.BIGINT, allowNull: true },
+      executorId: { type: DataTypes.INTEGER, allowNull: true },
+      datetime: { type: DataTypes.BIGINT, allowNull: true },
+
+
     }, { tableName: 'EVENTS_inviteCreate', timestamps: false });
 
     // EVENTS_inviteDelete Table
@@ -157,6 +170,10 @@ class Database {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
       code: { type: DataTypes.TEXT, allowNull: false },
       channelid: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
+      executorId: { type: DataTypes.INTEGER, allowNull: true },
+      datetime: { type: DataTypes.BIGINT, allowNull: true },
+
+
     }, { tableName: 'EVENTS_inviteDelete', timestamps: false });
 
     // EVENTS_messageCreate Table
@@ -275,6 +292,8 @@ class Database {
 
       eventType: { type: DataTypes.INTEGER, allowNull: true },
       executorId: { type: DataTypes.BIGINT, allowNull: true },
+      datetime: { type: DataTypes.BIGINT, allowNull: true },
+
     }, { tableName: 'EVENTS_voiceStateUpdate', timestamps: false });
 
     // STATE_voiceLeft Table
@@ -303,6 +322,55 @@ class Database {
       date: { type: DataTypes.BIGINT, allowNull: true },
     }, { tableName: 'STATS_globalServer', timestamps: false });
   }
+  /**
+   * Finds all voice state updates made by a user.
+   * @param {string} userId The ID of the user.
+   * @returns {Promise<Array<import('sequelize').Instance<VoiceStateUpdate>>>} The found voice state updates.
+   * @throws {Error} If the database query fails.
+   */
+  async getVoiceStateUpdatesByUserId(userId) {
+    try {
+      const updates = await this.EVENTS_voiceStateUpdate.findAll({
+        where: {
+          userId: userId
+        }
+      });
+      return updates;
+    } catch (error) {
+      throw error;
+    }
+  }
+  /**
+   * Retrieves all messages sent by the given user in the given channels in the given date range.
+   * 
+   * @param {string} userId - The user ID to query messages for.
+   * @param {number} startDate - The start of the date range to query messages for.
+   * @param {number} endDate - The end of the date range to query messages for.
+   * @param {string[]} channelIds - The channels to query messages for.
+   * @returns {Promise<Message[]>} - The messages sent by the user in the given channels in the given date range.
+   */
+  async getMessagesBetweenDates(userId, startDate, endDate, channelIds) {
+
+
+    try {
+      if (!channelIds || channelIds.length === 0) {
+        return [];
+      }
+      const messages = await this.EVENTS_messageCreate.findAll({
+        where: {
+          channelId: channelIds,
+          datetime: {
+            [Op.between]: [startDate, endDate]
+          }
+        },
+        order: [['datetime', 'ASC']]
+      });
+
+      return messages;
+    } catch (error) {
+      throw error;
+    }
+  }
 
 
   /**
@@ -322,7 +390,7 @@ class Database {
     }
   }
 
-  
+
   /**
    * Adds a new entry to the EVENTS_guildMemberAdd table.
    * @param {object} data - The data to add to the table.
@@ -439,6 +507,7 @@ class Database {
   async addChannelCreate(data) {
     await this.addEntry(this.EVENTS_channelCreate, data, 'Channel Create');
   }
+
 
   /**
    * Adds a new entry to the EVENTS_channelDelete table.
