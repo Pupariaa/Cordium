@@ -17,7 +17,7 @@ module.exports = {
     async execute(interaction) {
         const functionName = 'execute';
         try {
-            await interaction.reply('pong')
+            await interaction.reply(`pong (${Math.round((interaction.createdTimestamp - Date.now())/1000)}ms)`);
         } catch (err) {
             console.error(`${__filename} - Line ${__line} (${functionName}): `, err);
         }
