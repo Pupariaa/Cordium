@@ -44,7 +44,7 @@
     "gtts": "^0.2.1",
     "highcharts": "^11.4.7",
     "jimp": "^0.22.12",
-    "momentjs": "^2.0.0",
+    "moment": "^2.0.0",
     "mysql2": "^3.11.0",
     "nestjs": "^0.0.1",
     "node-cache": "^5.1.2",
