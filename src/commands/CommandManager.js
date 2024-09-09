@@ -10,9 +10,7 @@ const filePath = path.resolve(__dirname, 'CommandManager.js');
 class CommandHandler {
     constructor() {
         console.info(`START: Initializing CommandHandler.`);
-        this.client = global.client;
-        this.commands = new Collection();
-        this.commandsPath = path.join(__dirname, 'handlers');  // Use path.join for cross-platform compatibility
+        this.commandsPath = path.join(__dirname, 'handlers');
         this.rest = new REST({ version: '10' }).setToken(process.env.discord_cqd_token);
     }
 
@@ -24,8 +22,8 @@ class CommandHandler {
             console.info(`START: Loading commands`);
 
             // Initialize client.commands if it doesn't exist
-            if (!this.client.commands) {
-                this.client.commands = new Collection();
+            if (!global.client.commands) {
+                global.client.commands = new Collection();
                 console.success(`START: Initialized client.commands collection`);
             }
 
@@ -35,7 +33,7 @@ class CommandHandler {
                 try {
                     const command = require(path.join(this.commandsPath, file));
                     if ('data' in command && 'execute' in command) {
-                        this.client.commands.set(command.data.name, command);
+                        global.client.commands.set(command.data.name, command);
                         console.success(`START: Command loaded: ${command.data.name}`);
                     } else {
                         console.warn(`START: The command at ${file} is missing a required "data" or "execute" property.`);
@@ -58,7 +56,7 @@ class CommandHandler {
         const commands = [];
 
         // Convert commands to a format suitable for Discord API
-        this.client.commands.forEach(cmd => commands.push(cmd.data.toJSON()));
+        global.client.commands.forEach(cmd => commands.push(cmd.data.toJSON()));
 
         try {
             console.info(`START: Deploying commands to Discord API.`);

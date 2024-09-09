@@ -5,7 +5,7 @@ require('puparia.getlines.js');
 const wait = require('node:timers/promises').setTimeout;
 
 const cmdName = 'search';
-const cmdDescription = 'Run a search and report matches';
+const cmdDescription = 'run a search and report matches';
 
 function get_content(msg) {
     return [msg.content];

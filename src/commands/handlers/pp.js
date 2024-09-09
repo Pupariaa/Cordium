@@ -3,7 +3,7 @@ const { SlashCommandBuilder } = require('discord.js');
 require('puparia.getlines.js');
 
 const cmdName = 'pp';
-const cmdDescription = 'send the given user's profile pictures';
+const cmdDescription = 'send the given user\'s profile pictures';
 
 module.exports = {
     data: new SlashCommandBuilder()
