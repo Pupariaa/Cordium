@@ -38,6 +38,10 @@ class Database {
         global.databse = false
         console.error('START: Unable to connect to database', err)
       });
+
+
+      
+
   }
 
   /**
@@ -215,6 +219,8 @@ class Database {
       messageId: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
       userId: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
       datetime: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
+      name: { type: DataTypes.STRING(64), allowNull: true },
+
     }, { tableName: 'EVENTS_messageReactionAdd', timestamps: false });
 
     // EVENTS_messageReactionRemove Table
@@ -224,6 +230,8 @@ class Database {
       messageId: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
       userId: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
       datetime: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
+      name: { type: DataTypes.STRING(64), allowNull: true },
+
     }, { tableName: 'EVENTS_messageReactionRemove', timestamps: false });
 
     // EVENTS_messageUpdate Table
@@ -322,6 +330,17 @@ class Database {
       date: { type: DataTypes.BIGINT, allowNull: true },
     }, { tableName: 'STATS_globalServer', timestamps: false });
   }
+
+
+
+  
+
+
+
+
+
+
+
   /**
    * Finds all voice state updates made by a user.
    * @param {string} userId The ID of the user.
