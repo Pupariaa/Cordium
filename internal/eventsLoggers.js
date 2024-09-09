@@ -206,7 +206,8 @@ global.client.on('inviteCreate',async invite => {
         channelid: invite.channel.id,
         maxUses: invite.maxUses,
         expiresAt: invite.expiresTimestamp,
-        executorId: executorId
+        executorId: executorId,
+        datetime: Date.now(),
     });
 });
 
@@ -216,6 +217,7 @@ global.client.on('inviteDelete', async invite => {
         code: invite.code,
         channelid: invite.channel.id,
         executorId: executorId,
+        datetime: Date.now(),
     });
 });
 
