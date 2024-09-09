@@ -21,8 +21,9 @@ global.client.on('ready', async () => {
     try {
         // Event Loggers
         require('./internal/eventsLoggers');
+        
         console.success(`START: Client connected`);
-
+        require('./api/API')
         // Initialize invite cache
         global.client.invitesCache = new Map();
 
