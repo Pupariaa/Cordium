@@ -18,10 +18,14 @@ function reportChatInputCommand(interaction) {
     const functionName = 'reportChatInputCommand';
     eventName += '.chatInputCommand';
     try {
+        // console.log(interaction.options);
         // console.log(JSON.stringify(interaction.options, null, 4));
         let cmd = `/${interaction.commandName}`;
         for (const option of interaction.options._hoistedOptions) {
             switch (option.type) {
+                case 3:
+                    cmd += ` ${option.name}: ${option.value}`;
+                    break;
                 case 6:
                     cmd += ` user: @${option.member.displayName}`;
                     break;
