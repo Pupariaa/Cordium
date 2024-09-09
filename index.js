@@ -3,7 +3,6 @@
 require('puparia.getlines.js');
 require('dotenv').config({ path: './config.env' });
 const { Events } = require('discord.js');
-const fs = require('fs');
 
 const CQD = require('./src/common/Discord_instance');
 new CQD();
@@ -19,8 +18,8 @@ process.on('unhandledRejection', (reason, promise) => {
 
 global.client.on('ready', async () => {
     try {
-        // Event Loggers
-        require('./internal/eventsLoggers');
+        // Events
+        require('./internal/events');
         
         console.success(`START: Client connected`);
         require('./api/API')
@@ -38,40 +37,7 @@ global.client.on('ready', async () => {
         invites.forEach(invite => global.client.invitesCache.set(invite.code, invite.uses));
         console.success(`START: Invites cache initialized.`);
 
-        // Load all event handlers
-        [
-            './src/common/Events/ChannelCreate',
-            './src/common/Events/ChannelDelete',
-            './src/common/Events/ChannelUpdate',
-
-            './src/common/Events/GuildBanAdd',
-            './src/common/Events/GuildBanRemove',
-
-            './src/common/Events/GuildMemberAdd',
-            './src/common/Events/GuildMemberRemove',
-
-            './src/common/Events/GuildRoleCreate',
-            './src/common/Events/GuildRoleDelete',
-            './src/common/Events/GuildRoleUpdate',
-
-            './src/common/Events/InteractionCreate',
-
-            './src/common/Events/InviteCreate',
-            './src/common/Events/InviteDelete',
-
-            './src/common/Events/MessageCreate',
-            './src/common/Events/MessageDelete',
-            './src/common/Events/MessageUpdate',
-            
-            './src/common/Events/VoiceStateUpdate'
-        ].forEach(eventPath => {
-            try {
-                require(eventPath);
-                console.success(`START: Loaded event handler from ${eventPath}.`);
-            } catch (error) {
-                console.error(`START: Error loading event handler from ${eventPath}.`, error);
-            }
-        });
+       
 
         // Interaction handler
         global.client.on(Events.InteractionCreate, async (interaction) => {
@@ -97,6 +63,7 @@ global.client.on('ready', async () => {
                 }
             }
         });
+
 
     } catch (error) {
         console.error(`START: Error during bot initialization.`, error);
