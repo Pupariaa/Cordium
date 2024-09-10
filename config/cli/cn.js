@@ -695,23 +695,22 @@ function testDatabaseConnection() {
         .catch((error) => console.error('Failed to connect to the database:', error));
 }
 
-function initBotConfig(token, clientId, guid, restrictRole) {
+function initBotConfig(token, clientId, guid) {
 
     console.log('Initializing bot configuration...');
 
     updateEnvVariable('discord_cqd_token', token);
     updateEnvVariable('discord_cqd_cid', clientId);
     updateEnvVariable('discord_guid', guid);
-    updateEnvVariable('restrictRole', restrictRole);
 
     console.log('Bot configuration initialized successfully.');
 }
 
 if (argv._[0] === 'init') {
-    if (argv.token && argv.id && argv.guid && argv.rsrole) {
-        initBotConfig(argv.token, argv.id, argv.guid, argv.rsrole);
+    if (argv.token && argv.id && argv.guid) {
+        initBotConfig(argv.token, argv.id, argv.guid);
     } else {
-        console.log('Please provide all required options: --token, --id, --guid, --rsrole');
+        console.log('Please provide all required options: --token, --id, --guid');
     }
 } else if (argv._[0] === 'invite') {
     generateInviteLink();
