@@ -41,8 +41,6 @@
 //     }
 // }
 
-module.exports = {};
-
-module.exports = async function(channel) {
+module.exports = async function(oldMessage, newMessage) {
     
 }

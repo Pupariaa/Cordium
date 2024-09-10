@@ -1,5 +1,5 @@
 'use strict';
 
-module.exports = async function(channel) {
+module.exports = async function(interaction) {
     
 }

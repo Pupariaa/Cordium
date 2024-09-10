@@ -601,7 +601,7 @@ export enum AuditLogEvent {
 
             const executor = (await global.guild.latestAuditLog()).executor;
 
-            global.database.addEmojiCreate({
+            global.database.addStickerCreate({
                 emojiId: sticker.id,
                 emojiPath: sticker.url,
                 datetime: Date.now(),
@@ -627,7 +627,7 @@ export enum AuditLogEvent {
             const executor = (await global.guild.latestAuditLog()).executor;
 
             // TODO: isDelete?
-            global.database.addEmojiDelete({
+            global.database.addStickerDelete({
                 emojiId: sticker.id,
                 datetime: Date.now(),
                 // isDelete: true,
@@ -642,7 +642,31 @@ export enum AuditLogEvent {
     });
 }
 
-// TODO: GuildStickerUpdate
+{
+    const event = Events.GuildStickerUpdate;
+    let eventName = String(event)
+
+    global.client.on(event, async (oldSticker, newSticker) => {
+        try {
+            if (global.guild.id !== sticker.guild.id) return;
+
+            const executor = (await global.guild.latestAuditLog()).executor;
+
+            // TODO: isDelete? add addStickerUpdate to the DB
+            global.database.addStickerUpdate({
+                emojiId: sticker.id,
+                datetime: Date.now(),
+                // isDelete: true,
+                executorId: executor.id,
+            });
+
+            reportEvent(__line, eventName, 'executor.tag', executor.tag, 'sticker.name', oldSticker.name, ->, newSticker.name);
+            require(path.join(process.env.eventsFolderPath, event))(sticker);
+        } catch (err) {
+            reportEventError(__line, eventName, err);
+        }
+    });
+}
 
 // TODO: GuildUnavailable
 
@@ -809,21 +833,21 @@ export enum AuditLogEvent {
     const event = Events.MessageBulkDelete;
     let eventName = String(event);
 
-    global.client.on(event, async (messages) => {
+    global.client.on(event, async (messages, channel) => {
         try {
-            if (global.guild.id !== messages.first().guild.id) return;
+            if (global.guild.id !== channel.guild.id) return;
 
             const executor = (await global.guild.latestAuditLog()).executor;
 
             global.database.addMessageDeleteBulk({
-                channelId: messages.first().channel.id,
+                channelId: channel.id,
                 deletedMessages: messages.size,
                 datetime: Date.now(),
                 executorId: executor.id,
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'messages.size', messages.size);
-            require(path.join(process.env.eventsFolderPath, event))(messages);
+            require(path.join(process.env.eventsFolderPath, event))(messages, channel);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -1031,7 +1055,7 @@ export enum AuditLogEvent {
     const event = Events.ThreadCreate;
     let eventName = String(event);
 
-    global.client.on(event, async (thread) => {
+    global.client.on(event, async (thread, newlyCreated) => {
         try {
             if (global.guild.id !== thread.guild.id) return;
 
@@ -1046,7 +1070,7 @@ export enum AuditLogEvent {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'thread.name', thread.name);
-            require(path.join(process.env.eventsFolderPath, event))(thread);
+            require(path.join(process.env.eventsFolderPath, event))(thread, newlyCreated);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
