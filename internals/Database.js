@@ -17,8 +17,8 @@ class Database {
    */
   constructor() {
     this.connected = true;
-    this.charset = "tf8mb4";
-    this.collate = "tf8mb4_unicode_ci";
+    this.charset = "utf8mb4";
+    this.collate = "utf8mb4_unicode_ci";
     global.database = true
     if (!process.env.dbname || !process.env.dbhost || !process.env.dbuser || !process.env.dbpass || !process.env.dbport) {
       console.warn('START: Missing database parameters, no saved data, do cn --bdd help');
