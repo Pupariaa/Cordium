@@ -24,8 +24,6 @@ process.on('unhandledRejection', (reason, promise) => {
     console.error(`${__filename} - Line ${__line} (unhandledRejection): Unhandled rejection at`, promise, 'reason:', reason instanceof Error ? reason.message : reason);
 });
 
-
-
 global.client.on(Events.ClientReady, async () => {
     try {
         console.success(`START: Client connected`);
