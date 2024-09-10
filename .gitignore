@@ -4,3 +4,4 @@ config/channels.json
 config/reportEvents.json
 package-lock.json
 src/sandbox/index.js
+est.json
