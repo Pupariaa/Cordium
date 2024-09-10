@@ -660,7 +660,7 @@ export enum AuditLogEvent {
                 executorId: executor.id,
             });
 
-            reportEvent(__line, eventName, 'executor.tag', executor.tag, 'sticker.name', oldSticker.name, ->, newSticker.name);
+            reportEvent(__line, eventName, 'executor.tag', executor.tag, 'sticker.name', oldSticker.name, '->', newSticker.name);
             require(path.join(process.env.eventsFolderPath, event))(sticker);
         } catch (err) {
             reportEventError(__line, eventName, err);
