@@ -612,7 +612,7 @@ function updateEnvVariable(key, value) {
  *
  * @returns {Promise<void>}
  */
-function createTables() {
+function createTables(host, dbname, dbport, dbuser, bpass) {
     const db = new Database(host, dbname, dbport, dbuser, bpass);
     if (!db.sequelize) {
         console.log('Unable to connect to the database. Please check your parameters.');
