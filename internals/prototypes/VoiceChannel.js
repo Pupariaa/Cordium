@@ -1,9 +1,8 @@
 'use strict';
 const { VoiceChannel } = require('discord.js');
 
-VoiceChannel.prototype.getMembers = async function (channel) {
-    if (!channel) return null;
-    return Array.from(channel.members.values());
+VoiceChannel.prototype.hasTag = function (tag) {
+    this._hasTag(global.channels.forum, tag);
 };
 
 module.exports = {};

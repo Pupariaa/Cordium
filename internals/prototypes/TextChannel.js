@@ -24,4 +24,8 @@ TextChannel.prototype.fetchAllMessages = async function () {
     }
 };
 
+TextChannel.prototype.hasTag = function (tag) {
+    this._hasTag(global.channels.forum, tag);
+};
+
 module.exports = {};
