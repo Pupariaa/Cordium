@@ -24,7 +24,8 @@ class Database {
             console.log('Database connection parameters are missing. Cannot connect. Nothing will be recorded.');
             return;
         }
-
+        this.charset = "tf8mb4";
+        this.collate = "tf8mb4_unicode_ci";
         this.sequelize = new Sequelize(process.env.dbname, process.env.dbuser, process.env.dbpass, {
             host: process.env.dbhost,
             port: process.env.dbport,
@@ -45,234 +46,478 @@ class Database {
      * This function is called by the constructor and defines all the models used in the database.
      */
     defineModels() {
-        // DATA_channels Table
-        this.DATA_channels = this.sequelize.define('DATA_channels', {
-            id: { type: DataTypes.INTEGER, primaryKey: true },
-            name: { type: DataTypes.STRING(64), allowNull: false, defaultValue: '' },
-            channelId: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
-            parentId: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
-            permissions: { type: DataTypes.JSON, allowNull: false },
-            datetime: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
-            channelType: { type: DataTypes.BOOLEAN, allowNull: true },
-        }, { tableName: 'DATA_channels', timestamps: false });
+
+        this.DATA_channels = sequelize.define('DATA_channels', {
+          id: { type: DataTypes.INTEGER, primaryKey: true, allowNull: false },
+          name: { type: DataTypes.STRING(64), allowNull: false, defaultValue: '' },
+          channelId: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
+          parentId: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
+          permissions: { type: DataTypes.JSON, allowNull: false },
+          datetime: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
+          channelType: { type: DataTypes.TINYINT, allowNull: true }
+        }, {
+          tableName: 'DATA_channels',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
     
-        // EVENTS_channelCreate Table
-        this.EVENTS_channelCreate = this.sequelize.define('EVENTS_channelCreate', {
-            id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-            channelId: { type: DataTypes.BIGINT, allowNull: true },
-            name: { type: DataTypes.STRING(64), allowNull: true },
-            permissions: { type: DataTypes.JSON, allowNull: true },
-            datetime: { type: DataTypes.BIGINT, allowNull: true },
-            isDelete: { type: DataTypes.BOOLEAN, allowNull: true },
-            executorId: { type: DataTypes.BIGINT, allowNull: true },
-        }, { tableName: 'EVENTS_channelCreate', timestamps: false });
+        this.EVENTS_channelCreate = sequelize.define('EVENTS_channelCreate', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
+          channelId: { type: DataTypes.BIGINT, allowNull: true },
+          name: { type: DataTypes.STRING(64), allowNull: true },
+          permissions: { type: DataTypes.JSON, allowNull: true },
+          datetime: { type: DataTypes.BIGINT, allowNull: true },
+          isDelete: { type: DataTypes.TINYINT, allowNull: true },
+          executorId: { type: DataTypes.BIGINT, allowNull: true }
+        }, {
+          tableName: 'EVENTS_channelCreate',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
     
-        // EVENTS_emojiCreate Table
-        this.EVENTS_emojiCreate = this.sequelize.define('EVENTS_emojiCreate', {
-            id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-            emojiId: { type: DataTypes.BIGINT, allowNull: true },
-            emojiPath: { type: DataTypes.TEXT, allowNull: true },
-            datetime: { type: DataTypes.BIGINT, allowNull: true },
-            executorId: { type: DataTypes.BIGINT, allowNull: true },
-        }, { tableName: 'EVENTS_emojiCreate', timestamps: false });
+        this.EVENTS_channelPinsUpdate = sequelize.define('EVENTS_channelPinsUpdate', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false }
+        }, {
+          tableName: 'EVENTS_channelPinsUpdate',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
+        this.EVENTS_guildBanAdd = sequelize.define('EVENTS_guildBanAdd', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
+          userid: { type: DataTypes.BIGINT, allowNull: true },
+          reason: { type: DataTypes.STRING(255), allowNull: true },
+          datetime: { type: DataTypes.BIGINT, allowNull: true },
+          executorId: { type: DataTypes.BIGINT, allowNull: true }
+        }, {
+          tableName: 'EVENTS_guildBanAdd',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
     
-        // EVENTS_emojiUpdate Table
-        this.EVENTS_emojiUpdate = this.sequelize.define('EVENTS_emojiUpdate', {
-            id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-            emojiId: { type: DataTypes.BIGINT, allowNull: true },
-            oldEmojiPath: { type: DataTypes.TEXT, allowNull: true },
-            newEmojiPath: { type: DataTypes.TEXT, allowNull: true },
-            datetime: { type: DataTypes.BIGINT, allowNull: true },
-            executorId: { type: DataTypes.BIGINT, allowNull: true },
-        }, { tableName: 'EVENTS_emojiUpdate', timestamps: false });
+        this.EVENTS_guildEmojiCreate = sequelize.define('EVENTS_guildEmojiCreate', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
+          emojiId: { type: DataTypes.BIGINT, allowNull: true },
+          emojiPath: { type: DataTypes.TEXT, allowNull: false },
+          datetime: { type: DataTypes.BIGINT, allowNull: true },
+          executorId: { type: DataTypes.BIGINT, allowNull: true }
+        }, {
+          tableName: 'EVENTS_guildEmojiCreate',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
     
-        // EVENTS_guidBanAdd Table
-        this.EVENTS_guidBanAdd = this.sequelize.define('EVENTS_guidBanAdd', {
-            id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-            userid: { type: DataTypes.BIGINT, allowNull: true },
-            reason: { type: DataTypes.STRING(255), allowNull: true },
-            datetime: { type: DataTypes.BIGINT, allowNull: true },
-            executorId: { type: DataTypes.BIGINT, allowNull: true },
-        }, { tableName: 'EVENTS_guidBanAdd', timestamps: false });
+        this.EVENTS_guildEmojiDelete = sequelize.define('EVENTS_guildEmojiDelete', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
+          emojiId: { type: DataTypes.BIGINT, allowNull: true },
+          oldEmojiPath: { type: DataTypes.TEXT, allowNull: true },
+          newEmojiPath: { type: DataTypes.TEXT, allowNull: true },
+          datetime: { type: DataTypes.BIGINT, allowNull: true },
+          executorId: { type: DataTypes.BIGINT, allowNull: true }
+        }, {
+          tableName: 'EVENTS_guildEmojiDelete',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate,
+          indexes: [{ using: 'BTREE', fields: ['id'] }]
+        });
     
-        // EVENTS_guildMemberAdd Table
-        this.EVENTS_guildMemberAdd = this.sequelize.define('EVENTS_guildMemberAdd', {
-            id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-            userid: { type: DataTypes.BIGINT, allowNull: true },
-            joinedAt: { type: DataTypes.BIGINT, allowNull: true },
-            nickname: { type: DataTypes.STRING(64), allowNull: true },
-        }, { tableName: 'EVENTS_guildMemberAdd', timestamps: false });
+        this.EVENTS_guildEmojiUpdate = sequelize.define('EVENTS_guildEmojiUpdate', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
+          emojiId: { type: DataTypes.BIGINT, allowNull: true },
+          oldEmojiPath: { type: DataTypes.TEXT, allowNull: false },
+          newEmojiPath: { type: DataTypes.TEXT, allowNull: false },
+          datetime: { type: DataTypes.BIGINT, allowNull: true },
+          executorId: { type: DataTypes.BIGINT, allowNull: true }
+        }, {
+          tableName: 'EVENTS_guildEmojiUpdate',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
     
-        // EVENTS_guildMemberRemove Table
-        this.EVENTS_guildMemberRemove = this.sequelize.define('EVENTS_guildMemberRemove', {
-            id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-            userid: { type: DataTypes.BIGINT, allowNull: true },
-            leftedAt: { type: DataTypes.BIGINT, allowNull: true },
-        }, { tableName: 'EVENTS_guildMemberRemove', timestamps: false });
+        this.EVENTS_guildMemberAdd = sequelize.define('EVENTS_guildMemberAdd', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
+          userid: { type: DataTypes.BIGINT, allowNull: true },
+          joinedAt: { type: DataTypes.BIGINT, allowNull: true },
+          nickname: { type: DataTypes.STRING(64), allowNull: true },
+          datetime: { type: DataTypes.BIGINT, allowNull: true }
+        }, {
+          tableName: 'EVENTS_guildMemberAdd',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
     
-        // EVENTS_interactionCreate Table
-        this.EVENTS_interactionCreate = this.sequelize.define('EVENTS_interactionCreate', {
-            id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-            type: { type: DataTypes.INTEGER, allowNull: true },
-            datetime: { type: DataTypes.BIGINT, allowNull: true },
-            commandName: { type: DataTypes.STRING(50), allowNull: true },
-            executorId: { type: DataTypes.BIGINT, allowNull: true },
-            channelid: { type: DataTypes.BIGINT, allowNull: true },
-        }, { tableName: 'EVENTS_interactionCreate', timestamps: false });
+        this.EVENTS_guildMemberAvailable = sequelize.define('EVENTS_guildMemberAvailable', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false }
+        }, {
+          tableName: 'EVENTS_guildMemberAvailable',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
+        this.EVENTS_guildMemberRemove = sequelize.define('EVENTS_guildMemberRemove', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
+          userid: { type: DataTypes.BIGINT, allowNull: true },
+          leftAt: { type: DataTypes.BIGINT, allowNull: true },
+          datetime: { type: DataTypes.BIGINT, allowNull: true }
+        }, {
+          tableName: 'EVENTS_guildMemberRemove',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
+        this.EVENTS_guildMembersChunk = sequelize.define('EVENTS_guildMembersChunk', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false }
+        }, {
+          tableName: 'EVENTS_guildMembersChunk',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
+        this.EVENTS_guildMemberUpdate = sequelize.define('EVENTS_guildMemberUpdate', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
+          oldNickname: { type: DataTypes.STRING(50), allowNull: true },
+          oldDisplayName: { type: DataTypes.STRING(50), allowNull: true },
+          oldDisplayAvatarURL: { type: DataTypes.STRING(50), allowNull: true },
+          oldRoles: { type: DataTypes.JSON, allowNull: true },
+          newNickname: { type: DataTypes.STRING(50), allowNull: true },
+          newDisplayName: { type: DataTypes.STRING(50), allowNull: true },
+          newDisplayAvatarURL: { type: DataTypes.STRING(50), allowNull: true },
+          userid: { type: DataTypes.BIGINT, allowNull: true },
+          datetime: { type: DataTypes.BIGINT, allowNull: true },
+          newRoles: { type: DataTypes.JSON, allowNull: true }
+        }, {
+          tableName: 'EVENTS_guildMemberUpdate',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
+        this.EVENTS_interactionCreate = sequelize.define('EVENTS_interactionCreate', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
+          type: { type: DataTypes.INTEGER, allowNull: true },
+          datetime: { type: DataTypes.BIGINT, allowNull: true },
+          commandName: { type: DataTypes.STRING(50), allowNull: true },
+          executorId: { type: DataTypes.BIGINT, allowNull: true },
+          channelid: { type: DataTypes.BIGINT, allowNull: true }
+        }, {
+          tableName: 'EVENTS_interactionCreate',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
+        this.EVENTS_inviteCreate = sequelize.define('EVENTS_inviteCreate', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
+          code: { type: DataTypes.TEXT, allowNull: false },
+          channelid: { type: DataTypes.BIGINT, allowNull: true },
+          userid: { type: DataTypes.BIGINT, allowNull: true },
+          maxUses: { type: DataTypes.INTEGER, allowNull: true },
+          expiresAt: { type: DataTypes.BIGINT, allowNull: true },
+          executorId: { type: DataTypes.INTEGER, allowNull: true },
+          datetime: { type: DataTypes.BIGINT, allowNull: true }
+        }, {
+          tableName: 'EVENTS_inviteCreate',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
+        this.EVENTS_inviteDelete = sequelize.define('EVENTS_inviteDelete', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
+          code: { type: DataTypes.TEXT, allowNull: false },
+          channelid: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
+          executorId: { type: DataTypes.INTEGER, allowNull: true },
+          datetime: { type: DataTypes.BIGINT, allowNull: true }
+        }, {
+          tableName: 'EVENTS_inviteDelete',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
+        this.EVENTS_messageCreate = sequelize.define('EVENTS_messageCreate', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
+          datetime: { type: DataTypes.BIGINT, allowNull: true },
+          messageId: { type: DataTypes.BIGINT, allowNull: true },
+          channelId: { type: DataTypes.BIGINT, allowNull: true },
+          userId: { type: DataTypes.BIGINT, allowNull: true },
+          attachments: { type: DataTypes.JSON, allowNull: true },
+          content: { type: DataTypes.TEXT, allowNull: false },
+          isDelete: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+          isReply: { type: DataTypes.INTEGER, allowNull: true },
+          replyToMessageId: { type: DataTypes.BIGINT, allowNull: true },
+          deleteDatetime: { type: DataTypes.BIGINT, allowNull: true }
+        }, {
+          tableName: 'EVENTS_messageCreate',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
+        this.EVENTS_messageDelete = sequelize.define('EVENTS_messageDelete', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
+          messageId: { type: DataTypes.BIGINT, allowNull: true },
+          datetime: { type: DataTypes.BIGINT, allowNull: true },
+          executorId: { type: DataTypes.BIGINT, allowNull: true }
+        }, {
+          tableName: 'EVENTS_messageDelete',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
+        this.EVENTS_messageDeleteBulk = sequelize.define('EVENTS_messageDeleteBulk', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
+          channelId: { type: DataTypes.BIGINT, allowNull: true },
+          deletedMessages: { type: DataTypes.INTEGER, allowNull: true },
+          executorId: { type: DataTypes.BIGINT, allowNull: true },
+          datetime: { type: DataTypes.BIGINT, allowNull: true }
+        }, {
+          tableName: 'EVENTS_messageDeleteBulk',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
+        this.EVENTS_messageReactionAdd = sequelize.define('EVENTS_messageReactionAdd', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
+          reactionId: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
+          messageId: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
+          userId: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
+          datetime: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
+          name: { type: DataTypes.STRING(50), allowNull: true }
+        }, {
+          tableName: 'EVENTS_messageReactionAdd',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
+        this.EVENTS_messageReactionRemove = sequelize.define('EVENTS_messageReactionRemove', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
+          reactionId: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
+          messageId: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
+          userId: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
+          datetime: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
+          name: { type: DataTypes.STRING(50), allowNull: true }
+        }, {
+          tableName: 'EVENTS_messageReactionRemove',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
+        this.EVENTS_messageReactionRemoveAll = sequelize.define('EVENTS_messageReactionRemoveAll', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false }
+        }, {
+          tableName: 'EVENTS_messageReactionRemoveAll',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
+        this.EVENTS_messageReactionRemoveAll = sequelize.define('EVENTS_messageReactionRemoveAll', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false }
+        }, {
+          tableName: 'EVENTS_messageReactionRemoveAll',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
+        this.EVENTS_messageReactionRemoveEmoji = sequelize.define('EVENTS_messageReactionRemoveEmoji', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false }
+        }, {
+          tableName: 'EVENTS_messageReactionRemoveEmoji',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
+        this.EVENTS_messageUpdate = sequelize.define('EVENTS_messageUpdate', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
+          userId: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
+          messageId: { type: DataTypes.BIGINT, allowNull: true },
+          newContent: { type: DataTypes.TEXT, allowNull: true },
+          oldContent: { type: DataTypes.TEXT, allowNull: true },
+          datetime: { type: DataTypes.BIGINT, allowNull: true },
+          attachments: { type: DataTypes.JSON, allowNull: true },
+          isReply: { type: DataTypes.INTEGER, allowNull: true },
+          replyToMessageId: { type: DataTypes.BIGINT, allowNull: true }
+        }, {
+          tableName: 'EVENTS_messageUpdate',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
+        this.EVENTS_presenceUpdate = sequelize.define('EVENTS_presenceUpdate', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false }
+        }, {
+          tableName: 'EVENTS_presenceUpdate',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
+        this.EVENTS_roleCreate = sequelize.define('EVENTS_roleCreate', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
+          roleId: { type: DataTypes.BIGINT, allowNull: true },
+          name: { type: DataTypes.STRING(64), allowNull: true },
+          color: { type: DataTypes.TEXT, allowNull: false },
+          permissions: { type: DataTypes.JSON, allowNull: true },
+          datetime: { type: DataTypes.BIGINT, allowNull: true },
+          executorId: { type: DataTypes.BIGINT, allowNull: true }
+        }, {
+          tableName: 'EVENTS_roleCreate',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
+        this.EVENTS_roleUpdate = sequelize.define('EVENTS_roleUpdate', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
+          roleId: { type: DataTypes.BIGINT, allowNull: true },
+          name: { type: DataTypes.STRING(64), allowNull: true },
+          color: { type: DataTypes.TEXT, allowNull: false },
+          permissions: { type: DataTypes.JSON, allowNull: true },
+          datetime: { type: DataTypes.BIGINT, allowNull: true },
+          isDelete: { type: DataTypes.TINYINT, allowNull: true },
+          executorId: { type: DataTypes.BIGINT, allowNull: true },
+          deleteDatetime: { type: DataTypes.BIGINT, allowNull: true }
+        }, {
+          tableName: 'EVENTS_roleUpdate',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
+        this.EVENTS_threadCreate = sequelize.define('EVENTS_threadCreate', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false }
+        }, {
+          tableName: 'EVENTS_threadCreate',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
+        this.EVENTS_threadDelete = sequelize.define('EVENTS_threadDelete', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false }
+        }, {
+          tableName: 'EVENTS_threadDelete',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
+        this.EVENTS_threadListSync = sequelize.define('EVENTS_threadListSync', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false }
+        }, {
+          tableName: 'EVENTS_threadListSync',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
+        this.EVENTS_threadMemberUpdate = sequelize.define('EVENTS_threadMemberUpdate', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false }
+        }, {
+          tableName: 'EVENTS_threadMemberUpdate',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
+        this.EVENTS_threadUpdate = sequelize.define('EVENTS_threadUpdate', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false }
+        }, {
+          tableName: 'EVENTS_threadUpdate',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
+        this.EVENTS_typingStart = sequelize.define('EVENTS_typingStart', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false }
+        }, {
+          tableName: 'EVENTS_typingStart',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
+        this.EVENTS_typingStop = sequelize.define('EVENTS_typingStop', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false }
+        }, {
+          tableName: 'EVENTS_typingStop',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
+        this.EVENTS_userUpdate = sequelize.define('EVENTS_userUpdate', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false }
+        }, {
+          tableName: 'EVENTS_userUpdate',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
+        this.EVENTS_voiceServerUpdate = sequelize.define('EVENTS_voiceServerUpdate', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false }
+        }, {
+          tableName: 'EVENTS_voiceServerUpdate',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
+        this.EVENTS_voiceStateUpdate = sequelize.define('EVENTS_voiceStateUpdate', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
+          userId: { type: DataTypes.BIGINT, allowNull: true },
+          oldChannelId: { type: DataTypes.BIGINT, allowNull: true },
+          newChannelId: { type: DataTypes.BIGINT, allowNull: true },
+          oldServerMute: { type: DataTypes.TINYINT, allowNull: true },
+          newServerMute: { type: DataTypes.TINYINT, allowNull: true },
+          oldServerDeaf: { type: DataTypes.TINYINT, allowNull: true },
+          newServerDeaf: { type: DataTypes.TINYINT, allowNull: true },
+          oldStream: { type: DataTypes.TINYINT, allowNull: true },
+          newStream: { type: DataTypes.TINYINT, allowNull: true },
+          oldCam: { type: DataTypes.TINYINT, allowNull: true },
+          newCam: { type: DataTypes.TINYINT, allowNull: true },
+          oldClientMute: { type: DataTypes.TINYINT, allowNull: true },
+          newClientMute: { type: DataTypes.TINYINT, allowNull: true },
+          oldClientDeaf: { type: DataTypes.TINYINT, allowNull: true },
+          newClientDeaf: { type: DataTypes.TINYINT, allowNull: true },
+          eventType: { type: DataTypes.INTEGER, allowNull: true },
+          executorId: { type: DataTypes.BIGINT, allowNull: true },
+          datetime: { type: DataTypes.BIGINT, allowNull: true }
+        }, {
+          tableName: 'EVENTS_voiceStateUpdate',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
+        this.STATE_voiceLeft = sequelize.define('STATE_voiceLeft', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
+          channelid: { type: DataTypes.BIGINT, allowNull: true },
+          userid: { type: DataTypes.BIGINT, allowNull: true },
+          date: { type: DataTypes.BIGINT, allowNull: true }
+        }, {
+          tableName: 'STATE_voiceLeft',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
+        this.STATS_voiceJoin = sequelize.define('STATS_voiceJoin', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
+          userid: { type: DataTypes.BIGINT, allowNull: true },
+          channelid: { type: DataTypes.BIGINT, allowNull: true },
+          date: { type: DataTypes.BIGINT, allowNull: true }
+        }, {
+          tableName: 'STATS_voiceJoin',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
+        this.STATS_voiceSessions = sequelize.define('STATS_voiceSessions', {
+          id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
+          type: { type: DataTypes.INTEGER, allowNull: true },
+          start: { type: DataTypes.BIGINT, allowNull: true },
+          end: { type: DataTypes.BIGINT, allowNull: true },
+          userid: { type: DataTypes.BIGINT, allowNull: true }
+        }, {
+          tableName: 'STATS_voiceSessions',
+          timestamps: false,
+          charset: this.charset,
+          collate: this.collate
+        });
     
-        // EVENTS_inviteCreate Table
-        this.EVENTS_inviteCreate = this.sequelize.define('EVENTS_inviteCreate', {
-            id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-            code: { type: DataTypes.TEXT, allowNull: true },
-            channelid: { type: DataTypes.BIGINT, allowNull: true },
-            userid: { type: DataTypes.BIGINT, allowNull: true },
-            maxUses: { type: DataTypes.INTEGER, allowNull: true },
-            expiresAt: { type: DataTypes.BIGINT, allowNull: true },
-            executorId: { type: DataTypes.INTEGER, allowNull: true },
-        }, { tableName: 'EVENTS_inviteCreate', timestamps: false });
+      }
     
-        // EVENTS_inviteDelete Table
-        this.EVENTS_inviteDelete = this.sequelize.define('EVENTS_inviteDelete', {
-            id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-            code: { type: DataTypes.TEXT, allowNull: false },
-            channelid: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
-            executorId: { type: DataTypes.INTEGER, allowNull: true },
-        }, { tableName: 'EVENTS_inviteDelete', timestamps: false });
-    
-        // EVENTS_messageCreate Table
-        this.EVENTS_messageCreate = this.sequelize.define('EVENTS_messageCreate', {
-            id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-            datetime: { type: DataTypes.BIGINT, allowNull: true },
-            messageId: { type: DataTypes.BIGINT, allowNull: true },
-            channelId: { type: DataTypes.BIGINT, allowNull: true },
-            userId: { type: DataTypes.BIGINT, allowNull: true },
-            attachments: { type: DataTypes.JSON, allowNull: true },
-            content: { type: DataTypes.TEXT, allowNull: true },
-            isDelete: { type: DataTypes.INTEGER, allowNull: true, defaultValue: 0 },
-            isReply: { type: DataTypes.INTEGER, allowNull: true },
-            replyToMessageId: { type: DataTypes.BIGINT, allowNull: true },
-            deleteDatetime: { type: DataTypes.BIGINT, allowNull: true },
-        }, { tableName: 'EVENTS_messageCreate', timestamps: false });
-    
-        // EVENTS_messageDelete Table
-        this.EVENTS_messageDelete = this.sequelize.define('EVENTS_messageDelete', {
-            id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-            messageId: { type: DataTypes.BIGINT, allowNull: true },
-            datetime: { type: DataTypes.BIGINT, allowNull: true },
-            executorId: { type: DataTypes.INTEGER, allowNull: true },
-        }, { tableName: 'EVENTS_messageDelete', timestamps: false });
-    
-        // EVENTS_messageDeleteBulk Table
-        this.EVENTS_messageDeleteBulk = this.sequelize.define('EVENTS_messageDeleteBulk', {
-            id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-            channelId: { type: DataTypes.BIGINT, allowNull: true },
-            deletedMessages: { type: DataTypes.INTEGER, allowNull: true },
-            executorId: { type: DataTypes.BIGINT, allowNull: true },
-            datetime: { type: DataTypes.BIGINT, allowNull: true },
-        }, { tableName: 'EVENTS_messageDeleteBulk', timestamps: false });
-    
-        // EVENTS_messageReactionAdd Table
-        this.EVENTS_messageReactionAdd = this.sequelize.define('EVENTS_messageReactionAdd', {
-            id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-            reactionId: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
-            messageId: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
-            userId: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
-            datetime: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
-        }, { tableName: 'EVENTS_messageReactionAdd', timestamps: false });
-    
-        // EVENTS_messageReactionRemove Table
-        this.EVENTS_messageReactionRemove = this.sequelize.define('EVENTS_messageReactionRemove', {
-            id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-            reactionId: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
-            messageId: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
-            userId: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
-            datetime: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
-        }, { tableName: 'EVENTS_messageReactionRemove', timestamps: false });
-    
-        // EVENTS_messageUpdate Table
-        this.EVENTS_messageUpdate = this.sequelize.define('EVENTS_messageUpdate', {
-            id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-            userId: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
-            messageId: { type: DataTypes.BIGINT, allowNull: true },
-            newContent: { type: DataTypes.TEXT, allowNull: true },
-            oldContent: { type: DataTypes.TEXT, allowNull: true },
-            datetime: { type: DataTypes.BIGINT, allowNull: true },
-            attachments: { type: DataTypes.JSON, allowNull: true },
-            isReply: { type: DataTypes.INTEGER, allowNull: true },
-            replyToMessageId: { type: DataTypes.BIGINT, allowNull: true },
-        }, { tableName: 'EVENTS_messageUpdate', timestamps: false });
-    
-        // EVENTS_roleCreate Table
-        this.EVENTS_roleCreate = this.sequelize.define('EVENTS_roleCreate', {
-            id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-            roleId: { type: DataTypes.BIGINT, allowNull: true },
-            name: { type: DataTypes.STRING(64), allowNull: true },
-            color: { type: DataTypes.TEXT, allowNull: true },
-            permissions: { type: DataTypes.JSON, allowNull: true },
-            datetime: { type: DataTypes.BIGINT, allowNull: true },
-            executorId: { type: DataTypes.BIGINT, allowNull: true },
-        }, { tableName: 'EVENTS_roleCreate', timestamps: false });
-    
-        // EVENTS_roleUpdate Table
-        this.EVENTS_roleUpdate = this.sequelize.define('EVENTS_roleUpdate', {
-            id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-            roleId: { type: DataTypes.BIGINT, allowNull: true },
-            name: { type: DataTypes.STRING(64), allowNull: true },
-            color: { type: DataTypes.TEXT, allowNull: true },
-            permissions: { type: DataTypes.JSON, allowNull: true },
-            datetime: { type: DataTypes.BIGINT, allowNull: true },
-            isDelete: { type: DataTypes.BOOLEAN, allowNull: true },
-            executorId: { type: DataTypes.BIGINT, allowNull: true },
-            deleteDatetime: { type: DataTypes.BIGINT, allowNull: true },
-        }, { tableName: 'EVENTS_roleUpdate', timestamps: false });
-    
-        // EVENTS_voiceStateUpdate Table
-        this.EVENTS_voiceStateUpdate = this.sequelize.define('EVENTS_voiceStateUpdate', {
-            id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-            userId: { type: DataTypes.BIGINT, allowNull: true },
-            oldChannelId: { type: DataTypes.BIGINT, allowNull: true },
-            newChannelId: { type: DataTypes.BIGINT, allowNull: true },
-            oldServerMute: { type: DataTypes.BOOLEAN, allowNull: true },
-            newServerMute: { type: DataTypes.BOOLEAN, allowNull: true },
-            oldServerDeaf: { type: DataTypes.BOOLEAN, allowNull: true },
-            newServerDeaf: { type: DataTypes.BOOLEAN, allowNull: true },
-            oldStream: { type: DataTypes.BOOLEAN, allowNull: true },
-            newStream: { type: DataTypes.BOOLEAN, allowNull: true },
-            oldCam: { type: DataTypes.BOOLEAN, allowNull: true },
-            newCam: { type: DataTypes.BOOLEAN, allowNull: true },
-            oldClientMute: { type: DataTypes.BOOLEAN, allowNull: true },
-            newClientMute: { type: DataTypes.BOOLEAN, allowNull: true },
-            oldClientDeaf: { type: DataTypes.BOOLEAN, allowNull: true },
-            newClientDeaf: { type: DataTypes.BOOLEAN, allowNull: true },
-            eventType: { type: DataTypes.INTEGER, allowNull: true },
-            executorId: { type: DataTypes.BIGINT, allowNull: true },
-        }, { tableName: 'EVENTS_voiceStateUpdate', timestamps: false });
-    
-        // STATE_voiceLeft Table
-        this.STATE_voiceLeft = this.sequelize.define('STATE_voiceLeft', {
-            id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-            channelid: { type: DataTypes.BIGINT, allowNull: true },
-            userid: { type: DataTypes.BIGINT, allowNull: true },
-            date: { type: DataTypes.BIGINT, allowNull: true },
-        }, { tableName: 'STATE_voiceLeft', timestamps: false });
-    
-        // STATS_voiceJoin Table
-        this.STATS_voiceJoin = this.sequelize.define('STATS_voiceJoin', {
-            id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-            userid: { type: DataTypes.BIGINT, allowNull: true },
-            channelid: { type: DataTypes.BIGINT, allowNull: true },
-            date: { type: DataTypes.BIGINT, allowNull: true },
-        }, { tableName: 'STATS_voiceJoin', timestamps: false });
-    
-        // STATS_voiceSessions Table
-        this.STATS_voiceSessions = this.sequelize.define('STATS_voiceSessions', {
-            id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-            type: { type: DataTypes.INTEGER, allowNull: true },
-            start: { type: DataTypes.BIGINT, allowNull: true },
-            end: { type: DataTypes.BIGINT, allowNull: true },
-            userid: { type: DataTypes.BIGINT, allowNull: true },
-        }, { tableName: 'STATS_voiceSessions', timestamps: false });
-    }
     
     /**
      * Adds a single entry to a model. If the operation fails, it logs an error.
