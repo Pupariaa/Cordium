@@ -32,8 +32,8 @@ class Database {
             console.log('Database connection parameters are missing. Cannot connect. Nothing will be recorded.');
             return;
         }
-        this.charset = "tf8mb4";
-        this.collate = "tf8mb4_unicode_ci";
+        this.charset = "utf8mb4";
+        this.collate = "utf8mb4_unicode_ci";
         this.sequelize = new Sequelize(this.dbname, this.dbuser, this.dbpass, {
             host: this.host,
             port: this.dbport,
