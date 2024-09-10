@@ -1,5 +1,4 @@
 node_modules
-config/config.env
 config/channels.json
 package-lock.json
 src/sandbox/index.js

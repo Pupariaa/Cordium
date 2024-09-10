@@ -30,6 +30,8 @@ class CQD {
 
             global.client = new Discord.Client({ intents: 3276799, partials: ['MESSAGE', 'REACTION'] });
             global.configChannels = JSON.parse(fs.readFileSync('./config/channels.json', 'utf-8'));
+            global.configReportEvents = JSON.parse(fs.readFileSync('./config/reportEvents.json', 'utf-8'));
+            global.reportEvents = process.env.report_events.toLowerCase() === 'true';
             require('./Channels');
 
             // const Database = require('./internals/Database');
