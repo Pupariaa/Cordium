@@ -585,25 +585,14 @@ const argv = yargs
  * Updates a variable in a .env file. If the variable does not exist, adds it.
  * @param {string} key - The key to update in the .env file
  * @param {string} value - The value to set the key to
- * @param {string} configPath - The path to the .env file to update
  */
 function updateEnvVariable(key, value) {
     let configContent = fs.readFileSync(configPath, 'utf8');
     const regex = new RegExp(`^${key}=.*$`, 'm');
-
-    if (configContent.match(regex)) {
-
-        configContent = configContent.replace(regex, `${key}="${value}"`);
-        console.log(`Updated '${key}' in config.env.`);
-    } else {
-        configContent += `\n${key}= "${value}" `;
-        console.log(`Added '${key}' to config.env.`);
-    }
-
+    configContent = configContent.replace(regex, `${key}="${value}"`);
+    console.log(`Updated '${key}' in config.env.`);
     fs.writeFileSync(configPath, configContent, 'utf8');
 }
-
-
 
 /**
  * Creates all tables in the database if they don't already exist.
