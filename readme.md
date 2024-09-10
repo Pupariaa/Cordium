@@ -32,7 +32,7 @@ cn add --forum --name "your forum chanel name" --id "your forum channel id"
 <br>
 
 ## Basics utilisations
-### In any file initialized after the Discord_instance.js has a client global variable
+### In any file initialized after the CQD.js has a client global variable
 ```js
 //in any file
 const client = global.client
@@ -45,7 +45,7 @@ const client = global.client
 Async method, returns an object in promise
 ```js
 //in any file
-await global.Channel.send('channename', 'content');
+await global.channels.send('channename', 'content');
 ```
 return discord.js [Messages:Class](https://discord.js.org/docs/packages/discord.js/14.14.1/Message:Class)
 #### Other methods with directly Discord API
