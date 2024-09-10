@@ -4,7 +4,10 @@
 const fs = require('fs');
 const path = require('path');
 const yargs = require('yargs');
-require('dotenv').config({ path: path.join(__dirname, '../config.env') });
+
+const configPath = '../config.env';
+
+require('dotenv').config({ path: configPath });
 
 const { Sequelize, DataTypes } = require('sequelize');
 
@@ -579,7 +582,7 @@ const argv = yargs
  * @param {string} value - The value to set the key to
  * @param {string} configPath - The path to the .env file to update
  */
-function updateEnvVariable(key, value, configPath) {
+function updateEnvVariable(key, value) {
     let configContent = fs.readFileSync(configPath, 'utf8');
     const regex = new RegExp(`^${key}=.*$`, 'm');
 
@@ -650,15 +653,14 @@ function generateInviteLink() {
  * @returns {void}
  */
 function handleBddCommand(args) {
-    const configPath = path.join(__dirname, '../config.env');
 
     console.log('Configuring database connection variables...');
 
-    updateEnvVariable('dbhost', args.host, configPath);
-    updateEnvVariable('dbname', args.dbname, configPath);
-    updateEnvVariable('dbport', args.dbport, configPath);
-    updateEnvVariable('dbuser', args.dbuser, configPath);
-    updateEnvVariable('dbpass', args.dbpass, configPath);
+    updateEnvVariable('dbhost', args.host);
+    updateEnvVariable('dbname', args.dbname);
+    updateEnvVariable('dbport', args.dbport);
+    updateEnvVariable('dbuser', args.dbuser);
+    updateEnvVariable('dbpass', args.dbpass);
 
     console.log('Database connection parameters have been updated in config.env.');
 
@@ -688,7 +690,25 @@ function testDatabaseConnection() {
         .catch((error) => console.error('Failed to connect to the database:', error));
 }
 
-if (argv._[0] === 'invite') {
+function initBotConfig(token, clientId, guid, restrictRole) {
+
+    console.log('Initializing bot configuration...');
+
+    updateEnvVariable('discord_cqd_token', token);
+    updateEnvVariable('discord_cqd_cid', clientId);
+    updateEnvVariable('discord_guid', guid);
+    updateEnvVariable('restrictRole', restrictRole);
+
+    console.log('Bot configuration initialized successfully.');
+}
+
+if (argv._[0] === 'init') {
+    if (argv.token && argv.id && argv.guid && argv.rsrole) {
+        initBotConfig(argv.token, argv.id, argv.guid, argv.rsrole);
+    } else {
+        console.log('Please provide all required options: --token, --id, --guid, --rsrole');
+    }
+} else if (argv._[0] === 'invite') {
     generateInviteLink();
 } else if (argv._[0] === 'bdd') {
     handleBddCommand(argv);
