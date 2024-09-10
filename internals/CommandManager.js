@@ -9,7 +9,7 @@ class CommandHandler {
     constructor() {
         console.info(`START: Initializing CommandHandler.`);
         this.commandsPath = './src/commands';
-        this.rest = new REST({ version: '10' }).setToken(process.env.discord_cqd_token);
+        this.rest = new REST({ version: '10' }).setToken(process.env.client_token);
     }
 
     /**
@@ -59,7 +59,7 @@ class CommandHandler {
         try {
             console.info(`START: Deploying commands to Discord API.`);
             const data = await this.rest.put(
-                Routes.applicationGuildCommands(process.env.discord_cqd_cid, process.env.discord_guid),
+                Routes.applicationGuildCommands(process.env.client_id, process.env.discord_guild_id),
                 { body: commands }
             );
             console.success(`START: ${data.length} commands deployed successfully.`);

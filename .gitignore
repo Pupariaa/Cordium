@@ -1,8 +1,5 @@
 node_modules
-config.env
-events.json
-src/sandbox/index.js
+config/channels.json
+config/config.env
 package-lock.json
-src/common/logs
-channels.json
-est.json
+src/sandbox/index.js

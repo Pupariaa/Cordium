@@ -34,9 +34,9 @@ global.client.on(Events.ClientReady, async () => {
         global.client.invitesCache = new Map();
 
         // Get guild
-        global.guild = global.client.guilds.cache.get(process.env.discord_guid);
+        global.guild = global.client.guilds.cache.get(process.env.discord_guild_id);
         if (!global.guild) {
-            console.error(`START: Guild not found. Check the "discord_guid" in config.env.`);
+            console.error(`START: Guild not found. Check the "discord_guild_id" in config.env.`);
             process.exit(1);
         }
         global.initCount = (await global.guild.latestAuditLog())?.extra?.count || 0;

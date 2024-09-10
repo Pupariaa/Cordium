@@ -20,23 +20,23 @@ class Database {
      * Finally, attempts to authenticate the connection and logs a message depending on the result.
      */
 
-    constructor(host, dbname, dbport, dbuser, dbpass) {
+    constructor(db_host, db_name, db_port, db_user, db_pass) {
 
-        this.host = host || null
-        this.dbname = dbname || null
-        this.dbport = dbport || null
-        this.dbuser = dbuser || null
-        this.dbpass = dbpass || null
+        this.db_host = db_host || null
+        this.db_name = db_name || null
+        this.db_port = db_port || null
+        this.db_user = db_user || null
+        this.db_pass = db_pass || null
 
-        if (!this.dbname || !this.host || !this.dbuser || !this.dbpass || !this.dbport) {
+        if (!this.db_name || !this.db_host || !this.db_user || !this.db_pass || !this.db_port) {
             console.log('Database connection parameters are missing. Cannot connect. Nothing will be recorded.');
             return;
         }
         this.charset = "utf8mb4";
         this.collate = "utf8mb4_unicode_ci";
-        this.sequelize = new Sequelize(this.dbname, this.dbuser, this.dbpass, {
-            host: this.host,
-            port: this.dbport,
+        this.sequelize = new Sequelize(this.db_name, this.db_user, this.db_pass, {
+            host: this.db_host,
+            port: this.db_port,
             dialect: 'mysql',
         });
 
@@ -553,11 +553,11 @@ const argv = yargs
     .command('invite', 'Generate a Discord bot invite link', {})
 
     .command('bdd', 'Configure the database', {
-        host: { type: 'string', description: 'Database host address', demandOption: false },
-        dbname: { type: 'string', description: 'Database name', demandOption: false },
-        dbport: { type: 'number', description: 'Database port', demandOption: false },
-        dbuser: { type: 'string', description: 'Database username', demandOption: false },
-        dbpass: { type: 'string', description: 'Database password', demandOption: false },
+        db_host: { type: 'string', description: 'Database host address', demandOption: false },
+        db_name: { type: 'string', description: 'Database name', demandOption: false },
+        db_port: { type: 'number', description: 'Database port', demandOption: false },
+        db_user: { type: 'string', description: 'Database username', demandOption: false },
+        db_pass: { type: 'string', description: 'Database password', demandOption: false },
         create: { type: 'boolean', description: 'Create tables after connection', default: false }
     }, (args) => handleBddCommand(args))
     .command('bdd-test', 'Test the database connection', {}, () => {
@@ -569,7 +569,7 @@ const argv = yargs
         invite
             - Generate an invite link for the Discord bot.
 
-        bdd --host "host" --dbname "dbname" --dbport dbport --dbuser "username" --dbpass "password" --create (optional)
+        bdd --db_host "db_host" --db_name "db_name" --db_port db_port --db_user "username" --db_pass "password" --create (optional)
             - Set database connection variables in config.env. If --create is specified, connect and create tables.
 
         bdd-test
@@ -601,8 +601,8 @@ function updateEnvVariable(key, value) {
  *
  * @returns {Promise<void>}
  */
-function createTables(host, dbname, dbport, dbuser, bpass) {
-    const db = new Database(host, dbname, dbport, dbuser, bpass);
+function createTables(db_host, db_name, db_port, db_user, db_pass) {
+    const db = new Database(db_host, db_name, db_port, db_user, db_pass);
     if (!db.sequelize) {
         console.log('Unable to connect to the database. Please check your parameters.');
         return;
@@ -619,7 +619,7 @@ function createTables(host, dbname, dbport, dbuser, bpass) {
  * @returns {void}
  */
 function generateInviteLink() {
-    const clientId = process.env.discord_cqd_cid;
+    const clientId = process.env.client_id;
 
     if (!clientId) {
         console.error('Client ID is missing in environment variables. Please initialize the bot configuration using cn init.');
@@ -638,11 +638,11 @@ function generateInviteLink() {
  * creates the tables in the database if the `--create` flag is provided.
  *
  * @param {Object} args - The command line arguments.
- * @param {string} args.host - The hostname for the database.
- * @param {string} args.dbname - The name of the database.
- * @param {string} args.dbport - The port for the database.
- * @param {string} args.dbuser - The username for the database.
- * @param {string} args.dbpass - The password for the database.
+ * @param {string} args.db_host - The hostname for the database.
+ * @param {string} args.db_name - The name of the database.
+ * @param {string} args.db_port - The port for the database.
+ * @param {string} args.db_user - The username for the database.
+ * @param {string} args.db_pass - The password for the database.
  * @param {boolean} [args.create=false] - Create the tables in the database if true.
  * @returns {void}
  */
@@ -650,16 +650,16 @@ function handleBddCommand(args) {
 
     console.log('Configuring database connection variables...');
 
-    updateEnvVariable('dbhost', args.host);
-    updateEnvVariable('dbname', args.dbname);
-    updateEnvVariable('dbport', args.dbport);
-    updateEnvVariable('dbuser', args.dbuser);
-    updateEnvVariable('dbpass', args.dbpass);
+    updateEnvVariable('db_host', args.db_host);
+    updateEnvVariable('db_name', args.db_name);
+    updateEnvVariable('db_port', args.db_port);
+    updateEnvVariable('db_user', args.db_user);
+    updateEnvVariable('db_pass', args.db_pass);
 
     console.log('Database connection parameters have been updated in config.env.');
 
     if (args.create) {
-        createTables(args.host, args.dbname, args.dbport, args.dbuser, args.dbpass);
+        createTables(args.db_host, args.db_name, args.db_port, args.db_user, args.db_pass);
     }
 }
 
@@ -688,9 +688,9 @@ function initBotConfig(token, clientId, guid) {
 
     console.log('Initializing bot configuration...');
 
-    updateEnvVariable('discord_cqd_token', token);
-    updateEnvVariable('discord_cqd_cid', clientId);
-    updateEnvVariable('discord_guid', guid);
+    updateEnvVariable('client_token', token);
+    updateEnvVariable('client_id', clientId);
+    updateEnvVariable('discord_guild_id', guid);
 
     console.log('Bot configuration initialized successfully.');
 }

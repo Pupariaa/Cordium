@@ -6,7 +6,7 @@ const CommandManager = require('./CommandManager');
 require('puparia.getlines.js');
 
 function checkEnvVariables() {
-    const requiredVars = ['discord_cqd_token', 'discord_cqd_cid', 'discord_guid'];
+    const requiredVars = ['client_token', 'client_id', 'discord_guild_id'];
     const missingVars = requiredVars.filter(v => !process.env[v]);
 
     if (missingVars.length > 0) {
@@ -42,7 +42,7 @@ class CQD {
             commandManager.loadCommands();
             commandManager.deployCommands();
 
-            global.client.login(process.env.discord_cqd_token);
+            global.client.login(process.env.client_token);
         } catch (err) {
             console.error(`${__filename} - Line ${__line} (constructor): `, err);
         }
