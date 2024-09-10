@@ -21,14 +21,21 @@ class Database {
      */
 
     constructor(host, dbname, dbport, dbuser, dbpass) {
-        if (!dbname || !host || !dbuser || !dbpass || !dbport) {
+
+        this.host = host || null
+        this.dbname = dbname || null
+        this.dbport = dbport || null
+        this.dbuser = dbuser || null
+        this.dbpass = dbpass || null
+
+        if (!this.dbname || !this.host || !this.dbuser || !this.dbpass || !this.dbport) {
             console.log('Database connection parameters are missing. Cannot connect. Nothing will be recorded.');
             return;
         }
         this.charset = "tf8mb4";
         this.collate = "tf8mb4_unicode_ci";
         this.sequelize = new Sequelize(this.dbname, this.dbuser, this.dbpass, {
-            host: this.dbhost,
+            host: this.host,
             port: this.dbport,
             dialect: 'mysql',
         });
