@@ -274,8 +274,6 @@ class Database {
         }, { tableName: 'STATS_voiceSessions', timestamps: false });
     }
     
-
-
     /**
      * Adds a single entry to a model. If the operation fails, it logs an error.
      * @param {Model} model - The model to add the entry to.
@@ -293,22 +291,6 @@ class Database {
 }
 
 const argv = yargs
-    .command('add', 'Add a new channel', {
-        text: { type: 'boolean', description: 'Add a text channel' },
-        voice: { type: 'boolean', description: 'Add a voice channel' },
-        forum: { type: 'boolean', description: 'Add a forum channel' },
-        name: { alias: 'n', type: 'string', demandOption: true, description: 'Channel name' },
-        id: { alias: 'i', type: 'string', demandOption: true, description: 'Channel ID' },
-    })
-    .command('remove', 'Remove a channel', {
-        text: { type: 'boolean', description: 'Remove a text channel' },
-        voice: { type: 'boolean', description: 'Remove a voice channel' },
-        forum: { type: 'boolean', description: 'Remove a forum channel' },
-        id: { alias: 'i', type: 'string', demandOption: true, description: 'Channel ID' },
-    })
-    .command('create', 'Create a new trigger function', {
-        triggers: { alias: 't', type: 'string', demandOption: true, description: 'Trigger function definition' },
-    })
     .command('init', 'Initialize the bot configuration', {
         token: { alias: 't', type: 'string', demandOption: true, description: 'Discord bot token' },
         id: { alias: 'i', type: 'string', demandOption: true, description: 'Client ID' },
@@ -330,17 +312,6 @@ const argv = yargs
     })
     .command('help', `
         Available Commands:
-        add --text|--voice|--forum --name "channelName" --id "channelID" 
-            - Add a new channel of the specified type with the given name and ID.\n
-        
-        remove --text|--voice|--forum --id "channelID"
-            - Remove a channel of the specified type with the given ID.
-
-        create --triggers "functionName(message)"
-            - Create a new trigger function based on the provided definition.
-
-        init --token "discordToken" --id "clientId" --guid "guildId" --rsrole "roleId"
-            - Initialize the bot configuration with the provided parameters.
 
         invite
             - Generate an invite link for the Discord bot.
@@ -356,11 +327,6 @@ const argv = yargs
         `)
     .help()
     .argv;
-
-
-
-
-const sanitizeName = (name) => name.replace(/[^\w]/g, '');
 
 /**
  * Updates a variable in a .env file. If the variable does not exist, adds it.
@@ -383,257 +349,7 @@ function updateEnvVariable(key, value, configPath) {
 
     fs.writeFileSync(configPath, configContent, 'utf8');
 }
-/**
- * Creates a new trigger function based on the provided definition.
- * @param {string} triggerDefinition - The definition of the trigger function in the format "functionName(message)"
- * @returns {void}
- */
-function createTrigger(triggerDefinition) {
-    const match = triggerDefinition.match(/^(\w+)\(message\)$/);
-    if (!match) {
-        console.error('Invalid trigger function format. Expected format: functionName(message)');
-        return;
-    }
 
-    const functionName = match[1];
-    const triggersDir = path.join(__dirname, '../src/common/Triggers');
-    const triggerFilePath = path.join(triggersDir, `${functionName}.js`);
-    const typesFilePath = path.join(__dirname, '../types/global.t.ts');
-    const messagesFilePath = path.join(__dirname, '../internal/events.js');
-
-    console.log(`Creating trigger '${functionName}'...`);
-
-    if (!fs.existsSync(triggersDir)) {
-        fs.mkdirSync(triggersDir, { recursive: true });
-    }
-
-    const triggerFileContent = `
-    global.triggers = global.triggers || {};
-    
-    global.triggers.${functionName} = async function ${functionName}(message) {
-        // Your trigger logic here
-    };
-    
-    module.exports = {};
-    `;
-
-    fs.writeFileSync(triggerFilePath, triggerFileContent, 'utf8');
-    console.log(`Trigger file '${triggerFilePath}' created.`);
-
-    let typesContent = fs.readFileSync(typesFilePath, 'utf8');
-    const typeMarker04 = '//CLIMarker#04';
-    const typeMarker05 = '//CLIMarker#05';
-
-    if (typesContent.includes(`${functionName}: (message: any) => Promise<void>;`)) {
-        console.log(`Trigger type '${functionName}' already exists in global.t.ts.`);
-    } else {
-        typesContent = typesContent.replace(
-            typeMarker04,
-            `${typeMarker04}\n    ${functionName}: (message: any) => Promise<void>;`
-        );
-        typesContent = typesContent.replace(
-            typeMarker05,
-            `${typeMarker05}\n    ${functionName}: (message: any) => Promise<void>;`
-        );
-        fs.writeFileSync(typesFilePath, typesContent, 'utf8');
-        console.log(`Trigger type '${functionName}' added to global.t.ts.`);
-    }
-
-    let messagesContent = fs.readFileSync(messagesFilePath, 'utf8');
-    const messageMarker = '//CLIMarker#06';
-
-    if (!messagesContent.includes(`await global.triggers.${functionName}(message);`)) {
-        messagesContent = messagesContent.replace(
-            messageMarker,
-            `${messageMarker}\n    await global.triggers.${functionName}(message);`
-        );
-        fs.writeFileSync(messagesFilePath, messagesContent, 'utf8');
-        console.log(`Trigger call '${functionName}' added to Events.`);
-    } else {
-        console.log(`Trigger call '${functionName}' already exists in Events`);
-    }
-}
-
-/**
- * Adds a new channel to the config and Statics.js
- * @param {string} type - The type of channel to add (e.g. "text", "voice", "forum")
- * @param {string} channelName - The name of the channel to add
- * @param {string} channelId - The ID of the channel to add
- */
-function addChannel(type, channelName, channelId) {
-    const sanitizedChannelName = sanitizeName(channelName);
-
-    console.log(`Adding channel '${sanitizedChannelName}' with ID '${channelId}' as ${type}...`);
-    const staticsPath = path.join(__dirname, '../src/common/Statics.js');
-    let staticsContent = fs.readFileSync(staticsPath, 'utf8');
-    let typedefRegex = new RegExp(`(\\* @typedef {)([^}]*)} (${type})`, 's');
-    if (typedefRegex.test(staticsContent)) {
-        let exists = false;
-        staticsContent = staticsContent.replace(
-            typedefRegex,
-            (match, p1, p2, p3) => {
-                if (p2.includes(sanitizedChannelName)) {
-                    exists = true;
-                    return match;
-                }
-                if (p2 === '') {
-                    return `${p1}'${sanitizedChannelName}'} ${p3}`;
-                }
-                return `${p1}${p2} | '${sanitizedChannelName}'} ${p3}`;
-            }
-        );
-        if (exists) {
-            console.log(`Channel '${sanitizedChannelName}' already exists in ${staticsPath}.`);
-        } else {
-            fs.writeFileSync(staticsPath, staticsContent, 'utf8');
-            console.log(`Channel '${sanitizedChannelName}' added to ${staticsPath}.`);
-        }
-    } else {
-        console.error(`Failed to find typedef for ${type} in Statics.js.`);
-    }
-
-    const channelsPath = path.join(__dirname, '../channels.json');
-    const channels = JSON.parse(fs.readFileSync(channelsPath, 'utf8'));
-    if (channels[type][sanitizedChannelName]) {
-        console.log(`Channel '${sanitizedChannelName}' already exists in ${channelsPath}.`);
-        return;
-    }
-    channels[type][sanitizedChannelName] = channelId;
-    fs.writeFileSync(channelsPath, JSON.stringify(channels, null, 4), 'utf-8');
-    console.log(`Channel '${sanitizedChannelName}' added to ${channelsPath}.`);
-}
-
-/**
- * Removes a string from a union type definition in a string.
- * @param {string} str The string containing the union type definition.
- * @param {string} valueToRemove The value to remove from the union type definition.
- * @returns {string} The string with the value removed from the union type definition.
- */
-function removeStringFromUnion(str, valueToRemove) {
-    const regex = new RegExp(`'${valueToRemove}'(\\s*\\|\\s*)?`, 'g');
-    return str.replace(regex, '').replace(/\s*\|\s*$/, '');
-}
-
-/**
- * Finds the key associated with the given value in the given dictionary.
- * @param {Object<string,*>} dictionary The dictionary to search.
- * @param {*} value The value to search for.
- * @returns {string|null} The key associated with the given value or null if no key is found.
- */
-function findKeyByValue(dictionary, value) {
-    for (const [key, val] of Object.entries(dictionary)) {
-        if (val === value) {
-            return key;
-        }
-    }
-    return null;
-}
-
-/**
- * Removes a channel from the config and Statics.js
- * @param {string} type - The type of channel to remove (e.g. "text", "voice", "forum")
- * @param {string} channelId - The ID of the channel to remove
- * @returns {boolean} Whether or not the channel was successfully removed
- */
-function removeChannel(type, channelId) {
-    console.log(`Removing channel with ID '${channelId}' as ${type}...`);
-
-    const channelsPath = path.join(__dirname, '../channels.json');
-    const channels = JSON.parse(fs.readFileSync(channelsPath, 'utf8'));
-    const sanitizedChannelName = findKeyByValue(channels[type], channelId);
-    if (!sanitizedChannelName) {
-        console.log(`Channel with ID '${channelId}' already didn't exists in ${channelsPath}.`);
-        return false;
-    }
-    delete channels[type][sanitizedChannelName];
-    fs.writeFileSync(channelsPath, JSON.stringify(channels, null, 4), 'utf-8');
-    console.log(`Channel '${sanitizedChannelName}' removed from ${channelsPath}.`);
-
-    const staticsPath = path.join(__dirname, '../src/common/Statics.js');
-    let staticsContent = fs.readFileSync(staticsPath, 'utf8');
-    let typedefRegex = new RegExp(`(\\* @typedef {)([^}]*)} (${type})`, 's');
-    if (typedefRegex.test(staticsContent)) {
-        let exists = false;
-        staticsContent = staticsContent.replace(
-            typedefRegex,
-            (match, p1, p2, p3) => {
-                if (!p2.includes(sanitizedChannelName)) {
-                    return match;
-                }
-                exists = true;
-                return `${p1}${removeStringFromUnion(p2, sanitizedChannelName)}} ${p3}`;
-            }
-        );
-        if (!exists) {
-            console.log(`Channel '${sanitizedChannelName}' already didn't exist in ${staticsPath}.`);
-        } else {
-            fs.writeFileSync(staticsPath, staticsContent, 'utf8');
-            console.log(`Channel '${sanitizedChannelName}' removed from ${staticsPath}.`);
-        }
-    } else {
-        console.error(`Failed to find typedef for ${type} in Statics.js.`);
-    }
-
-    return true;
-}
-
-
-/**
- * Initializes the bot configuration by writing the given values to the
- * "config.env" file.
- *
- * @param {string} token - The bot token.
- * @param {string} clientId - The bot client ID.
- * @param {string} guid - The guild ID to join.
- * @param {string} restrictRole - The ID of the role to restrict to.
- * @returns {void}
- */
-function initBotConfig(token, clientId, guid, restrictRole) {
-    const configPath = path.join(__dirname, '../config.env');
-
-    console.log('Initializing bot configuration...');
-
-    updateEnvVariable('discord_cqd_token', token, configPath);
-    updateEnvVariable('discord_cqd_cid', clientId, configPath);
-    updateEnvVariable('discord_guid', guid, configPath);
-    updateEnvVariable('restrictRole', restrictRole, configPath);
-
-    console.log('Bot configuration initialized successfully.');
-}
-/**
- * Adds a channel to the "channels.json" file as a member count channel.
- *
- * The channel name must contain '{count}' where the member count should be displayed.
- * The channel ID should be the Discord ID of the channel.
- *
- * @param {string} channelName - The name of the channel to add.
- * @param {string} channelId - The Discord ID of the channel to add.
- * @returns {void}
- */
-function addMemberCountChannel(channelName, channelId) {
-
-    if (!channelName.includes('{count}')) {
-        console.error(`Channel name must contain '{count}' where the member count should be displayed.`);
-        return;
-    }
-
-    console.log(`Setting up '${channelName}' as a member count channel with ID '${channelId}'...`);
-
-    const channelsPath = path.join(__dirname, '../channels.json');
-    const channels = JSON.parse(fs.readFileSync(channelsPath, 'utf8'));
-    if (channels['voice'][channelName]) {
-        console.log(`Channel '${channelName}' already exists in ${channelsPath}.`);
-    } else {
-        channels['voice'][channelName] = channelId;
-        fs.writeFileSync(channelsPath, JSON.stringify(channels, null, 4), 'utf-8');
-        console.log(`Channel '${channelName}' added to ${channelsPath}.`);
-    }
-    addChannel('text', 'membercount', channelId)
-
-    const configPath = path.join(__dirname, '../config.env');
-    updateEnvVariable('membercount', channelId, configPath);
-    console.log(`Environment variable 'membercount' set to '${channelId}'.`);
-}
 
 
 /**
@@ -727,33 +443,8 @@ function testDatabaseConnection() {
         .catch((error) => console.error('Failed to connect to the database:', error));
 }
 
-
-if (argv._[0] === 'add') {
-    if (argv.text) addChannel('text', argv.name, argv.id);
-    else if (argv.voice) addChannel('voice', argv.name, argv.id);
-    else if (argv.forum) addChannel('forum', argv.name, argv.id);
-    else console.log('Please specify a valid channel type: --text, --voice, or --forum.');
-} else if (argv._[0] === 'remove') {
-    if (removeChannel('text', argv.id)) return;
-    if (removeChannel('voice', argv.id)) return;
-    if (removeChannel('forum', argv.id)) return;
-} else if (argv._[0] === 'create') {
-    if (argv.triggers) createTrigger(argv.triggers);
-    else console.log('Please provide a valid trigger function definition: --triggers "functionName(message)"');
-} else if (argv._[0] === 'init') {
-    if (argv.token && argv.id && argv.guid && argv.rsrole) {
-        initBotConfig(argv.token, argv.id, argv.guid, argv.rsrole);
-    } else {
-        console.log('Please provide all required options: --token, --id, --guid, --rsrole');
-    }
-} else if (argv._[0] === 'invite') {
+if (argv._[0] === 'invite') {
     generateInviteLink();
-} else if (argv._[0] === 'add-member-count') {
-    if (argv.name && argv.id) {
-        addMemberCountChannel(argv.name, argv.id);
-    } else {
-        console.log('Please provide both --name and --id options.');
-    }
 } else if (argv._[0] === 'bdd') {
     handleBddCommand(argv);
 } else if (argv._[0] === 'help') {
