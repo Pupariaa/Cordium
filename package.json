@@ -4,11 +4,11 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "init": "powershell -ExecutionPolicy Bypass -File ./init.ps1 & mkdir src\\common\\logs & echo|set /p=[]> events.json & echo|set /p=> config.env & echo {> channels.json & echo \t\"text\": {>> channels.json & echo \t},>> channels.json & echo \t\"voice\": {>> channels.json & echo \t},>> channels.json & echo \t\"forum\": {>> channels.json & echo \t}>> channels.json & echo }>> channels.json & echo 'use strict';> src\\sandbox\\index.js & echo console.log('--------------------------------------------SANDBOX OUTPUT START--------------------------------------------');>> src\\sandbox\\index.js & echo const fs = require('fs');>> src\\sandbox\\index.js & echo const path = require('path');>> src\\sandbox\\index.js & echo const guild = global.client.guilds.cache.get(process.env.discord_guid);>> src\\sandbox\\index.js & echo.>> src\\sandbox\\index.js & echo.>> src\\sandbox\\index.js & echo.>> src\\sandbox\\index.js & echo|set /p=console.log('--------------------------------------------SANDBOX OUTPUT END----------------------------------------------');>> src\\sandbox\\index.js & npm i",
+    "init": "echo|set /p=> config/config.env & echo 'use strict';> src\\sandbox\\index.js & echo console.log('--------------------------------------------SANDBOX OUTPUT START--------------------------------------------');>> src\\sandbox\\index.js & echo const fs = require('fs');>> src\\sandbox\\index.js & echo const path = require('path');>> src\\sandbox\\index.js & echo const guild = global.client.guilds.cache.get(process.env.discord_guid);>> src\\sandbox\\index.js & echo.>> src\\sandbox\\index.js & echo.>> src\\sandbox\\index.js & echo.>> src\\sandbox\\index.js & echo|set /p=console.log('--------------------------------------------SANDBOX OUTPUT END----------------------------------------------');>> src\\sandbox\\index.js & npm i & echo. & powershell -ExecutionPolicy Bypass -File ./config/cli/init.ps1",
     "prod": "set prod=true && node index.js"
   },
   "bin": {
-    "cn": "./cli //cn_add.js"
+    "cn": "./config/cli/cn.js"
   },
   "type": "commonjs",
   "author": "Pupariaa",
