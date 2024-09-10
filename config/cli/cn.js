@@ -4,9 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const yargs = require('yargs');
-
-const configPath = '../config.env';
-
+const configPath = path.resolve(__dirname, '../config.env');
 require('dotenv').config({ path: configPath });
 
 const { Sequelize, DataTypes } = require('sequelize');
@@ -22,16 +20,16 @@ class Database {
      * Finally, attempts to authenticate the connection and logs a message depending on the result.
      */
 
-    constructor() {
-        if (!process.env.dbname || !process.env.dbhost || !process.env.dbuser || !process.env.dbpass || !process.env.dbport) {
+    constructor(host, dbname, dbport, dbuser, dbpass) {
+        if (!dbname || !host || !dbuser || !dbpass || !dbport) {
             console.log('Database connection parameters are missing. Cannot connect. Nothing will be recorded.');
             return;
         }
         this.charset = "tf8mb4";
         this.collate = "tf8mb4_unicode_ci";
-        this.sequelize = new Sequelize(process.env.dbname, process.env.dbuser, process.env.dbpass, {
-            host: process.env.dbhost,
-            port: process.env.dbport,
+        this.sequelize = new Sequelize(this.dbname, this.dbuser, this.dbpass, {
+            host: this.dbhost,
+            port: this.dbport,
             dialect: 'mysql',
         });
 
@@ -608,7 +606,7 @@ function updateEnvVariable(key, value) {
  * @returns {Promise<void>}
  */
 function createTables() {
-    const db = new Database();
+    const db = new Database(host, dbname, dbport, dbuser, bpass);
     if (!db.sequelize) {
         console.log('Unable to connect to the database. Please check your parameters.');
         return;
@@ -665,7 +663,7 @@ function handleBddCommand(args) {
     console.log('Database connection parameters have been updated in config.env.');
 
     if (args.create) {
-        createTables();
+        createTables(args.host, args.dbname, args.dbport, args.dbuser, args.dbpass);
     }
 }
 
@@ -711,7 +709,7 @@ if (argv._[0] === 'init') {
 } else if (argv._[0] === 'invite') {
     generateInviteLink();
 } else if (argv._[0] === 'bdd') {
-    handleBddCommand(argv);
+    // handleBddCommand(argv);
 } else if (argv._[0] === 'help') {
     console.log('Use `cn help` to see available commands.');
 } else {
