@@ -20,7 +20,7 @@ function _getByTags(channels, ...tags) {
     for (const [ channelName, channelAlias ] of Object.entries(channels)) {
         for (const tag of tags) {
             if (channelAlias.tags.includes(tag)) {
-                r.push(channelName);
+                r.push(_getByName(channelName));
                 break;
             }
         }
@@ -80,7 +80,7 @@ class Channels {
     }
 
     getByTags = function(...tags) {
-        return this.text.getByTags(...tags) || this.voice.getByTags(...tags) || this.forum.getByTags(...tags);
+        return [...this.text.getByTags(...tags), ...this.voice.getByTags(...tags), ...this.forum.getByTags(...tags)];
     }
 
     text = {
