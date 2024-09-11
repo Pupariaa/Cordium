@@ -1,5 +1,7 @@
-const ParamCaretaker = require('../../Modules/ParamCaretaker');
+const path = require('path');
 
+
+const ParamCaretaker = require(path.join(__dirname, '../../../../internals/api/modules/ParamCaretaker'));
 /**
  * Process a list of voice state updates and returns an array of voice connection status objects.
  * Each object contains the user ID, the datetime of the connection, the datetime of the disconnection,
@@ -31,7 +33,7 @@ async function getVoiceConnectionStatusWithEvents(voiceUpdates) {
         events: [],
         messages: [],
         connectedChannelId: event.newChannelId,
-        global.database: null
+        disconnectedChannelId: null
       };
 
     } else if (event.eventType === 3) {
@@ -39,13 +41,13 @@ async function getVoiceConnectionStatusWithEvents(voiceUpdates) {
         connectEvents[userId].disconnectAt = event.datetime;
         connectEvents[userId].disconnectBy = event.executorId;
         connectEvents[userId].stillConnected = false;
-        connectEvents[userId].global.database = event.oldChannelId;
+        connectEvents[userId].disconnectedChannelId = event.oldChannelId;
 
-        const { connectedChannelId, global.database } = connectEvents[userId];
+        const { connectedChannelId, disconnectedChannelId } = connectEvents[userId];
         const channelIds = [connectedChannelId];
 
-        if (global.database && global.database !== connectedChannelId) {
-          channelIds.push(global.database);
+        if (disconnectedChannelId && disconnectedChannelId !== connectedChannelId) {
+          channelIds.push(disconnectedChannelId);
         }
 
         console.log(`Canaux pour l'utilisateur ${userId}:`, channelIds);
@@ -130,6 +132,62 @@ function addEventChanges(eventsList, event) {
   });
 }
 
+/**
+ * Adds events to the given events list based on the differences between the old and new values in the given event.
+ * The added events are serverMute, serverDeaf, selfStream, selfCam, clientMute and clientDeaf.
+ * @param {Array<Object>} eventsList - The list of events to add to.
+ * @param {Object} event - The event object containing the old and new values to compare.
+ * @returns {void}
+ */
+function addEventChanges(eventsList, event) {
+  const changeFields = [
+    { old: 'oldServerMute', new: 'newServerMute', eventName: 'serverMute' },
+    { old: 'oldServerDeaf', new: 'newServerDeaf', eventName: 'serverDeaf' },
+    { old: 'oldStream', new: 'newStream', eventName: 'selfStream' },
+    { old: 'oldCam', new: 'newCam', eventName: 'selfCam' },
+    { old: 'oldClientMute', new: 'newClientMute', eventName: 'clientMute' },
+    { old: 'oldClientDeaf', new: 'newClientDeaf', eventName: 'clientDeaf' }
+  ];
+
+  changeFields.forEach(({ old, new: newField, eventName }) => {
+    if (event[old] !== event[newField]) {
+      eventsList.push({
+        datetime: event.datetime,
+        eventName: eventName,
+        stats: event[newField]
+      });
+    }
+  });
+}
+
+/**
+ * Adds events to the given events list based on the differences between the old and new values in the given event.
+ * The added events are serverMute, serverDeaf, selfStream, selfCam, clientMute and clientDeaf.
+ * @param {Array<Object>} eventsList - The list of events to add to.
+ * @param {Object} event - The event object containing the old and new values to compare.
+ * @returns {void}
+ */
+function addEventChanges(eventsList, event) {
+  const changeFields = [
+    { old: 'oldServerMute', new: 'newServerMute', eventName: 'serverMute' },
+    { old: 'oldServerDeaf', new: 'newServerDeaf', eventName: 'serverDeaf' },
+    { old: 'oldStream', new: 'newStream', eventName: 'selfStream' },
+    { old: 'oldCam', new: 'newCam', eventName: 'selfCam' },
+    { old: 'oldClientMute', new: 'newClientMute', eventName: 'clientMute' },
+    { old: 'oldClientDeaf', new: 'newClientDeaf', eventName: 'clientDeaf' }
+  ];
+
+  changeFields.forEach(({ old, new: newField, eventName }) => {
+    if (event[old] !== event[newField]) {
+      eventsList.push({
+        datetime: event.datetime,
+        eventName: eventName,
+        stats: event[newField]
+      });
+    }
+  });
+}
+
 module.exports = {
   /**
    * @description Return the history of voice connections for a specific user
@@ -140,6 +198,7 @@ module.exports = {
    * @returns {Promise<object[]>} - The voice connection updates
    */
   handleRequest: async (ep, requestData) => {
+    console.log('test')
     const params = new ParamCaretaker();
     const validationError = params.validate(ep, requestData);
     if (requestData.key !== "bAhRTVpaXS4FvEeD9k2KLOI6Ho92MReU" || !requestData.key) {
@@ -148,6 +207,8 @@ module.exports = {
     if (validationError) {
       return validationError;
     }
+
+    
 
     const pairs = getVoiceConnectionStatusWithEvents(await global.database.getVoiceStateUpdatesByUserId(requestData.userid));
 
