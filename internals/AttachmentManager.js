@@ -21,11 +21,12 @@ class AttachmentManager {
      * @returns {Array} - A list of attachments.
      */
     loadAttachments() {
+        const functionName = 'loadAttachments';
         try {
             const data = fs.readFileSync(path.join(this.attachmentsFile, 'index.json'), 'utf8');
             return JSON.parse(data);
         } catch (error) {
-            console.error(`${__filename} - (loadAttachments): Error loading attachments.`, error);
+            console.error(`${__filename} - (${functionName}): Error loading attachments.`, error);
             return [];
         }
     }
@@ -35,13 +36,14 @@ class AttachmentManager {
      * @param {Array} attachments - The list of attachments to save.
      */
     saveAttachments(attachments) {
+        const functionName = 'saveAttachments';
         try {
             fs.writeFileSync(
                 path.join(this.attachmentsFile, 'index.json'),
                 JSON.stringify(attachments, null, 2)
             );
         } catch (error) {
-            console.error(`${__filename} - (saveAttachments): Error saving attachments.`, error);
+            console.error(`${__filename} - (${functionName}): Error saving attachments.`, error);
         }
     }
 
@@ -51,13 +53,14 @@ class AttachmentManager {
      * @returns {string} - The extracted and sanitized filename.
      */
     extractFilenameFromUrl(url) {
+        const functionName = 'extractFilenameFromUrl';
         try {
             const parsedUrl = new URL(url);
             const pathname = parsedUrl.pathname;
             const filename = path.basename(pathname);
             return sanitizeFilename(filename);
         } catch (error) {
-            console.error(`${__filename} - (extractFilenameFromUrl): Error extracting filename.`, error);
+            console.error(`${__filename} - (${functionName}): Error extracting filename.`, error);
             return 'unknown';
         }
     }
@@ -69,6 +72,7 @@ class AttachmentManager {
      * @returns {Promise<string>} - The path to the downloaded file.
      */
     async downloadFile(url, filename) {
+        const functionName = 'downloadFile';
         try {
             const response = await axios({
                 url,
@@ -86,12 +90,12 @@ class AttachmentManager {
                     resolve(filePath);
                 });
                 writer.on('error', (error) => {
-                    console.error(`${__filename} - (downloadFile): Error during download.`, error);
+                    console.error(`${__filename} - (${functionName}): Error during download.`, error);
                     reject(error);
                 });
             });
         } catch (error) {
-            console.error(`${__filename} - (downloadFile): Error initiating download.`, error);
+            console.error(`${__filename} - (${functionName}): Error initiating download.`, error);
             throw error;
         }
     }
@@ -102,6 +106,7 @@ class AttachmentManager {
  * @returns {Promise<Array>} - A list of newly processed attachments.
  */
     async handleAttachments(message) {
+        const functionName = 'handleAttachments';
         try {
             const newAttachments = [];
 
@@ -135,7 +140,7 @@ class AttachmentManager {
             return newAttachments;
 
         } catch (error) {
-            console.error(`${__filename} - (handleAttachments): Error handling attachments.`, error);
+            console.error(`${__filename} - (${functionName}): Error handling attachments.`, error);
             throw error;
         }
     }
@@ -145,12 +150,13 @@ class AttachmentManager {
      * @returns {Array} - A list of attachments associated with the message.
      */
     getAttachments(messageId) {
+        const functionName = 'getAttachments';
         try {
             const attachments = this.loadAttachments();
             const filteredAttachments = attachments.filter(att => att.messageId === messageId);
             return filteredAttachments;
         } catch (error) {
-            console.error(`${__filename} - (getAttachments): Error retrieving attachments.`, error);
+            console.error(`${__filename} - (${functionName}): Error retrieving attachments.`, error);
             return [];
         }
     }
