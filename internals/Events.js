@@ -848,7 +848,7 @@ function eventToPath(event) {
 
 {
     const event = Events.InteractionCreate;
-    let eventName = String(event);
+    let eventName;
 
     const reportDefault = (interaction) => {
         try {
@@ -885,6 +885,8 @@ function eventToPath(event) {
     }
 
     global.client.on(event, (interaction) => {
+        eventName = String(event);
+
         try {
             if (global.guild.id !== interaction.guildId) return;
             
@@ -951,9 +953,11 @@ function eventToPath(event) {
 
 {
     const event = Events.InviteCreate;
-    let eventName = String(event);
+    let eventName;
 
     global.client.on(event, async (invite) => {
+        eventName = String(event);
+
         try {
             if (global.guild.id !== invite.guild.id) return;
 
@@ -980,9 +984,11 @@ function eventToPath(event) {
 
 {
     const event = Events.InviteDelete;
-    let eventName = String(event);
+    let eventName;
 
     global.client.on(event, async (invite) => {
+        eventName = String(event);
+
         try {
             if (global.guild.id !== invite.guild.id) return;
             
@@ -1005,9 +1011,11 @@ function eventToPath(event) {
 
 {
     const event = Events.MessageBulkDelete;
-    let eventName = String(event);
+    let eventName;
 
     global.client.on(event, async (messages, channel) => {
+        eventName = String(event);
+
         try {
             if (global.guild.id !== channel.guild.id) return;
 
@@ -1030,9 +1038,11 @@ function eventToPath(event) {
 
 {
     const event = Events.MessageCreate;
-    let eventName = String(event);
+    let eventName;
 
     global.client.on(event, async (message) => {
+        eventName = String(event);
+
         try {
             if (global.guild.id !== message.guild.id) return;
            
@@ -1066,9 +1076,11 @@ function eventToPath(event) {
 
 {
     const event = Events.MessageDelete;
-    let eventName = String(event);
+    let eventName;
 
     global.client.on(event, async (message) => {
+        eventName = String(event);
+
         try {
             if (global.guild.id !== message.guild.id) return;
 
@@ -1094,9 +1106,11 @@ function eventToPath(event) {
 
 {
     const event = Events.MessageReactionAdd;
-    let eventName = String(event);
+    let eventName;
 
     global.client.on(event, (reaction, executor, details) => {
+        eventName = String(event);
+
         try {
             if (global.guild.id !== reaction.message.guild.id) return;
 
@@ -1122,9 +1136,11 @@ function eventToPath(event) {
 
 {
     const event = Events.MessageReactionRemove;
-    let eventName = String(event);
+    let eventName;
 
     global.client.on(event, (reaction, executor, details) => {
+        eventName = String(event);
+
         try {
             if (global.guild.id !== reaction.message.guild.id) return;
 
@@ -1150,9 +1166,11 @@ function eventToPath(event) {
 
 {
     const event = Events.MessageReactionRemoveAll;
-    let eventName = String(event);
+    let eventName;
 
     global.client.on(event, async (message, reactions) => {
+        eventName = String(event);
+
         try {
             if (global.guild.id !== reactions.message.guild.id) return;
 
@@ -1167,9 +1185,11 @@ function eventToPath(event) {
 
 {
     const event = Events.MessageReactionRemoveEmoji;
-    let eventName = String(event);
+    let eventName;
 
     global.client.on(event, async (reaction) => {
+        eventName = String(event);
+
         try {
             if (global.guild.id !== reaction.message.guild.id) return;
 
@@ -1184,9 +1204,11 @@ function eventToPath(event) {
 
 {
     const event = Events.MessageUpdate;
-    let eventName = String(event);
+    let eventName;
 
     global.client.on(event, (oldMessage, newMessage) => {
+        eventName = String(event);
+
         try {
             if (global.guild.id !== invite.guild.id) return;
 
@@ -1230,9 +1252,11 @@ function eventToPath(event) {
 
 {
     const event = Events.ThreadCreate;
-    let eventName = String(event);
+    let eventName;
 
     global.client.on(event, async (thread, newlyCreated) => {
+        eventName = String(event);
+
         try {
             if (global.guild.id !== thread.guild.id) return;
 
@@ -1256,9 +1280,11 @@ function eventToPath(event) {
 
 {
     const event = Events.ThreadDelete;
-    let eventName = String(event);
+    let eventName;
 
     global.client.on(event, async (thread) => {
+        eventName = String(event);
+
         try {
             if (global.guild.id !== thread.guild.id) return;
 
@@ -1288,9 +1314,11 @@ function eventToPath(event) {
 
 {
     const event = Events.ThreadUpdate;
-    let eventName = String(event);
+    let eventName;
 
     global.client.on(event, async (oldThread, newThread) => {
+        eventName = String(event);
+
         try {
             if (global.guild.id !== newThread.guild.id) return;
 
@@ -1320,7 +1348,7 @@ function eventToPath(event) {
 
 {
     const event = Events.VoiceStateUpdate;
-    let eventName = String(event);
+    let eventName;
 
     let count = global.initCount;
     let now;
@@ -1337,6 +1365,7 @@ function eventToPath(event) {
     }
 
     global.client.on(event, async (oldState, newState) => {
+        eventName = String(event);
         
         try {
 
