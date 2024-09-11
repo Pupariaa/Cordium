@@ -85,7 +85,6 @@ if (port && process.env.api_enable && global.database) {
 } else {
     if (!global.database && process.env.db_host) {
         reportError(__line, __filename, 'START: The API could not start because the database was not resolved. Do cn bdd-test for more details');
-        console.error('START: The API could not start because the database was not resolved. Do cn bdd-test for more details');
     } else if (!global.database && !process.env.db_host){
         console.warn('START: The API could not start because the database was not configured. Do cn -bdd -host "hostname" --dbname "<database name>" --dbuser "<database username>" --dbpass "<database password>" --dbport <database port> --create')
     } else {
