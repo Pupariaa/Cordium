@@ -34,11 +34,14 @@ class CQD {
             global.reportEvents = process.env.report_events.toLowerCase() === 'true';
             require('./Channels');
 
-            // const Database = require('./internals/Database');
-            // global.database = new Database();
-            // const AttachmentManager = require('./AttachmentManager');
+            const Database = require('../internals/Database');
+            global.database = new Database();
 
-            // global.attachment = new AttachmentManager();
+
+
+            const AttachmentManager = require('./AttachmentManager');
+
+            global.attachment = new AttachmentManager();
             
             const commandManager = new CommandManager();
             commandManager.loadCommands();
