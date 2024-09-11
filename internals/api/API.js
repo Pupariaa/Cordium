@@ -6,7 +6,10 @@ const path = require('path');
 const app = express();
 const endpointsPath = path.join(__dirname, '../../src/api/endpoints');
 const endpoints = require(endpointsPath);
-const port = process.env.apiport;
+const port = process.env.api_port;
+
+const report = console.createReportFunction(__filename);
+const reportError = console.createReportErrorFunction(__filename);
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -66,12 +69,12 @@ const rh = async (req, res) => {
             l = { client: cIp, error: `cannot get /${ePath}`, status_code: 400, request_data: rData };
         }
     } catch (err) {
-        console.error('Erreur inattendue dans le routeur:', err);
+        reportError(__line, functionName, 'Unexpected error in routing:', err);
         res.status(500).json('Internal Server Error');
     }
 };
 
-if (port && process.env.apienable && global.database) {
+if (port && process.env.api_enable && global.database) {
     app.get('/api/private/*', rh);
     app.get('/api/public/*', rh);
 
@@ -80,12 +83,12 @@ if (port && process.env.apienable && global.database) {
         console.success(`START: API is Running on port ${port}`);
     });
 } else {
-    if (!global.database && process.env.dbhost) {
+    if (!global.database && process.env.db_host) {
+        reportError(__line, __filename, 'START: The API could not start because the database was not resolved. Do cn bdd-test for more details');
         console.error('START: The API could not start because the database was not resolved. Do cn bdd-test for more details');
-    } else if(!global.database && !process.env.dbhost){
+    } else if (!global.database && !process.env.db_host){
         console.warn('START: The API could not start because the database was not configured. Do cn -bdd -host "hostname" --dbname "<database name>" --dbuser "<database username>" --dbpass "<database password>" --dbport <database port> --create')
     } else {
-        console.warn('START: API is not setup properly; check environment variables.');
+        console.warn('START: API is not setup properly, check environment variables');
     }
-    
 }

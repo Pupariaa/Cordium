@@ -1,12 +1,15 @@
 'use-strict';
 require('puparia.getlines.js')
 
+const report = console.createReportFunction(__filename);
+const reportError = console.createReportErrorFunction(__filename);
+
 function _getById(channelId) {
     const functionName = 'getChannel';
     try {
         return channelId ? global.guild.channels.cache.get(channelId) : null;
     } catch (err) {
-        console.error(`${__filename} - Line ${__line} (${functionName}): Error fetching channel with ID ${channelId}:`, err);
+        reportError(__line, functionName, `Error fetching channel with ID ${channelId}:`, err);
         return null;
     }
 }
@@ -37,7 +40,7 @@ class Channels {
         try {
             return await channel.send(data);
         } catch (err) {
-            console.error(`${__filename} - Line ${__line} (${functionName}): `, err);
+            reportError(__line, functionName, `Error sending message to channel ${channel.name}:`, err);
         }
         return null;
     }
@@ -47,10 +50,10 @@ class Channels {
         // const channelName = channel.name;
         try {
             await channel.setName(newName);
-            // console.info(`${__filename} - Line ${__line} (${functionName}): Channel "${channelName}" renamed to "${newName}".`);
+            // console.info(`${__filename} - Line ${__line} (${functionName}): Channel "${channelName}" renamed to "${newName}"`);
             return channel;
         } catch (err) {
-            console.error(`${__filename} - Line ${__line} (${functionName}): `, err);
+            reportError(__line, functionName, `Error renaming channel ${channel.name}:`, err);
         }
         return null;
     }

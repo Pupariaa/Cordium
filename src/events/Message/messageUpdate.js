@@ -13,16 +13,16 @@
 
 //     try {
         // if (oldMessage.partial || newMessage.partial) {
-        //     console.warn(`${__filename} - Line ${__line} (${eventName}): Cannot fetch details for partial messages.`);
+        //     console.warn(`${__filename} - Line ${__line} (${eventName}): Cannot fetch details for partial messages`);
         //     return;
         // }
         // if (oldMessage.author?.bot || newMessage.author?.bot) {
-        //     console.info(`${__filename} - Line ${__line} (${eventName}): Message updated by a bot, ignoring.`);
+        //     console.info(`${__filename} - Line ${__line} (${eventName}): Message updated by a bot, ignoring`);
         //     return;
         // }
 
         // if (oldMessage.content === newMessage.content) {
-        //     console.info(`${__filename} - Line ${__line} (${eventName}): Message content unchanged, no action needed.`);
+        //     console.info(`${__filename} - Line ${__line} (${eventName}): Message content unchanged, no action needed`);
         //     return;
         // }
 

@@ -23,7 +23,7 @@ Client.prototype.executeCommand = function (commandName, message, args) {
     if (this.commands && this.commands.has(commandName)) {
         this.commands.get(commandName)(message, args);
     } else {
-        message.reply('Command not found.');
+        message.reply('Command not found');
     }
 };
 
@@ -70,7 +70,7 @@ Client.prototype.sendMessageToChannel = async function (channelName, message) {
     if (channel) {
         await channel.send(message);
     } else {
-        console.error(`Channel "${channelName}" not found.`);
+        console.error(`Channel "${channelName}" not found`);
     }
 };
 

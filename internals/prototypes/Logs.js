@@ -68,7 +68,7 @@ console.success = function (...args) {
     originalLog(colors.FgGreen, `${getFormattedTime()} [GOOD]`, colors.Reset, ...args);
 };
 
-console.createReportFunction = function (filename, formatArgs, shouldLog = (functionName, ...args) => true) {
+console.createReportFunction = function (filename, formatArgs = (...args) => args.join(' '), shouldLog = (functionName, ...args) => true) {
     return function (line, functionName, ...args) {
         if (!shouldLog(filename, ...args)) return;
         console.info(`${filename} - Line ${line} (${colors['FgGreen']}${functionName}${colors['Reset']}): `, formatArgs(...args));
