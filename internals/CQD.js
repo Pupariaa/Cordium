@@ -35,7 +35,10 @@ class CQD {
             require('./Channels');
 
             const Database = require('../internals/Database');
+            global.database_cache = [];
+            
             global.database = new Database();
+            require('../internals/GetDatabase')
 
 
 
