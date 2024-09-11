@@ -815,6 +815,7 @@ function eventToPath(event) {
     });
 }
 
+
 {
     const event = Events.GuildStickerUpdate;
     let eventName = String(event)
