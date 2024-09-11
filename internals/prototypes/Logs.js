@@ -35,9 +35,9 @@ function getFormattedTime() {
 }
 
 function logFactory(logger, type, typeColor) {
-    return function (filename, formatArgs = (...args) => args.join(' '), shouldLog = (context, ...args) => true) {
+    return function (filename, formatArgs = (...args1) => args1.join(' '), shouldLog = (context, ...args2) => true) {
         return function (line, context, ...args) {
-            if (!shouldLog(filename, ...args)) return;
+            if (!shouldLog(context, ...args)) return;
             logger(typeColor, `${getFormattedTime()} [${type}]${colors.Reset}`, `${filename} - Line ${line} (${colors['FgGreen']}${context}${colors['Reset']}):`, formatArgs(...args));
         }
     };

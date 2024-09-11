@@ -1,7 +1,7 @@
 const { Sequelize, DataTypes, Op } = require('sequelize'); // Assurez-vous que Sequelize et Op sont importés
 
 const { __cfn, __cf } = eval(require(`current_filename`));
-const { report, reportWarn, reportError } = console.createReports(__cf);
+const { report, reportWarn, reportError } = console.createReports(__cfn);
 
 class Database {
     /**

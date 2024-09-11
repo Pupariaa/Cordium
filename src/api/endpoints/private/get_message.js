@@ -1,7 +1,4 @@
-const path = require('path');
-const ParamCaretaker = require(path.join(__dirname, '../../../../internals/api/modules/ParamCaretaker'));
-
-
+const spectraget = require('spectraget')
 
 module.exports = {
     /**
@@ -13,8 +10,7 @@ module.exports = {
      * @returns {Promise<object[]>} - The voice connection updates
      */
     handleRequest: async (ep, requestData) => {
-        const params = new ParamCaretaker();
-        const validationError = params.validate(ep, requestData);
+        const validationError = spectraget.validate(ep.params, requestData);
         if (requestData.key !== "bAhRTVpaXS4FvEeD9k2KLOI6Ho92MReU" || !requestData.key) {
             return { error: 'Unauthorized', status_code: 401 }
         }
@@ -23,9 +19,7 @@ module.exports = {
         }
 
         const messageData = await global.database_cache.get_message(requestData.id);
-
         return messageData
-
     },
 };
 

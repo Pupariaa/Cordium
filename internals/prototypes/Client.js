@@ -1,7 +1,7 @@
 'use strict';
 const { Client, Collection } = require('discord.js');
 const { __cfn, __cf } = eval(require(`current_filename`));
-const { report, reportWarn, reportError } = console.createReports(__cf);
+const { report, reportWarn, reportError } = console.createReports(__cfn);
 
 /**
  * Registers a command by name.

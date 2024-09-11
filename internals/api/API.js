@@ -9,7 +9,7 @@ const endpoints = require(endpointsPath);
 const port = process.env.api_port;
 
 const { __cfn, __cf } = eval(require(`current_filename`));
-const { report, reportWarn, reportError } = console.createReports(__cf);
+const { report, reportWarn, reportError } = console.createReports(__cfn);
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -68,6 +68,7 @@ const rh = async (req, res) => {
             l = { client: cIp, error: `cannot get /${ePath}`, status_code: 400, request_data: rData };
         }
     } catch (err) {
+        console.log(err)
         reportError(__line, functionName, 'Unexpected error in routing:', err);
         res.status(500).json('Internal Server Error');
     }

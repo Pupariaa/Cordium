@@ -1,6 +1,7 @@
 'use strict';
 const path = require('path');
 const { AuditLogEvent, Events } = require('discord.js');
+const { cp } = require('fs');
 require('puparia.getlines.js');
 
 const { __cfn } = eval(require(`current_filename`));
@@ -20,7 +21,7 @@ function formatArgs(...args) {
 }
 
 function shouldLog(eventName, ...args) {
-    return global.global.reportEvents && global.configReportEvents[eventName];
+    return global.reportEvents && global.configReportEvents[eventName.split('.')[0]];
 }
 
 const report = console.createReport(__cfn, formatArgs, shouldLog);
@@ -1454,7 +1455,7 @@ function eventToPath(event) {
             }
             else {
                 eventName += '.join';
-
+      
                 user = newState.member.user;
                 channel = newState.channel;
 
@@ -1464,7 +1465,8 @@ function eventToPath(event) {
 
             args = [__line, eventName, 'user.tag', user.tag, 'channel.name', channel.name];
             if (executor) args.push('executor.tag', executor.tag);
-            report(...args, ...updates);
+            report(__line, eventName, 'user.tag', user.tag, 'channel.name', channel.name);
+            
  
 
             require(eventToPath(event))(oldState, newState);

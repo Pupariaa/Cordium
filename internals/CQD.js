@@ -4,7 +4,7 @@ const Discord = require('discord.js');
 const CommandManager = require('./CommandManager');
 require('puparia.getlines.js');
 const { __cfn, __cf } = eval(require(`current_filename`));
-const { report, reportWarn, reportError } = console.createReports(__cf);
+const { report, reportWarn, reportError } = console.createReports(__cfn);
 
 function checkEnvVariables() {
     const functionName = 'checkEnvVariables';

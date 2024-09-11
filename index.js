@@ -12,7 +12,7 @@ fs.readdirSync(prototypesDir)
     .filter(filename => filename !== 'Logs.js')
     .forEach(filename => require('./' + path.join(prototypesDir, filename)));
 
-const { report, reportWarn, reportError } = console.createReports(__cf);
+const { report, reportWarn, reportError } = console.createReports(__cfn);
 
 require('puparia.getlines.js');
 require('dotenv').config({ path: './config/config.env' });
@@ -38,6 +38,7 @@ global.client.on(event, async () => {
         require('./internals/api/API');
         // Initialize invite cache
         global.client.invitesCache = new Map();
+        report('yusgvzfh')
 
         // Get guild
         global.guild = global.client.guilds.cache.get(process.env.discord_guild_id);
