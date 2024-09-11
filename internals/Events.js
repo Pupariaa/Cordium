@@ -2,8 +2,27 @@
 const path = require('path');
 const { AuditLogEvent, Events } = require('discord.js');
 require('puparia.getlines.js');
-const reportEvent = Events.createReportEvent(__filename);
-const reportEventError = Events.createReportEvent(__filename);
+
+function formatArgs(...args) {
+    let i = 0;
+    let formattedArgs = '';
+    while (i < args.length) {
+        formattedArgs += ` ${colors['FgCyan']}${args[i]}${colors['Reset']}="${colors['FgYellow']}${args[i + 1]}${colors['Reset']}"`;
+        if (i + 2 < args.length && args[i + 2] === '->') {
+            formattedArgs += `->"${colors['FgYellow']}${args[i + 3]}${colors['Reset']}"`;
+            i += 2;
+        }
+        i += 2;
+    }
+    return formattedArgs;
+}
+
+function shouldLog(eventName, ...args) {
+    return global.global.reportEvents && global.configReportEvents[eventName];
+}
+
+const reportEvent = console.createReportFunction(__filename, formatArgs, shouldLog);
+const reportEventError = console.createReportErrorFunction(__filename);
 
 /*
 Events Enum
@@ -252,7 +271,6 @@ function eventToPath(event) {
     
     return path.join('../', process.env.events_folder_path, category, String(event) + '.js');
 }
-
 
 {
     const event = Events.ChannelCreate;

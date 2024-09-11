@@ -68,6 +68,19 @@ console.success = function (...args) {
     originalLog(colors.FgGreen, `${getFormattedTime()} [GOOD]`, colors.Reset, ...args);
 };
 
+console.createReportFunction = function (filename, formatArgs, shouldLog = (functionName, ...args) => true) {
+    return function (line, functionName, ...args) {
+        if (!shouldLog(filename, ...args)) return;
+        console.info(`${filename} - Line ${line} (${colors['FgGreen']}${functionName}${colors['Reset']}): `, formatArgs(...args));
+    }
+};
+
+console.createReportErrorFunction = function (filename) {
+    return function (line, functionName, err) {
+        console.error(`${filename} - Line ${line} (${colors['FgGreen']}${functionName}${colors['Reset']}): `, err);
+    }
+};
+
 global.colors = colors;
 
 module.exports = {};
