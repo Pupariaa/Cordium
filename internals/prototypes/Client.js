@@ -1,5 +1,7 @@
 'use strict';
 const { Client, Collection } = require('discord.js');
+const { __cfn, __cf } = eval(require(`current_filename`));
+const { report, reportWarn, reportError } = console.createReports(__cf);
 
 /**
  * Registers a command by name.
@@ -66,11 +68,12 @@ Client.prototype.findChannel = function (channelRep) {
  * @returns {Promise<void>}
  */
 Client.prototype.sendMessageToChannel = async function (channelName, message) {
+    const functionName = 'sendMessageToChannel';
     const channel = this.findChannelByName(channelName);
     if (channel) {
         await channel.send(message);
     } else {
-        console.error(`Channel "${channelName}" not found`);
+        reportError(__line, functionName, `Channel "${channelName}" not found`);
     }
 };
 

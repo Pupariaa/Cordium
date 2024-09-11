@@ -72,7 +72,7 @@ async function getVoiceConnectionStatusWithEvents(voiceUpdates) {
                     channelIds.push(disconnectedChannelId);
                 }
 
-                console.log(`Canaux pour l'utilisateur ${userId}:`, channelIds);
+                report(__line, functionName, `Canaux pour l'utilisateur ${userId}:`, channelIds)
 
                 if (channelIds.length > 0) {
                     const messages = await global.database.getMessagesBetweenDates(

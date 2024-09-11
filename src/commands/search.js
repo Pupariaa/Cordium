@@ -1,6 +1,8 @@
 'use strict';
 const { SlashCommandBuilder, AttachmentBuilder } = require('discord.js');
 require('puparia.getlines.js');
+const { __cfn, __cf } = eval(require(`current_filename`));
+const { report, reportWarn, reportError } = console.createReports(__cf);
 
 const wait = require('node:timers/promises').setTimeout;
 
@@ -80,9 +82,8 @@ const gets = [
 ];
 
 function log_matches(matches, replyObject) {
-    for (const result of matches) {
-        console.log(result);
-    }
+    const functionName = 'log_matches';
+    for (const result of matches) report(__line, functionName, result);
 }
 
 function report_matches(matches, replyObject) {
@@ -269,7 +270,7 @@ module.exports = {
                 await interaction.reply(replyObject);
             }
         } catch (err) {
-            console.error(`${__filename} - Line ${__line} (${functionName}): `, err);
+            reportError(__line, functionName, err);
             await interaction.reply({ content: `${cmdName} failed`, ephemeral: true });
             await wait(5000);
             await interaction.deleteReply();

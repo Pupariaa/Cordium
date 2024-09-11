@@ -1,8 +1,7 @@
 'use-strict';
 require('puparia.getlines.js')
-
-const report = console.createReportFunction(__filename);
-const reportError = console.createReportErrorFunction(__filename);
+const { __cfn, __cf } = eval(require(`current_filename`));
+const { report, reportWarn, reportError } = console.createReports(__cf);
 
 function _getById(channelId) {
     const functionName = 'getChannel';
@@ -46,11 +45,11 @@ class Channels {
     }
 
     async rename(channel, newName) {
-        const functionName = 'rename';
+        // const functionName = 'rename';
         // const channelName = channel.name;
         try {
             await channel.setName(newName);
-            // console.info(`${__filename} - Line ${__line} (${functionName}): Channel "${channelName}" renamed to "${newName}"`);
+            // report(__line, functionName, `Channel "${channelName}" renamed to "${newName}"`);
             return channel;
         } catch (err) {
             reportError(__line, functionName, `Error renaming channel ${channel.name}:`, err);
@@ -69,7 +68,7 @@ class Channels {
     //             }
     //         }
     //     } catch (err) {
-    //         console.error(`${__filename} - Line ${__line} (${functionName}): `, err);
+    //         reportError(__line, functionName, `Error fetching audit logs:`, err);
     //     }
     //     return null;
     // }

@@ -1,13 +1,5 @@
 'use strict';
 
-// const fs = require('fs');
-// const path = require('path');
-
-const originalLog = console.log;
-const originalInfo = console.info;
-const originalError = console.error;
-const originalWarn = console.warn;
-
 const colors = {
     Reset: "\x1b[0m",
     Bright: "\x1b[1m",
@@ -36,50 +28,31 @@ const colors = {
     BgWhite: "\x1b[47m"
 };
 
-// function getFormattedDate() {
-//     const date = new Date();
-//     const options = { timeZone: 'Europe/Paris', day: '2-digit', month: '2-digit', year: 'numeric' };
-//     return new Intl.DateTimeFormat('fr-FR', options).format(date).replace(/\//g, '-');
-// }
-
 function getFormattedTime() {
     const date = Date.now();
     const options = { timeZone: 'Europe/Paris', hour: '2-digit', minute: '2-digit', second: '2-digit' };
     return new Intl.DateTimeFormat('fr-FR', options).format(date);
 }
 
-console.log = function (...args) {
-    originalLog(colors.FgBlue, `${getFormattedTime()} [LOG]`, colors.Reset, ...args);
-};
+function logFactory(logger, type, typeColor) {
+    return function (filename, formatArgs = (...args) => args.join(' '), shouldLog = (context, ...args) => true) {
+        return function (line, context, ...args) {
+            if (!shouldLog(filename, ...args)) return;
+            logger(typeColor, `${getFormattedTime()} [${type}]${colors.Reset}`, `${filename} - Line ${line} (${colors['FgGreen']}${context}${colors['Reset']}):`, formatArgs(...args));
+        }
+    };
+}
 
-console.info = function (...args) {
-    originalInfo(colors.FgCyan, `${getFormattedTime()} [INFO]`, colors.Reset, ...args);
-};
-
-console.error = function (...args) {
-    originalError(colors.FgRed, `${getFormattedTime()} [ERROR]`, colors.Reset, ...args);
-};
-
-console.warn = function (...args) {
-    originalWarn(colors.FgYellow, `${getFormattedTime()} [WARN]`, colors.Reset, ...args);
-};
-
-console.success = function (...args) {
-    originalLog(colors.FgGreen, `${getFormattedTime()} [GOOD]`, colors.Reset, ...args);
-};
-
-console.createReportFunction = function (filename, formatArgs = (...args) => args.join(' '), shouldLog = (functionName, ...args) => true) {
-    return function (line, functionName, ...args) {
-        if (!shouldLog(filename, ...args)) return;
-        console.info(`${filename} - Line ${line} (${colors['FgGreen']}${functionName}${colors['Reset']}): `, formatArgs(...args));
-    }
-};
-
-console.createReportErrorFunction = function (filename) {
-    return function (line, functionName, err) {
-        console.error(`${filename} - Line ${line} (${colors['FgGreen']}${functionName}${colors['Reset']}): `, err);
-    }
-};
+console.createReport = logFactory(console.info, 'INFO', colors.FgCyan);
+console.createReportWarn = logFactory(console.warn, 'WARN', colors.FgYellow);
+console.createReportError = logFactory(console.error, 'ERROR', colors.FgRed);
+console.createReports = function (filename) {
+    return {
+        report: console.createReport(filename),
+        reportWarn: console.createReportWarn(filename),
+        reportError: console.createReportError(filename)
+    };
+}
 
 global.colors = colors;
 
