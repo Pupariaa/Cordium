@@ -13,130 +13,119 @@ async function getVoiceConnectionStatusWithEvents(voiceUpdates) {
 
     const filteredUpdates = voiceUpdates.filter(event => [1, 2, 3, 4].includes(event.eventType));
     filteredUpdates.sort((a, b) => a.datetime - b.datetime);
-
+  
     const results = [];
     const connectEvents = {};
-
+  
     for (const event of filteredUpdates) {
-        const userId = event.userId;
+      const userId = event.userId;
+  
+      if (event.eventType === 1) {
+        connectEvents[userId] = {
+          userId: userId,
+          connectedTimestamp: event.datetime,
+          connectedAt: function (utcOffset = 0, locale = 'en') {
+            if (!event.datetime) return null;
+            return new Date(event.datetime + utcOffset * 3600 * 1000).toLocaleString(locale, {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit'
+            });
+          },
+          disconnectTimestamp : null,
+          disconnectedAt: null,
+          disconnectBy: null,
+          stillConnected: true,
+          events: [],
+          messages: [],
+          connectedChannelId: event.newChannelId,
+          disconnectedChannelId: null
+        };
+  
+      } else if (event.eventType === 3) {
+        if (connectEvents[userId]) {
+          connectEvents[userId].disconnectTimestamp = event.datetime,
+          connectEvents[userId].disconnectedAt = function (utcOffset = 0, locale = 'en') {
+            if (!event.datetime) return null;
+            return new Date(this.disconnectTimestamp + utcOffset * 3600 * 1000).toLocaleString(locale, {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit'
+            });
+          },
+          connectEvents[userId].disconnectBy = event.executorId;
+          connectEvents[userId].stillConnected = false;
+          connectEvents[userId].disconnectedChannelId = event.oldChannelId;
+  
+          const { connectedChannelId, disconnectedChannelId } = connectEvents[userId];
+          const channelIds = [connectedChannelId];
+  
+          if (disconnectedChannelId && disconnectedChannelId !== connectedChannelId) {
+            channelIds.push(disconnectedChannelId);
+          }
+  
+          report(__line, functionName, `Canaux pour l'utilisateur ${userId}:`, channelIds)
 
-        if (event.eventType === 1) {
-            connectEvents[userId] = {
-                userId: userId,
-                connectedTimestamp: event.datetime,
-                connectAt: function (utcOffset = 0, locale = 'en') {
-                    if (!event.datetime) return null;
-                    return new Date(event.datetime + utcOffset * 3600 * 1000).toLocaleString(locale, {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit'
-                    });
-                },
-                disconnectTimestamp: null,
-                disconnectAt: null,
-                disconnectBy: null,
-                stillConnected: true,
-                events: [],
-                messages: [],
-                connectedChannelId: event.newChannelId,
-                disconnectedChannelId: null
-            };
-
-        } else if (event.eventType === 3) {
-            if (connectEvents[userId]) {
-                connectEvents[userId].disconnectTimestamp = event.datetime,
-                    connectEvents[userId].disconnectAt = function (utcOffset = 0, locale = 'en') {
-                        if (!event.datetime) return null;
-                        return new Date(this.disconnectTimestamp + utcOffset * 3600 * 1000).toLocaleString(locale, {
-                            weekday: 'long',
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            second: '2-digit'
-                        });
-                    },
-                    connectEvents[userId].disconnectBy = event.executorId;
-                connectEvents[userId].stillConnected = false;
-                connectEvents[userId].disconnectedChannelId = event.oldChannelId;
-
-                const { connectedChannelId, disconnectedChannelId } = connectEvents[userId];
-                const channelIds = [connectedChannelId];
-
-                if (disconnectedChannelId && disconnectedChannelId !== connectedChannelId) {
-                    channelIds.push(disconnectedChannelId);
-                }
-
-                report(__line, functionName, `Canaux pour l'utilisateur ${userId}:`, channelIds)
-
-                if (channelIds.length > 0) {
-                    const messages = await global.database.getMessagesBetweenDates(
-                        userId,
-                        connectEvents[userId].connectAt,
-                        connectEvents[userId].disconnectTimestamp || Date.now(),
-                        connectEvents[userId].disconnectAt || function (utcOffset = 0, locale = 'en') {
-
-                            return new Date(new Date.now() + utcOffset * 3600 * 1000).toLocaleString(locale, {
-                                weekday: 'long',
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                second: '2-digit'
-                            });
-                        },
-                        channelIds
-                    );
-                    connectEvents[userId].messages = messages;
-                }
-
-                results.push(connectEvents[userId]);
-
-                delete connectEvents[userId];
-            }
-        } else if (event.eventType === 2) {
-
-            if (event.oldChannelId && event.newChannelId && event.oldChannelId !== event.newChannelId) {
-                if (connectEvents[userId]) {
-                    connectEvents[userId].events.push({
-                        datetime: event.datetime,
-                        eventName: 'channelChange',
-                        stats: event.newChannelId
-                    });
-                }
-            }
-        } else if (event.eventType === 4) {
-            if (connectEvents[userId]) {
-                addEventChanges(connectEvents[userId].events, event);
-            }
-        }
-    }
-
-
-    for (const session of Object.values(connectEvents)) {
-        const { connectedChannelId } = session;
-        const channelIds = [connectedChannelId];
-        if (channelIds.length > 0) {
+  
+          if (channelIds.length > 0) {
             const messages = await global.database.getMessagesBetweenDates(
-                session.userId,
-                session.connectAt,
-                Date.now(),
-                channelIds
+              userId,
+              connectEvents[userId].connectedTimestamp,
+              connectEvents[userId].disconnectTimestamp || Date.now(),
+              channelIds
             );
-            session.messages = messages;
+            connectEvents[userId].messages = messages;
+          }
+  
+          results.push(connectEvents[userId]);
+  
+          delete connectEvents[userId];
         }
-
-        results.push(session);
+      } else if (event.eventType === 2) {
+  
+        if (event.oldChannelId && event.newChannelId && event.oldChannelId !== event.newChannelId) {
+          if (connectEvents[userId]) {
+            connectEvents[userId].events.push({
+              datetime: event.datetime,
+              eventName: 'channelChange',
+              stats: event.newChannelId
+            });
+          }
+        }
+      } else if (event.eventType === 4) {
+        if (connectEvents[userId]) {
+          addEventChanges(connectEvents[userId].events, event);
+        }
+      }
     }
-
+  
+  
+    for (const session of Object.values(connectEvents)) {
+      const { connectedChannelId } = session;
+      const channelIds = [connectedChannelId];
+      if (channelIds.length > 0) {
+        const messages = await global.database.getMessagesBetweenDates(
+          session.userId,
+          session.connectAt,
+          Date.now(),
+          channelIds
+        );
+        session.messages = messages;
+      }
+  
+      results.push(session);
+    }
+  
     return results;
-}
+  }
 
 /**
  * Adds events to the given events list based on the differences between the old and new values in the given event.
@@ -235,27 +224,65 @@ async function getMessageDetails(messageId) {
         const messageDetails = {
             messageId: message.messageId,
             authorId: message.userId,
-            createdAt: message.datetime,
+            createdTimestamp: message.datetime,
+            createdAt: function (utcOffset = 0, locale = 'en') {
+                if (!message.datetime) return null;
+                return new Date(message.datetime + utcOffset * 3600 * 1000).toLocaleString(locale, {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+            },
             channelId: message.channelId,
             content: message.content,
             attachments: message.attachments || [],
             replies: [],
             reactions: [],
-            deletedAt: null
+            deletedAt: null,
+            deletedTimestamp: null
         };
         const messageDeleted = await global.database.EVENTS_messageDelete.findOne({
             where: { messageId },
         });
         if (messageDeleted) {
-            messageDetails.deletedAt =messageDeleted.datetime;
+            message.deletedTimestamp = messageDeleted.date;
+            messageDetails.deletedAt = function (utcOffset = 0, locale = 'en') {
+                if (!messageDetails.deletedAt) return null;
+                return new Date(messageDetails.deletedAt + utcOffset * 3600 * 1000).toLocaleString(locale, {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+            }
         }
+        
         const replies = await global.database.EVENTS_messageCreate.findAll({
             where: { replyToMessageId: messageId },
         });
         messageDetails.replies = replies.map((reply) => ({
             messageId: reply.messageId,
             authorId: reply.userId,
-            createdAt: reply.datetime,
+            createdTimestamp: reply.date,
+            createdAt: function (utcOffset = 0, locale = 'en') {
+                if (!reply.datee) return null;
+                return new Date(reply.date + utcOffset * 3600 * 1000).toLocaleString(locale, {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+            },
             content: reply.content,
             attachments: reply.attachments || [],
         }));
@@ -283,6 +310,7 @@ async function getMessageDetails(messageId) {
         return messageDetails;
 
     } catch (error) {
+        console.error(error);
         return { error: "Internal Server Error", status_code: 500 };
     }
 };
@@ -294,7 +322,7 @@ async function getMessageDetails(messageId) {
 
 
 
-global.database_cache.get_voice_member = async function (userid){
+global.database_cache.get_voice_member = async function (userid) {
     return await getVoiceConnectionStatusWithEvents(await global.database.getVoiceStateUpdatesByUserId(userid));
 }
 
