@@ -1,4 +1,5 @@
-const ParamCaretaker = require('../../Modules/ParamCaretaker');
+const path = require('path');
+const ParamCaretaker = require(path.join(__dirname, '../../../../internals/api/modules/ParamCaretaker'));
 
 const getMessageDetails = async (messageId) => {
     try {
