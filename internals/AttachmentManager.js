@@ -12,7 +12,8 @@ const sanitizeFilename = require('sanitize-filename');
 class AttachmentManager {
     constructor() {
         this.client = global.client;
-        this.attachmentsFile = path.join(__dirname, 'attachments.json');
+        this.attachmentsFile = path.join(__dirname, '../src/files/');
+        console.log(__dirname);
     }
 
     /**
@@ -21,11 +22,10 @@ class AttachmentManager {
      */
     loadAttachments() {
         try {
-            const data = fs.readFileSync(this.attachmentsFile, 'utf8');
-            console.info(`${__filename} - Line ${__line} (loadAttachments): Loaded attachments successfully.`);
+            const data = fs.readFileSync(path.join(this.attachmentsFile, 'index.json'), 'utf8');
             return JSON.parse(data);
         } catch (error) {
-            console.error(`${__filename} - Line ${__line} (loadAttachments): Error loading attachments.`, error);
+            console.error(`${__filename} - (loadAttachments): Error loading attachments.`, error);
             return [];
         }
     }
@@ -36,10 +36,12 @@ class AttachmentManager {
      */
     saveAttachments(attachments) {
         try {
-            fs.writeFileSync(this.attachmentsFile, JSON.stringify(attachments, null, 2));
-            console.info(`${__filename} - Line ${__line} (saveAttachments): Attachments saved successfully.`);
+            fs.writeFileSync(
+                path.join(this.attachmentsFile, 'index.json'),
+                JSON.stringify(attachments, null, 2)
+            );
         } catch (error) {
-            console.error(`${__filename} - Line ${__line} (saveAttachments): Error saving attachments.`, error);
+            console.error(`${__filename} - (saveAttachments): Error saving attachments.`, error);
         }
     }
 
@@ -53,10 +55,9 @@ class AttachmentManager {
             const parsedUrl = new URL(url);
             const pathname = parsedUrl.pathname;
             const filename = path.basename(pathname);
-            console.info(`${__filename} - Line ${__line} (extractFilenameFromUrl): Filename extracted successfully.`);
             return sanitizeFilename(filename);
         } catch (error) {
-            console.error(`${__filename} - Line ${__line} (extractFilenameFromUrl): Error extracting filename.`, error);
+            console.error(`${__filename} - (extractFilenameFromUrl): Error extracting filename.`, error);
             return 'unknown';
         }
     }
@@ -75,38 +76,38 @@ class AttachmentManager {
                 responseType: 'stream',
             });
 
-            const filePath = path.join(__dirname, 'downloads', filename);
+            const filePath = path.join(this.attachmentsFile, 'downloads', filename);
             const writer = fs.createWriteStream(filePath);
 
             response.data.pipe(writer);
 
-            console.info(`${__filename} - Line ${__line} (downloadFile): Download started for ${filename}.`);
-
             return new Promise((resolve, reject) => {
                 writer.on('finish', () => {
-                    console.info(`${__filename} - Line ${__line} (downloadFile): Download completed for ${filename}.`);
                     resolve(filePath);
                 });
                 writer.on('error', (error) => {
-                    console.error(`${__filename} - Line ${__line} (downloadFile): Error during download.`, error);
+                    console.error(`${__filename} - (downloadFile): Error during download.`, error);
                     reject(error);
                 });
             });
         } catch (error) {
-            console.error(`${__filename} - Line ${__line} (downloadFile): Error initiating download.`, error);
+            console.error(`${__filename} - (downloadFile): Error initiating download.`, error);
             throw error;
         }
     }
 
     /**
-     * Handles attachments from a Discord message.
-     * @param {Object} message - The Discord message containing attachments.
-     * @returns {Promise<Array>} - A list of attachments processed.
-     */
+ * Handles attachments from a Discord message.
+ * @param {Object} message - The Discord message containing attachments.
+ * @returns {Promise<Array>} - A list of newly processed attachments.
+ */
     async handleAttachments(message) {
         try {
+            const newAttachments = [];
+
             if (message.attachments.size > 0) {
                 const attachments = this.loadAttachments();
+
                 for (const attachment of message.attachments.values()) {
                     const originalFilename = this.extractFilenameFromUrl(attachment.url);
                     const uniqueId = uuidv4() + path.extname(originalFilename);
@@ -124,20 +125,20 @@ class AttachmentManager {
                     };
 
                     attachments.push(attachmentInfo);
+                    newAttachments.push(attachmentInfo);
                 }
+
                 this.saveAttachments(attachments);
-                console.info(`${__filename} - Line ${__line} (handleAttachments): Attachments handled successfully.`);
-                return attachments;
             } else {
-                console.info(`${__filename} - Line ${__line} (handleAttachments): No attachments found in message.`);
-                return [];
             }
+
+            return newAttachments;
+
         } catch (error) {
-            console.error(`${__filename} - Line ${__line} (handleAttachments): Error handling attachments.`, error);
+            console.error(`${__filename} - (handleAttachments): Error handling attachments.`, error);
             throw error;
         }
     }
-
     /**
      * Retrieves attachments associated with a given message.
      * @param {string} messageId - The ID of the message to retrieve attachments for.
@@ -147,10 +148,9 @@ class AttachmentManager {
         try {
             const attachments = this.loadAttachments();
             const filteredAttachments = attachments.filter(att => att.messageId === messageId);
-            console.info(`${__filename} - Line ${__line} (getAttachments): Attachments retrieved successfully for message ID ${messageId}.`);
             return filteredAttachments;
         } catch (error) {
-            console.error(`${__filename} - Line ${__line} (getAttachments): Error retrieving attachments.`, error);
+            console.error(`${__filename} - (getAttachments): Error retrieving attachments.`, error);
             return [];
         }
     }
