@@ -269,7 +269,7 @@ function eventToPath(event) {
             break;
     }
     
-    return path.join('../', process.env.events_folder_path, category, String(event) + '.js');
+    return path.join('../', process.env.events_folder, category, String(event) + '.js');
 }
 
 {
