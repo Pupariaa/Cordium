@@ -274,9 +274,11 @@ function eventToPath(event) {
 
 {
     const event = Events.ChannelCreate;
-    let eventName = String(event);
+    let eventName;
 
     global.client.on(event, async (channel) => {
+        eventName = String(event);
+
         try {
             if (global.guild.id !== channel.guild.id) return;
             
@@ -300,9 +302,11 @@ function eventToPath(event) {
 
 {
     const event = Events.ChannelDelete;
-    let eventName = String(event);
+    let eventName;
 
     global.client.on(event, async (channel) => {
+        eventName = String(event);
+
         try {
             if (global.guild.id !== channel.guild.id) return;
 
@@ -327,9 +331,11 @@ function eventToPath(event) {
 
 {
     const event = Events.ChannelPinsUpdate;
-    let eventName = String(event);
+    let eventName;
 
     global.client.on(event, async (channel, date)  => {
+        eventName = String(event);
+
         try {
             if (global.guild.id !== channel.guild.id) return;
 
@@ -345,9 +351,11 @@ function eventToPath(event) {
 
 {
     const event = Events.ChannelUpdate;
-    let eventName = String(event);
+    let eventName;
 
     global.client.on(event, async (oldChannel, newChannel) => {
+        eventName = String(event);
+
         try {
             if (global.guild.id !== newChannel.guild.id) return;
 
@@ -390,9 +398,11 @@ function eventToPath(event) {
 
 {
     const event = Events.GuildBanAdd;
-    let eventName = String(event);
+    let eventName;
 
     global.client.on(event, async (ban) => {
+        eventName = String(event);
+
         try {
             if (global.guild.id !== ban.guild.id) return;
 
@@ -416,9 +426,11 @@ function eventToPath(event) {
 
 {
     const event = Events.GuildBanRemove;
-    let eventName = String(event);
+    let eventName;
 
     global.client.on(event, async (ban) => {
+        eventName = String(event);
+
         try {
             if (global.guild.id !== ban.guild.id) return;
 
@@ -446,9 +458,11 @@ function eventToPath(event) {
 
 {
     const event = Events.GuildEmojiCreate;
-    let eventName = String(event);
+    let eventName;
 
     global.client.on(event, async (emoji) => {
+        eventName = String(event);
+
         try {
             if (global.guild.id !== emoji.guild.id) return;
 
@@ -471,9 +485,11 @@ function eventToPath(event) {
 
 {
     const event = Events.GuildEmojiDelete;
-    let eventName = String(event);
+    let eventName;
 
     global.client.on(event, async (emoji) => {
+        eventName = String(event);
+
         try {
             if (global.guild.id !== emoji.guild.id) return;
 
@@ -497,9 +513,11 @@ function eventToPath(event) {
 
 {
     const event = Events.GuildEmojiUpdate;
-    let eventName = String(event);
+    let eventName;
 
     global.client.on(event, async (oldEmoji, newEmoji) => {
+        eventName = String(event);
+
         try {
             if (global.guild.id !== newEmoji.guild.id) return;
 
@@ -525,9 +543,11 @@ function eventToPath(event) {
 
 {
     const event = Events.GuildMemberAdd;
-    let eventName = String(event);
+    let eventName;
 
     global.client.on(event, (member) => {
+        eventName = String(event);
+
         try {
             if (global.guild.id !== member.guild.id) return;
 
@@ -549,9 +569,11 @@ function eventToPath(event) {
 
 {
     const event = Events.GuildMemberAvailable;
-    let eventName = String(event)
+    let eventName;
 
     global.client.on(event, async (member) => {
+        eventName = String(event);
+
         try {
             if (global.guild.id !== member.guild.id) return;
 
@@ -567,9 +589,11 @@ function eventToPath(event) {
 
 {
     const event = Events.GuildMemberRemove;
-    let eventName = String(event);
+    let eventName;
 
     global.client.on(event, async (member) => {
+        eventName = String(event);
+
         try {
             if (global.guild.id !== member.guild.id) return;
 
@@ -596,9 +620,11 @@ function eventToPath(event) {
 
 {
     const event = Events.GuildMemberUpdate;
-    let eventName = String(event)
+    let eventName;
 
     global.client.on(event, async (oldMember, newMember) => {
+        eventName = String(event)
+
         try {
             if (global.guild.id !== newMember.guild.id) return;
 
@@ -642,9 +668,11 @@ function eventToPath(event) {
 
 {
     const event = Events.GuildRoleCreate;
-    let eventName = String(event);
+    let eventName;
 
     global.client.on(event, async (role) => {
+        eventName = String(event);
+
         try {
             if (global.guild.id !== invite.guild.id) return;
 
@@ -669,9 +697,11 @@ function eventToPath(event) {
 
 {
     const event = Events.GuildRoleDelete;
-    let eventName = String(event);
+    let eventName;
 
     global.client.on(event, async (role) => {
+        eventName = String(event);
+
         try {
             if (global.guild.id !== invite.guild.id) return;
 
@@ -695,9 +725,11 @@ function eventToPath(event) {
 
 {
     const event = Events.GuildRoleUpdate;
-    let eventName = String(event);
+    let eventName;
 
     global.client.on(event, async (oldRole, newRole) => {
+        eventName = String(event);
+
         try {
             if (global.guild.id !== invite.guild.id) return;
 
@@ -730,9 +762,11 @@ function eventToPath(event) {
 
 {
     const event = Events.GuildStickerCreate;
-    let eventName = String(event);
+    let eventName;
 
     global.client.on(event, async (sticker) => {
+        eventName = String(event);
+
         try {
             if (global.guild.id !== sticker.guild.id) return;
 
@@ -755,9 +789,11 @@ function eventToPath(event) {
 
 {
     const event = Events.GuildStickerDelete;
-    let eventName = String(event)
+    let eventName;
 
     global.client.on(event, async (sticker) => {
+        eventName = String(event)
+
         try {
             if (global.guild.id !== sticker.guild.id) return;
 
