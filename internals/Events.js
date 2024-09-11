@@ -2,7 +2,6 @@
 const path = require('path');
 const { AuditLogEvent, Events } = require('discord.js');
 require('puparia.getlines.js');
-
 const reportEvent = Events.createReportEvent(__filename);
 const reportEventError = Events.createReportEvent(__filename);
 
@@ -135,6 +134,126 @@ export enum AuditLogEvent {
 
 // TODO: CacheSweep
 
+function eventToPath(event) {
+    let category;
+    switch (String(event)) {
+        case Events.AutoModerationActionExecution:
+        case Events.AutoModerationRuleCreate:
+        case Events.AutoModerationRuleDelete:
+        case Events.AutoModerationRuleUpdate:
+            category = 'AutoModeration';
+            break;
+    
+        case Events.ChannelCreate:
+        case Events.ChannelDelete:
+        case Events.ChannelPinsUpdate:
+        case Events.ChannelUpdate:
+            category = 'Channel';
+            break;
+    
+        case Events.EntitlementCreate:
+        case Events.EntitlementDelete:
+        case Events.EntitlementUpdate:
+            category = 'Entitlement';
+            break;
+    
+        case Events.GuildAuditLogEntryCreate:
+        case Events.GuildAvailable:
+        case Events.GuildBanAdd:
+        case Events.GuildBanRemove:
+        case Events.GuildCreate:
+        case Events.GuildDelete:
+        case Events.GuildEmojiCreate:
+        case Events.GuildEmojiDelete:
+        case Events.GuildEmojiUpdate:
+        case Events.GuildIntegrationsUpdate:
+        case Events.GuildMemberAdd:
+        case Events.GuildMemberAvailable:
+        case Events.GuildMemberRemove:
+        case Events.GuildMembersChunk:
+        case Events.GuildMemberUpdate:
+        case Events.GuildRoleCreate:
+        case Events.GuildRoleDelete:
+        case Events.GuildRoleUpdate:
+        case Events.GuildScheduledEventCreate:
+        case Events.GuildScheduledEventDelete:
+        case Events.GuildScheduledEventUpdate:
+        case Events.GuildScheduledEventUserAdd:
+        case Events.GuildScheduledEventUserRemove:
+        case Events.GuildStickerCreate:
+        case Events.GuildStickerDelete:
+        case Events.GuildStickerUpdate:
+        case Events.GuildUnavailable:
+        case Events.GuildUpdate:
+            category = 'Guild';
+            break;
+    
+        case Events.InviteCreate:
+        case Events.InviteDelete:
+            category = 'Invite';
+            break;
+    
+        case Events.MessageBulkDelete:
+        case Events.MessageCreate:
+        case Events.MessageDelete:
+        case Events.MessagePollVoteAdd:
+        case Events.MessagePollVoteRemove:
+        case Events.MessageReactionAdd:
+        case Events.MessageReactionRemove:
+        case Events.MessageReactionRemoveAll:
+        case Events.MessageReactionRemoveEmoji:
+        case Events.MessageUpdate:
+            category = 'Message';
+            break;
+    
+        case Events.ApplicationCommandPermissionsUpdate:
+        case Events.CacheSweep:
+        case Events.Debug:
+        case Events.Error:
+        case Events.InteractionCreate:
+        case Events.Invalidated:
+        case Events.PresenceUpdate:
+        case Events.Raw:
+        case Events.TypingStart:
+        case Events.UserUpdate:
+        case Events.VoiceServerUpdate:
+        case Events.VoiceStateUpdate:
+        case Events.Warn:
+        case Events.WebhooksUpdate:
+            category = 'Other';
+            break;
+    
+        case Events.ShardDisconnect:
+        case Events.ShardError:
+        case Events.ShardReady:
+        case Events.ShardReconnecting:
+        case Events.ShardResume:
+            category = 'Shard';
+            break;
+    
+        case Events.StageInstanceCreate:
+        case Events.StageInstanceDelete:
+        case Events.StageInstanceUpdate:
+            category = 'Stage';
+            break;
+    
+        case Events.ThreadCreate:
+        case Events.ThreadDelete:
+        case Events.ThreadListSync:
+        case Events.ThreadMembersUpdate:
+        case Events.ThreadMemberUpdate:
+        case Events.ThreadUpdate:
+            category = 'Thread';
+            break;
+        default:
+            category = 'Unknown';
+            break;
+    }
+    
+    return path.join('../', process.env.events_folder_path, category, String(event) + '.js');
+}
+
+
 {
     const event = Events.ChannelCreate;
     let eventName = String(event);
@@ -145,7 +264,7 @@ export enum AuditLogEvent {
             
             const executor = (await global.guild.latestAuditLog()).executor;
             
-            global.database.addChannelCreate({
+            global.database.addEntry('EVENTS_'+eventName, {
                 channelId: channel.id,
                 name: channel.name,
                 permissions: channel.permissionOverwrites.cache,
@@ -154,7 +273,7 @@ export enum AuditLogEvent {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'channel.type', global.guild.channelTypeStr(channel.type), 'channel.name', channel.name);
-            require(path.join(process.env.eventsFolderPath, event))(channel);
+            require(eventtopath(event))(channel);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -171,7 +290,7 @@ export enum AuditLogEvent {
 
             const executor = (await global.guild.latestAuditLog()).executor;
 
-            global.database.addChannelDelete({
+            global.database.addEntry('EVENTS_'+eventName, {
                 channelId: channel.id,
                 name: channel.name,
                 permissions: channel.permissionOverwrites.cache,
@@ -181,7 +300,7 @@ export enum AuditLogEvent {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'channel.type', global.guild.channelTypeStr(channel.type), 'channel.name', channel.name);
-            require(path.join(process.env.eventsFolderPath, event))(channel);
+            require(eventtopath(event))(channel);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }  
@@ -199,7 +318,7 @@ export enum AuditLogEvent {
             // TODO
 
             reportEvent(__line, eventName);
-            require(path.join(process.env.eventsFolderPath, event))(channel, date);
+            require(eventtopath(event))(channel, date);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -217,7 +336,7 @@ export enum AuditLogEvent {
             const executor = (await global.guild.latestAuditLog()).executor;
 
             const executorId = (await global.guild.latestAuditLog()).executorId;
-            global.database.addChannelUpdate({
+            global.database.addEntry('EVENTS_'+eventName, {
                 channelId: newChannel.id,
                 oldName: oldChannel.name,
                 newName: newChannel.name,
@@ -228,7 +347,7 @@ export enum AuditLogEvent {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'channel.type', global.guild.channelTypeStr(newChannel.type), 'channel.name', oldChannel.name, '->', newChannel.name);
-            require(path.join(process.env.eventsFolderPath, event))(oldChannel, newChannel);
+            require(eventtopath(event))(oldChannel, newChannel);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -262,7 +381,7 @@ export enum AuditLogEvent {
             const user = ban.user;
             const executor = (await global.guild.latestAuditLog()).executor;
 
-            global.database.addGuidBanAdd({
+            global.database.addEntry('EVENTS_'+eventName, {
                 userid: user.id,
                 reason: ban.reason,
                 datetime: Date.now(),
@@ -270,7 +389,7 @@ export enum AuditLogEvent {
             });
 
             reportEvent(__line, eventName, 'user.tag', user.tag, 'executor.tag', executor.tag, 'reason', ban.reason);
-            require(path.join(process.env.eventsFolderPath, event))(ban);
+            require(eventtopath(event))(ban);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -288,7 +407,7 @@ export enum AuditLogEvent {
             const user = ban.user;
             const executor = (await global.guild.latestAuditLog()).executor;
 
-            global.database.addGuidBanAdd({
+            global.database.addEntry('EVENTS_'+eventName, {
                 userid: user.id,
                 datetime: Date.now(),
                 isDelete: true,
@@ -296,7 +415,7 @@ export enum AuditLogEvent {
             });
 
             reportEvent(__line, eventName, 'user.tag', user.tag, 'executor.tag', executor.tag);
-            require(path.join(process.env.eventsFolderPath, event))(ban);
+            require(eventtopath(event))(ban);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -317,7 +436,7 @@ export enum AuditLogEvent {
 
             const executor = (await global.guild.latestAuditLog()).executor;
 
-            global.database.addEmojiCreate({
+            global.database.addEntry('EVENTS_'+eventName, {
                 emojiId: emoji.id,
                 emojiPath: emoji.url,
                 datetime: Date.now(),
@@ -325,7 +444,7 @@ export enum AuditLogEvent {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'emoji.name', emoji.name, 'emoji.url', emoji.url);
-            require(path.join(process.env.eventsFolderPath, event))(emoji);
+            require(eventtopath(event))(emoji);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -343,7 +462,7 @@ export enum AuditLogEvent {
             const executor = (await global.guild.latestAuditLog()).executor;
             
             // TODO: add "addEmojiDelete" to DB
-            global.database.addEmojiDelete({
+            global.database.addEntry('EVENTS_'+eventName, {
                 emojiId: emoji.id,
                 datetime: Date.now(),
                 isDelete: true,
@@ -351,7 +470,7 @@ export enum AuditLogEvent {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'emoji.name', emoji.name, 'emoji.url', emoji.url);
-            require(path.join(process.env.eventsFolderPath, event))(emoji);
+            require(eventtopath(event))(emoji);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -368,7 +487,7 @@ export enum AuditLogEvent {
 
             const executor = (await global.guild.latestAuditLog()).executor;
             
-            global.database.addEmojiUpdate({
+            global.database.addEntry('EVENTS_'+eventName, {
                 emojiId: newEmoji.id,
                 oldEmojiPath: oldEmoji.url,
                 newEmojiPath: newEmoji.url,
@@ -377,7 +496,7 @@ export enum AuditLogEvent {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'emoji.name', oldEmoji.name, '->', newEmoji.name, 'emoji.url', oldEmoji.url, '->', newEmoji.url);
-            require(path.join(process.env.eventsFolderPath, event))(oldEmoji, newEmoji);
+            require(eventtopath(event))(oldEmoji, newEmoji);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -396,14 +515,14 @@ export enum AuditLogEvent {
 
             const user = member.user;
 
-            global.database.addGuildMemberAdd({
+            global.database.addEntry('EVENTS_'+eventName, {
                 userid: user.id,
                 joinedAt: Date.now(),
                 nickname: member.nickname || '',
             });
 
             reportEvent(__line, eventName, 'user.tag', user.tag);
-            require(path.join(process.env.eventsFolderPath, event))(member);
+            require(eventtopath(event))(member);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -421,7 +540,7 @@ export enum AuditLogEvent {
             // TODO
 
             reportEvent(__line, eventName, 'member.user.tag', member.user.tag);
-            require(path.join(process.env.eventsFolderPath, event))(member);
+            require(eventtopath(event))(member);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -442,13 +561,13 @@ export enum AuditLogEvent {
             if (latestAuditLog?.action === AuditLogEvent.GuildBanAdd && latestAuditLog?.target.id === user.id) return;
 
             // TODO: rename leftedAt to leftAt in DB
-            global.database.addGuildMemberRemove({
+            global.database.addEntry('EVENTS_'+eventName, {
                 userid: user.id,
                 leftAt: Date.now(),
             });
 
             reportEvent(__line, eventName, 'user.tag', user.tag);
-            require(path.join(process.env.eventsFolderPath, event))(member);
+            require(eventtopath(event))(member);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -496,7 +615,7 @@ export enum AuditLogEvent {
             // }
 
             reportEvent(__line, eventName, 'user.tag', oldMember.user.tag, '->', newMember.user.tag);
-            require(path.join(process.env.eventsFolderPath, event))(oldMember, newMember);
+            require(eventtopath(event))(oldMember, newMember);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -513,7 +632,7 @@ export enum AuditLogEvent {
 
             const executor = (await global.guild.latestAuditLog()).executor;
 
-            global.database.addRoleCreate({
+            global.database.addEntry('EVENTS_'+eventName, {
                 roleId: role.id,
                 name: role.name,
                 color: role.hexColor,
@@ -523,7 +642,7 @@ export enum AuditLogEvent {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'role.name', role.name);
-            require(path.join(process.env.eventsFolderPath, event))(role);
+            require(eventtopath(event))(role);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -540,7 +659,7 @@ export enum AuditLogEvent {
 
             const executor = (await global.guild.latestAuditLog()).executor;
 
-            global.database.addRoleUpdate({
+            global.database.addEntry('EVENTS_'+eventName, {
                 roleId: role.id,
                 name: role.name,
                 datetime: Date.now(),
@@ -549,7 +668,7 @@ export enum AuditLogEvent {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'role.name', role.name);
-            require(path.join(process.env.eventsFolderPath, event))(role);
+            require(eventtopath(event))(role);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -566,7 +685,7 @@ export enum AuditLogEvent {
 
             const executor = (await global.guild.latestAuditLog()).executor;
 
-            global.database.addRoleUpdate({
+            global.database.addEntry('EVENTS_'+eventName, {
                 roleId: newRole.id,
                 name: newRole.name,
                 datetime: Date.now(),
@@ -574,7 +693,7 @@ export enum AuditLogEvent {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'role.name', oldRole.name, '->', newRole.name, 'role.color', oldRole.hexColor, '->', newRole.hexColor);
-            require(path.join(process.env.eventsFolderPath, event))(role);
+            require(eventtopath(event))(role);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -601,7 +720,7 @@ export enum AuditLogEvent {
 
             const executor = (await global.guild.latestAuditLog()).executor;
 
-            global.database.addStickerCreate({
+            global.database.addEntry('EVENTS_'+eventName, {
                 emojiId: sticker.id,
                 emojiPath: sticker.url,
                 datetime: Date.now(),
@@ -609,7 +728,7 @@ export enum AuditLogEvent {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'sticker.name', sticker.name);
-            require(path.join(process.env.eventsFolderPath, event))(sticker);
+            require(eventtopath(event))(sticker);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -627,7 +746,7 @@ export enum AuditLogEvent {
             const executor = (await global.guild.latestAuditLog()).executor;
 
             // TODO: isDelete?
-            global.database.addStickerDelete({
+            global.database.addEntry('EVENTS_'+eventName, {
                 emojiId: sticker.id,
                 datetime: Date.now(),
                 // isDelete: true,
@@ -635,7 +754,7 @@ export enum AuditLogEvent {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'sticker.name', sticker.name);
-            require(path.join(process.env.eventsFolderPath, event))(sticker);
+            require(eventtopath(event))(sticker);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -653,7 +772,7 @@ export enum AuditLogEvent {
             const executor = (await global.guild.latestAuditLog()).executor;
 
             // TODO: isDelete? add addStickerUpdate to the DB
-            global.database.addStickerUpdate({
+            global.database.addEntry('EVENTS_'+eventName, {
                 emojiId: sticker.id,
                 datetime: Date.now(),
                 // isDelete: true,
@@ -661,7 +780,7 @@ export enum AuditLogEvent {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'sticker.name', oldSticker.name, '->', newSticker.name);
-            require(path.join(process.env.eventsFolderPath, event))(sticker);
+            require(eventtopath(event))(sticker);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -716,7 +835,7 @@ export enum AuditLogEvent {
             
             const executor = interaction.user;
 
-            global.database.addInteractionCreate({
+            global.database.addEntry('EVENTS_'+eventName, {
                 type: interaction.type,
                 datetime: Date.now(),
                 commandName: interaction.commandName,
@@ -766,7 +885,7 @@ export enum AuditLogEvent {
                 console.warn(`${__filename} - Line ${__line} (${eventName}): unknown interaction of type "${interaction.type}"`);
             }
 
-            require(path.join(process.env.eventsFolderPath, event))(interaction);
+            require(eventtopath(event))(interaction);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -786,7 +905,7 @@ export enum AuditLogEvent {
             const executor = invite.inviter || (await global.guild.latestAuditLog()).executor;
         
             // TODO: remove userid from DB
-            global.database.addInviteCreate({
+            global.database.addEntry('EVENTS_'+eventName, {
                 // userid: user.id,
                 code: invite.code,
                 channelid: invite.channel.id,
@@ -797,7 +916,7 @@ export enum AuditLogEvent {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'url', invite.url);
-            require(path.join(process.env.eventsFolderPath, event))(invite);
+            require(eventtopath(event))(invite);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -814,7 +933,7 @@ export enum AuditLogEvent {
             
             const executor = invite.inviter || (await global.guild.latestAuditLog()).executor;
             
-            global.database.addInviteDelete({
+            global.database.addEntry('EVENTS_'+eventName, {
                 code: invite.code,
                 channelid: invite.channel.id,
                 executorId: executor.id,
@@ -822,7 +941,7 @@ export enum AuditLogEvent {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'url', invite.url);
-            require(path.join(process.env.eventsFolderPath, event))(invite);
+            require(eventtopath(event))(invite);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -839,7 +958,7 @@ export enum AuditLogEvent {
 
             const executor = (await global.guild.latestAuditLog()).executor;
 
-            global.database.addMessageDeleteBulk({
+            global.database.addEntry('EVENTS_'+eventName, {
                 channelId: channel.id,
                 deletedMessages: messages.size,
                 datetime: Date.now(),
@@ -847,7 +966,7 @@ export enum AuditLogEvent {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'messages.size', messages.size);
-            require(path.join(process.env.eventsFolderPath, event))(messages, channel);
+            require(eventtopath(event))(messages, channel);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -867,20 +986,23 @@ export enum AuditLogEvent {
             const content = message.content;
 
             // TODO: rename userId to executorId in DB
-            global.database.addMessageCreate({
-                executorId: executor.id,
+            const attachments = await global.attachment.handleAttachments(message)
+            const filenames = attachments.map(attachment => attachment.filename);
+            global.database.addEntry('EVENTS_'+eventName, {
+                userId: executor.id,
                 messageId: message.id,
                 channelId: channel.id,
                 content: content,
                 datetime: Date.now(),
-                attachments: JSON.stringify(Array.from(message.attachments.values()).map(att => att.url)),
+                attachments: JSON.stringify(filenames),
                 isDelete: 0,
                 isReply: message.reference ? 1 : 0,
                 replyToMessageId: message.reference ? message.reference.messageId : null,
             });
 
+
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'channel.name', channel.name, 'content', content);
-            require(path.join(process.env.eventsFolderPath, event))(message);
+            require(eventtopath(event))(message);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -897,14 +1019,14 @@ export enum AuditLogEvent {
 
             const executor = (await global.guild.latestAuditLog()).executor;
             
-            global.database.addMessageDelete({
+            global.database.addEntry('EVENTS_'+eventName, {
                 messageId: message.id,
                 datetime: Date.now(),
                 executorId: executor.id,
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'channel.name', message.channel.name, 'content', message.content);
-            require(path.join(process.env.eventsFolderPath, event))(message);
+            require(eventtopath(event))(message);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -927,7 +1049,7 @@ export enum AuditLogEvent {
             const message = reaction.message;
             const user = message.author;
 
-            global.database.addMessageReactionAdd({
+            global.database.addEntry('EVENTS_'+eventName, {
                 reactionId: emoji.id || 0,
                 messageId: message.id,
                 userId: user.id,
@@ -936,7 +1058,7 @@ export enum AuditLogEvent {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'emoji.name', emoji.name, 'message.author.tag', user.tag);
-            require(path.join(process.env.eventsFolderPath, event))(reaction, executor, details);
+            require(eventtopath(event))(reaction, executor, details);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -955,7 +1077,7 @@ export enum AuditLogEvent {
             const message = reaction.message;
             const user = message.author;
 
-            global.database.addMessageReactionRemove({
+            global.database.addEntry('EVENTS_'+eventName, {
                 reactionId: emoji.id || 0,
                 messageId: message.id,
                 userId: user.id,
@@ -964,7 +1086,7 @@ export enum AuditLogEvent {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'emoji.name', emoji.name, 'message.author.tag', user.tag);
-            require(path.join(process.env.eventsFolderPath, event))(reaction, executor, details);
+            require(eventtopath(event))(reaction, executor, details);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -981,7 +1103,7 @@ export enum AuditLogEvent {
 
             // TODO
 
-            require(path.join(process.env.eventsFolderPath, event))(message, reactions);
+            require(eventtopath(event))(message, reactions);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -998,7 +1120,7 @@ export enum AuditLogEvent {
 
             // TODO
 
-            require(path.join(process.env.eventsFolderPath, event))(reactions);
+            require(eventtopath(event))(reactions);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -1015,7 +1137,7 @@ export enum AuditLogEvent {
 
             const user = oldMessage?.author || newMessage?.author;
 
-            global.database.addMessageUpdate({
+            global.database.addEntry('EVENTS_'+eventName, {
                 userId: user.id,
                 messageId: newMessage.id,
                 newContent: newMessage.content,
@@ -1024,7 +1146,7 @@ export enum AuditLogEvent {
             });
 
             reportEvent(__line, eventName, 'user.tag', user.tag, 'channel.name', newMessage.channel.name, 'content', oldMessage.content, '->', newMessage.content);
-            require(path.join(process.env.eventsFolderPath, event))(oldMessage, newMessage);
+            require(eventtopath(event))(oldMessage, newMessage);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -1061,7 +1183,7 @@ export enum AuditLogEvent {
 
             const executor = (await global.guild.latestAuditLog()).executor;
 
-            global.database.addThreadCreate({
+            global.database.addEntry('EVENTS_'+eventName, {
                 channelId: thread.id,
                 name: thread.name,
                 permissions: thread.permissionOverwrites.cache,
@@ -1070,7 +1192,7 @@ export enum AuditLogEvent {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'thread.name', thread.name);
-            require(path.join(process.env.eventsFolderPath, event))(thread, newlyCreated);
+            require(eventtopath(event))(thread, newlyCreated);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -1087,7 +1209,7 @@ export enum AuditLogEvent {
 
             const executor = (await global.guild.latestAuditLog()).executor;
 
-            global.database.addThreadDelete({
+            global.database.addEntry('EVENTS_'+eventName, {
                 channelId: thread.id,
                 name: thread.name,
                 permissions: thread.permissionOverwrites.cache,
@@ -1096,7 +1218,7 @@ export enum AuditLogEvent {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'thread.name', thread.name);
-            require(path.join(process.env.eventsFolderPath, event))(thread);
+            require(eventtopath(event))(thread);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -1119,7 +1241,7 @@ export enum AuditLogEvent {
 
             const executor = (await global.guild.latestAuditLog()).executor;
 
-            global.database.addChannelUpdate({
+            global.database.addEntry('EVENTS_'+eventName, {
                 channelId: newThread.id,
                 oldName: oldThread.name,
                 newName: newThread.name,
@@ -1128,7 +1250,7 @@ export enum AuditLogEvent {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'thread.name', oldThread.name, '->', newThread.name);
-            require(path.join(process.env.eventsFolderPath, event))(oldThread, newThread);
+            require(eventtopath(event))(oldThread, newThread);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -1160,12 +1282,14 @@ export enum AuditLogEvent {
     }
 
     global.client.on(event, async (oldState, newState) => {
+        
         try {
+
             if (global.guild.id !== newState.guild.id) return;
 
-            impossibleCaseReached = function (msg) {
+            const impossibleCaseReached = function (msg) {
                 console.warn(`${__filename} - Line ${__line} (${eventName}): impossible case reached: ${msg}`);
-                require(path.join(process.env.eventsFolderPath, event))(oldState, newState);
+                require(eventtopath(event))(oldState, newState);
             }
 
             if (!oldState.channelId && !newState.channelId) {
@@ -1175,8 +1299,8 @@ export enum AuditLogEvent {
 
             let user, channel, executor, updates;
 
-            now = Date.now();
-
+            let now = Date.now();
+            let args
             const voiceStateUpdateObject = function(user, executor, eventType) {
                 return {
                     userId: user.id,
@@ -1209,7 +1333,7 @@ export enum AuditLogEvent {
                         eventName += '.move';
 
                         executor = await getExecutor(AuditLogEvent.MemberMove);
-                        global.database.addVoiceStateUpdate(voiceStateUpdateObject(user, executor || user, 2));
+                        global.database.addEntry('EVENTS_'+event, voiceStateUpdateObject(user, executor || user, 2));
                     }
                     else {
                         eventName += '.update';
@@ -1234,14 +1358,14 @@ export enum AuditLogEvent {
                             return;
                         }
 
-                        global.database.addVoiceStateUpdate(voiceStateUpdateObject(user, executor || user, 4));
+                        global.database.addEntry('EVENTS_'+event, voiceStateUpdateObject(user, executor || user, 4));
                     }
                 }
                 else {
                     eventName += '.leave';
 
                     executor = await getExecutor(AuditLogEvent.MemberDisconnect);
-                    global.database.addVoiceStateUpdate(voiceStateUpdateObject(user, executor || user, 3));
+                    global.database.addEntry('EVENTS_'+event, voiceStateUpdateObject(user, executor || user, 3));
                 }
             }
             else {
@@ -1251,16 +1375,18 @@ export enum AuditLogEvent {
                 channel = newState.channel;
 
                 executor = await getExecutor(AuditLogEvent.MemberMove);
-                global.database.addVoiceStateUpdate(voiceStateUpdateObject(user, executor || user, 1));
+                global.database.addEntry('EVENTS_'+event, voiceStateUpdateObject(user, executor || user, 1));
             }
 
             args = [__line, eventName, 'user.tag', user.tag, 'channel.name', channel.name];
             if (executor) args.push('executor.tag', executor.tag);
             reportEvent(...args, ...updates);
+ 
 
-            require(path.join(process.env.eventsFolderPath, event))(oldState, newState);
+            require(eventToPath(event))(oldState, newState);
         } catch (err) {
             reportEventError(__line, eventName, err);
+            console.log(__line, eventName, err)
         }
     }); 
 }
