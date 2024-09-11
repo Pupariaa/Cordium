@@ -1369,7 +1369,6 @@ function eventToPath(event) {
         eventName = String(event);
         
         try {
-
             if (global.guild.id !== newState.guild.id) return;
 
             const impossibleCaseReached = function (msg) {
@@ -1382,7 +1381,9 @@ function eventToPath(event) {
                 return;
             };
 
-            let user, channel, executor, updates;
+            let user, channel, executor;
+            let updates = [];
+
 
             let now = Date.now();
             let args
@@ -1423,8 +1424,6 @@ function eventToPath(event) {
                     else {
                         eventName += '.update';
 
-                        updates = [];
-                        
                         if (oldState.serverDeaf !== newState.serverDeaf) {
                             executor = await getExecutor(AuditLogEvent.MemberUpdate);
                             updates.push('user.serverDeaf', oldState.serverDeaf, '->', newState.serverDeaf);
