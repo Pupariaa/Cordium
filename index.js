@@ -8,6 +8,9 @@ const prototypes = fs.readdirSync(prototypesDir).map(file => path.join('./', pro
 
 prototypes.forEach(proto => require('./' + String(proto)));
 
+const report = console.createReportFunction(__filename);
+const reportError = console.createReportErrorFunction(__filename);
+
 require('puparia.getlines.js');
 require('dotenv').config({ path: './config/config.env' });
 const { Events } = require('discord.js');
@@ -17,11 +20,11 @@ new CQD();
 
 // Global error handling
 process.on('uncaughtException', (err) => {
-    console.error(`${__filename} - Line ${__line} (uncaughtException): Uncaught exception occurred.`, err);
+    reportError(__line, 'uncaughtException', 'Uncaught exception occurred:', err);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-    console.error(`${__filename} - Line ${__line} (unhandledRejection): Unhandled rejection at`, promise, 'reason:', reason instanceof Error ? reason.message : reason);
+    reportError(__line, 'unhandledRejection', 'Unhandled rejection at', promise, 'reason:', reason instanceof Error ? reason.message : reason);
 });
 
 global.client.on(Events.ClientReady, async () => {
@@ -34,7 +37,7 @@ global.client.on(Events.ClientReady, async () => {
         // Get guild
         global.guild = global.client.guilds.cache.get(process.env.discord_guild_id);
         if (!global.guild) {
-            console.error(`START: Guild not found. Check the "discord_guild_id" in config.env.`);
+            console.error(`START: Guild not found. Check the "discord_guild_id" in config.env`);
             process.exit(1);
         }
         global.initCount = (await global.guild.latestAuditLog())?.extra?.count || 0;
@@ -45,7 +48,7 @@ global.client.on(Events.ClientReady, async () => {
         
         const invites = await global.guild.invites.fetch();
         invites.forEach(invite => global.client.invitesCache.set(invite.code, invite.uses));
-        console.success(`START: Invites cache initialized.`);
+        console.success(`START: Invites cache initialized`);
 
         // Interaction handler
         global.client.on(Events.InteractionCreate, async (interaction) => {
@@ -54,15 +57,15 @@ global.client.on(Events.ClientReady, async () => {
             const command = interaction.client.commands.get(interaction.commandName);
             if (!command) {
                 await interaction.reply('Not a command');
-                console.error(`${__filename} - Line ${__line} (InteractionCreate): No command matching ${interaction.commandName} was found.`);
+                console.error(`${__filename} - Line ${__line} (InteractionCreate): No command matching ${interaction.commandName} was found`);
                 return;
             }
 
             try {
                 await command.execute(interaction);
-                console.info(`${__filename} - Line ${__line} (InteractionCreate): Executed command ${interaction.commandName} successfully.`);
-            } catch (error) {
-                console.error(`${__filename} - Line ${__line} (InteractionCreate): Error executing command ${interaction.commandName}.`, error);
+                console.info(`${__filename} - Line ${__line} (InteractionCreate): Executed command ${interaction.commandName} successfully`);
+            } catch (err) {
+                console.error(`${__filename} - Line ${__line} (InteractionCreate): Error executing command ${interaction.commandName}`, err);
                 const responseMessage = { content: 'There was an error while executing this command!', ephemeral: true };
                 if (interaction.replied || interaction.deferred) {
                     await interaction.followUp(responseMessage);
@@ -73,7 +76,8 @@ global.client.on(Events.ClientReady, async () => {
         });
 
 
-    } catch (error) {
-        console.error(`START: Error during bot initialization.`, error);
+    } catch (err) {
+        reportError(__line, 'ClientReady', 'START: Error during bot initialization:', err);
+        console.error(``, err);
     }
 });

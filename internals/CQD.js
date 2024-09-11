@@ -5,6 +5,9 @@ const Discord = require('discord.js');
 const CommandManager = require('./CommandManager');
 require('puparia.getlines.js');
 
+const report = console.createReportFunction(__filename);
+const reportError = console.createReportErrorFunction(__filename);
+
 function checkEnvVariables() {
     const requiredVars = ['client_token', 'client_id', 'discord_guild_id'];
     const missingVars = requiredVars.filter(v => !process.env[v]);
@@ -12,7 +15,6 @@ function checkEnvVariables() {
     if (missingVars.length > 0) {
         console.error(`Missing required environment variables: ${missingVars.join(', ')}`);
         console.error(`cn init --token "yourToken" --id "yourClientID" --guid "yourGuildID" --rsrole "yourRestrictedRoleID"`);
-
         process.exit(1);
     }
 }
@@ -25,6 +27,7 @@ if (process.env.prod) {
 
 class CQD {
     constructor() {
+        const functionName = 'constructor';
         try {
             checkEnvVariables();
 
@@ -40,8 +43,6 @@ class CQD {
             global.database = new Database();
             require('../internals/GetDatabase')
 
-
-
             const AttachmentManager = require('./AttachmentManager');
 
             global.attachment = new AttachmentManager();
@@ -52,7 +53,7 @@ class CQD {
 
             global.client.login(process.env.client_token);
         } catch (err) {
-            console.error(`${__filename} - Line ${__line} (constructor): `, err);
+            reportError(__line, functionName, err);
         }
     }
 }

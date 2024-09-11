@@ -20,7 +20,7 @@ class Database {
     constructor() {
 
         if (!db_name || !db_host || !db_user || !db_pass || !db_port) {
-            console.log('Database connection parameters are missing. Cannot connect. Nothing will be recorded.');
+            console.log('Database connection parameters are missing. Cannot connect. Nothing will be recorded');
             return;
         }
 
@@ -39,7 +39,7 @@ class Database {
             port: this.db_port,
             dialect: 'mysql',
         })
-        .then(() => console.log('Database connection successful.'))
+        .then(() => console.log('Database connection successful'))
         .catch(err => console.error('Unable to connect to the database:', err));
     }
 
@@ -519,7 +519,7 @@ class Database {
     async addEntry(model, data, description) {
         try {
             await model.create(data);
-            console.log(`${description} event added.`);
+            console.log(`${description} event added`);
         } catch (error) {
             console.error(`Error adding ${description} event:`, error);
         }
@@ -537,19 +537,19 @@ function updateEnvVariable(key, value) {
     let configContent = fs.readFileSync(configPath, 'utf8');
     const regex = new RegExp(`^${key}=.*$`, 'm');
     configContent = configContent.replace(regex, `${key}="${value}"`);
-    console.log(`Updated '${key}' in config.env.`);
+    console.log(`Updated '${key}' in config.env`);
     fs.writeFileSync(configPath, configContent, 'utf8');
 }
 
 function createTables() {
     const db = new Database();
     if (!db.sequelize) {
-        console.log('Unable to connect to the database. Please check your parameters.');
+        console.log('Unable to connect to the database. Please check your parameters');
         return;
     }
 
     db.sequelize.sync({ force: true })
-        .then(() => console.log('Tables have been created successfully in the database.'))
+        .then(() => console.log('Tables have been created successfully in the database'))
         .catch((error) => console.error('Error creating tables:', error));
 }
 
@@ -557,7 +557,7 @@ function generateInviteLink() {
     const clientId = process.env.client_id;
 
     if (!clientId) {
-        console.error('Client ID is missing in environment variables. Please initialize the bot configuration using cn init.');
+        console.error('Client ID is missing in environment variables. Please initialize the bot configuration using cn init');
         return;
     }
 
@@ -576,7 +576,7 @@ function handleBddCommand() {
     updateEnvVariable('db_user', db_user);
     updateEnvVariable('db_pass', db_pass);
 
-    console.log('Database connection parameters have been updated in config.env.');
+    console.log('Database connection parameters have been updated in config.env');
 
     createTables(db_host, db_name, db_port, db_user, db_pass);
 }
@@ -584,7 +584,7 @@ function handleBddCommand() {
 function testDatabaseConnection() {
     const db = new Database();
     if (!db.sequelize) {
-        console.log('Unable to connect to the database. Please check your parameters.');
+        console.log('Unable to connect to the database. Please check your parameters');
         return;
     }
 
@@ -593,7 +593,7 @@ function testDatabaseConnection() {
     port: this.db_port,
     dialect: 'mysql',
     })
-    .then(() => console.log('Database connection successful.'))
+    .then(() => console.log('Database connection successful'))
     .catch((error) => console.error('Failed to connect to the database:', error));
 }
 

@@ -6,35 +6,26 @@ const axios = require('axios');
 const { v4: uuidv4 } = require('uuid');
 const sanitizeFilename = require('sanitize-filename');
 
-/**
- * AttachmentManager class handles the management of attachments in a Discord bot.
- */
+const report = console.createReportFunction(__filename);
+const reportError = console.createReportErrorFunction(__filename);
+
 class AttachmentManager {
     constructor() {
         this.client = global.client;
         this.attachmentsFile = path.join(__dirname, '../src/files/');
-        console.log(__dirname);
     }
 
-    /**
-     * Loads attachments from a JSON file.
-     * @returns {Array} - A list of attachments.
-     */
     loadAttachments() {
         const functionName = 'loadAttachments';
         try {
             const data = fs.readFileSync(path.join(this.attachmentsFile, 'index.json'), 'utf8');
             return JSON.parse(data);
-        } catch (error) {
-            console.error(`${__filename} - (${functionName}): Error loading attachments.`, error);
+        } catch (err) {
+            reportError(__line, functionName, `Error loading attachments:`, err);
             return [];
         }
     }
 
-    /**
-     * Saves attachments to a JSON file.
-     * @param {Array} attachments - The list of attachments to save.
-     */
     saveAttachments(attachments) {
         const functionName = 'saveAttachments';
         try {
@@ -42,16 +33,11 @@ class AttachmentManager {
                 path.join(this.attachmentsFile, 'index.json'),
                 JSON.stringify(attachments, null, 2)
             );
-        } catch (error) {
-            console.error(`${__filename} - (${functionName}): Error saving attachments.`, error);
+        } catch (err) {
+            reportError(__line, functionName, `Error saving attachments:`, err);
         }
     }
 
-    /**
-     * Extracts the filename from a URL.
-     * @param {string} url - The URL to extract the filename from.
-     * @returns {string} - The extracted and sanitized filename.
-     */
     extractFilenameFromUrl(url) {
         const functionName = 'extractFilenameFromUrl';
         try {
@@ -59,18 +45,12 @@ class AttachmentManager {
             const pathname = parsedUrl.pathname;
             const filename = path.basename(pathname);
             return sanitizeFilename(filename);
-        } catch (error) {
-            console.error(`${__filename} - (${functionName}): Error extracting filename.`, error);
+        } catch (err) {
+            reportError(__line, functionName, `Error extracting filename from ${url}:`, err);
             return 'unknown';
         }
     }
 
-    /**
-     * Downloads a file from a URL and saves it locally.
-     * @param {string} url - The URL of the file to download.
-     * @param {string} filename - The filename to save the downloaded file as.
-     * @returns {Promise<string>} - The path to the downloaded file.
-     */
     async downloadFile(url, filename) {
         const functionName = 'downloadFile';
         try {
@@ -89,22 +69,17 @@ class AttachmentManager {
                 writer.on('finish', () => {
                     resolve(filePath);
                 });
-                writer.on('error', (error) => {
-                    console.error(`${__filename} - (${functionName}): Error during download.`, error);
-                    reject(error);
+                writer.on('error', (err) => {
+                    reportError(__line, functionName, `Error during download ${url}:`, err);
+                    reject(err);
                 });
             });
-        } catch (error) {
-            console.error(`${__filename} - (${functionName}): Error initiating download.`, error);
+        } catch (err) {
+            reportError(__line, functionName, `Error initiating download of ${url}:`, err);
             throw error;
         }
     }
 
-    /**
- * Handles attachments from a Discord message.
- * @param {Object} message - The Discord message containing attachments.
- * @returns {Promise<Array>} - A list of newly processed attachments.
- */
     async handleAttachments(message) {
         const functionName = 'handleAttachments';
         try {
@@ -139,24 +114,20 @@ class AttachmentManager {
 
             return newAttachments;
 
-        } catch (error) {
-            console.error(`${__filename} - (${functionName}): Error handling attachments.`, error);
+        } catch (err) {
+            reportError(__line, functionName, `Error handling attachments:`, err);
             throw error;
         }
     }
-    /**
-     * Retrieves attachments associated with a given message.
-     * @param {string} messageId - The ID of the message to retrieve attachments for.
-     * @returns {Array} - A list of attachments associated with the message.
-     */
+
     getAttachments(messageId) {
         const functionName = 'getAttachments';
         try {
             const attachments = this.loadAttachments();
             const filteredAttachments = attachments.filter(att => att.messageId === messageId);
             return filteredAttachments;
-        } catch (error) {
-            console.error(`${__filename} - (${functionName}): Error retrieving attachments.`, error);
+        } catch (err) {
+            reportError(__line, functionName, `Error retrieving attachments:`, err);
             return [];
         }
     }

@@ -21,8 +21,8 @@ function shouldLog(eventName, ...args) {
     return global.global.reportEvents && global.configReportEvents[eventName];
 }
 
-const reportEvent = console.createReportFunction(__filename, formatArgs, shouldLog);
-const reportEventError = console.createReportErrorFunction(__filename);
+const report = console.createReportFunction(__filename, formatArgs, shouldLog);
+const reportError = console.createReportErrorFunction(__filename);
 
 /*
 Events Enum
@@ -292,10 +292,10 @@ function eventToPath(event) {
                 executorId: executor.id,
             });
 
-            reportEvent(__line, eventName, 'executor.tag', executor.tag, 'channel.type', global.guild.channelTypeStr(channel.type), 'channel.name', channel.name);
+            report(__line, eventName, 'executor.tag', executor.tag, 'channel.type', global.guild.channelTypeStr(channel.type), 'channel.name', channel.name);
             require(eventtopath(event))(channel);
         } catch (err) {
-            reportEventError(__line, eventName, err);
+            reportError(__line, eventName, err);
         }
     });
 }
@@ -321,10 +321,10 @@ function eventToPath(event) {
                 executorId: executor.id,
             });
 
-            reportEvent(__line, eventName, 'executor.tag', executor.tag, 'channel.type', global.guild.channelTypeStr(channel.type), 'channel.name', channel.name);
+            report(__line, eventName, 'executor.tag', executor.tag, 'channel.type', global.guild.channelTypeStr(channel.type), 'channel.name', channel.name);
             require(eventtopath(event))(channel);
         } catch (err) {
-            reportEventError(__line, eventName, err);
+            reportError(__line, eventName, err);
         }  
     });
 }
@@ -341,10 +341,10 @@ function eventToPath(event) {
 
             // TODO
 
-            reportEvent(__line, eventName);
+            report(__line, eventName);
             require(eventtopath(event))(channel, date);
         } catch (err) {
-            reportEventError(__line, eventName, err);
+            reportError(__line, eventName, err);
         }
     });
 }
@@ -372,10 +372,10 @@ function eventToPath(event) {
                 executorId: executor.id,
             });
 
-            reportEvent(__line, eventName, 'executor.tag', executor.tag, 'channel.type', global.guild.channelTypeStr(newChannel.type), 'channel.name', oldChannel.name, '->', newChannel.name);
+            report(__line, eventName, 'executor.tag', executor.tag, 'channel.type', global.guild.channelTypeStr(newChannel.type), 'channel.name', oldChannel.name, '->', newChannel.name);
             require(eventtopath(event))(oldChannel, newChannel);
         } catch (err) {
-            reportEventError(__line, eventName, err);
+            reportError(__line, eventName, err);
         }
     });
 }
@@ -416,10 +416,10 @@ function eventToPath(event) {
                 executorId: executor.id,
             });
 
-            reportEvent(__line, eventName, 'user.tag', user.tag, 'executor.tag', executor.tag, 'reason', ban.reason);
+            report(__line, eventName, 'user.tag', user.tag, 'executor.tag', executor.tag, 'reason', ban.reason);
             require(eventtopath(event))(ban);
         } catch (err) {
-            reportEventError(__line, eventName, err);
+            reportError(__line, eventName, err);
         }
     });
 }
@@ -444,10 +444,10 @@ function eventToPath(event) {
                 executorId: executor.id,
             });
 
-            reportEvent(__line, eventName, 'user.tag', user.tag, 'executor.tag', executor.tag);
+            report(__line, eventName, 'user.tag', user.tag, 'executor.tag', executor.tag);
             require(eventtopath(event))(ban);
         } catch (err) {
-            reportEventError(__line, eventName, err);
+            reportError(__line, eventName, err);
         }
     });
 }
@@ -475,10 +475,10 @@ function eventToPath(event) {
                 executorId: executor.id,
             });
 
-            reportEvent(__line, eventName, 'executor.tag', executor.tag, 'emoji.name', emoji.name, 'emoji.url', emoji.url);
+            report(__line, eventName, 'executor.tag', executor.tag, 'emoji.name', emoji.name, 'emoji.url', emoji.url);
             require(eventtopath(event))(emoji);
         } catch (err) {
-            reportEventError(__line, eventName, err);
+            reportError(__line, eventName, err);
         }
     });
 }
@@ -503,10 +503,10 @@ function eventToPath(event) {
                 executorId: executor.id,
             });
 
-            reportEvent(__line, eventName, 'executor.tag', executor.tag, 'emoji.name', emoji.name, 'emoji.url', emoji.url);
+            report(__line, eventName, 'executor.tag', executor.tag, 'emoji.name', emoji.name, 'emoji.url', emoji.url);
             require(eventtopath(event))(emoji);
         } catch (err) {
-            reportEventError(__line, eventName, err);
+            reportError(__line, eventName, err);
         }
     });
 }
@@ -531,10 +531,10 @@ function eventToPath(event) {
                 executorId: executor.id,
             });
 
-            reportEvent(__line, eventName, 'executor.tag', executor.tag, 'emoji.name', oldEmoji.name, '->', newEmoji.name, 'emoji.url', oldEmoji.url, '->', newEmoji.url);
+            report(__line, eventName, 'executor.tag', executor.tag, 'emoji.name', oldEmoji.name, '->', newEmoji.name, 'emoji.url', oldEmoji.url, '->', newEmoji.url);
             require(eventtopath(event))(oldEmoji, newEmoji);
         } catch (err) {
-            reportEventError(__line, eventName, err);
+            reportError(__line, eventName, err);
         }
     });
 }
@@ -559,10 +559,10 @@ function eventToPath(event) {
                 nickname: member.nickname || '',
             });
 
-            reportEvent(__line, eventName, 'user.tag', user.tag);
+            report(__line, eventName, 'user.tag', user.tag);
             require(eventtopath(event))(member);
         } catch (err) {
-            reportEventError(__line, eventName, err);
+            reportError(__line, eventName, err);
         }
     });
 }
@@ -579,10 +579,10 @@ function eventToPath(event) {
 
             // TODO
 
-            reportEvent(__line, eventName, 'member.user.tag', member.user.tag);
+            report(__line, eventName, 'member.user.tag', member.user.tag);
             require(eventtopath(event))(member);
         } catch (err) {
-            reportEventError(__line, eventName, err);
+            reportError(__line, eventName, err);
         }
     });
 }
@@ -608,10 +608,10 @@ function eventToPath(event) {
                 leftAt: Date.now(),
             });
 
-            reportEvent(__line, eventName, 'user.tag', user.tag);
+            report(__line, eventName, 'user.tag', user.tag);
             require(eventtopath(event))(member);
         } catch (err) {
-            reportEventError(__line, eventName, err);
+            reportError(__line, eventName, err);
         }
     });
 }
@@ -658,10 +658,10 @@ function eventToPath(event) {
             //     await global.database.addGuildMemberUpdate(data);
             // }
 
-            reportEvent(__line, eventName, 'user.tag', oldMember.user.tag, '->', newMember.user.tag);
+            report(__line, eventName, 'user.tag', oldMember.user.tag, '->', newMember.user.tag);
             require(eventtopath(event))(oldMember, newMember);
         } catch (err) {
-            reportEventError(__line, eventName, err);
+            reportError(__line, eventName, err);
         }
     });
 }
@@ -687,10 +687,10 @@ function eventToPath(event) {
                 executorId: executor.id,
             });
 
-            reportEvent(__line, eventName, 'executor.tag', executor.tag, 'role.name', role.name);
+            report(__line, eventName, 'executor.tag', executor.tag, 'role.name', role.name);
             require(eventtopath(event))(role);
         } catch (err) {
-            reportEventError(__line, eventName, err);
+            reportError(__line, eventName, err);
         }
     });
 }
@@ -715,10 +715,10 @@ function eventToPath(event) {
                 executorId: executor.id,
             });
 
-            reportEvent(__line, eventName, 'executor.tag', executor.tag, 'role.name', role.name);
+            report(__line, eventName, 'executor.tag', executor.tag, 'role.name', role.name);
             require(eventtopath(event))(role);
         } catch (err) {
-            reportEventError(__line, eventName, err);
+            reportError(__line, eventName, err);
         }
     });
 }
@@ -742,10 +742,10 @@ function eventToPath(event) {
                 executorId: executor.id,
             });
 
-            reportEvent(__line, eventName, 'executor.tag', executor.tag, 'role.name', oldRole.name, '->', newRole.name, 'role.color', oldRole.hexColor, '->', newRole.hexColor);
+            report(__line, eventName, 'executor.tag', executor.tag, 'role.name', oldRole.name, '->', newRole.name, 'role.color', oldRole.hexColor, '->', newRole.hexColor);
             require(eventtopath(event))(role);
         } catch (err) {
-            reportEventError(__line, eventName, err);
+            reportError(__line, eventName, err);
         }
     });
 }
@@ -779,10 +779,10 @@ function eventToPath(event) {
                 executorId: executor.id,
             });
 
-            reportEvent(__line, eventName, 'executor.tag', executor.tag, 'sticker.name', sticker.name);
+            report(__line, eventName, 'executor.tag', executor.tag, 'sticker.name', sticker.name);
             require(eventtopath(event))(sticker);
         } catch (err) {
-            reportEventError(__line, eventName, err);
+            reportError(__line, eventName, err);
         }
     });
 }
@@ -807,10 +807,10 @@ function eventToPath(event) {
                 executorId: executor.id,
             });
 
-            reportEvent(__line, eventName, 'executor.tag', executor.tag, 'sticker.name', sticker.name);
+            report(__line, eventName, 'executor.tag', executor.tag, 'sticker.name', sticker.name);
             require(eventtopath(event))(sticker);
         } catch (err) {
-            reportEventError(__line, eventName, err);
+            reportError(__line, eventName, err);
         }
     });
 }
@@ -834,10 +834,10 @@ function eventToPath(event) {
                 executorId: executor.id,
             });
 
-            reportEvent(__line, eventName, 'executor.tag', executor.tag, 'sticker.name', oldSticker.name, '->', newSticker.name);
+            report(__line, eventName, 'executor.tag', executor.tag, 'sticker.name', oldSticker.name, '->', newSticker.name);
             require(eventtopath(event))(sticker);
         } catch (err) {
-            reportEventError(__line, eventName, err);
+            reportError(__line, eventName, err);
         }
     });
 }
@@ -852,9 +852,9 @@ function eventToPath(event) {
 
     const reportDefault = (interaction) => {
         try {
-            reportEvent(__line, eventName, 'executor.tag', interaction.user.tag, 'client.tag', interaction.client.user.tag, 'channel.name', interaction.channel.name);
+            report(__line, eventName, 'executor.tag', interaction.user.tag, 'client.tag', interaction.client.user.tag, 'channel.name', interaction.channel.name);
         } catch(err) {
-            reportEventError(__line, eventName, err);
+            reportError(__line, eventName, err);
         }
     } 
 
@@ -878,9 +878,9 @@ function eventToPath(event) {
                         break;
                 }
             }
-            reportEvent(__line, eventName, 'executor.tag', interaction.user.tag, 'client.tag', interaction.client.user.tag, 'channel.name', interaction.channel.name, 'command', cmd);
+            report(__line, eventName, 'executor.tag', interaction.user.tag, 'client.tag', interaction.client.user.tag, 'channel.name', interaction.channel.name, 'command', cmd);
         } catch(err) {
-            reportEventError(__line, eventName, err);
+            reportError(__line, eventName, err);
         }
     }
 
@@ -944,7 +944,7 @@ function eventToPath(event) {
 
             require(eventtopath(event))(interaction);
         } catch (err) {
-            reportEventError(__line, eventName, err);
+            reportError(__line, eventName, err);
         }
     });
 }
@@ -974,10 +974,10 @@ function eventToPath(event) {
                 datetime: Date.now(),
             });
 
-            reportEvent(__line, eventName, 'executor.tag', executor.tag, 'url', invite.url);
+            report(__line, eventName, 'executor.tag', executor.tag, 'url', invite.url);
             require(eventtopath(event))(invite);
         } catch (err) {
-            reportEventError(__line, eventName, err);
+            reportError(__line, eventName, err);
         }
     });
 }
@@ -1001,10 +1001,10 @@ function eventToPath(event) {
                 datetime: Date.now(),
             });
 
-            reportEvent(__line, eventName, 'executor.tag', executor.tag, 'url', invite.url);
+            report(__line, eventName, 'executor.tag', executor.tag, 'url', invite.url);
             require(eventtopath(event))(invite);
         } catch (err) {
-            reportEventError(__line, eventName, err);
+            reportError(__line, eventName, err);
         }
     });
 }
@@ -1028,10 +1028,10 @@ function eventToPath(event) {
                 executorId: executor.id,
             });
 
-            reportEvent(__line, eventName, 'executor.tag', executor.tag, 'messages.size', messages.size);
+            report(__line, eventName, 'executor.tag', executor.tag, 'messages.size', messages.size);
             require(eventtopath(event))(messages, channel);
         } catch (err) {
-            reportEventError(__line, eventName, err);
+            reportError(__line, eventName, err);
         }
     });
 }
@@ -1066,10 +1066,10 @@ function eventToPath(event) {
             });
 
 
-            reportEvent(__line, eventName, 'executor.tag', executor.tag, 'channel.name', channel.name, 'content', content);
+            report(__line, eventName, 'executor.tag', executor.tag, 'channel.name', channel.name, 'content', content);
             require(eventtopath(event))(message);
         } catch (err) {
-            reportEventError(__line, eventName, err);
+            reportError(__line, eventName, err);
         }
     });
 }
@@ -1092,10 +1092,10 @@ function eventToPath(event) {
                 executorId: executor.id,
             });
 
-            reportEvent(__line, eventName, 'executor.tag', executor.tag, 'channel.name', message.channel.name, 'content', message.content);
+            report(__line, eventName, 'executor.tag', executor.tag, 'channel.name', message.channel.name, 'content', message.content);
             require(eventtopath(event))(message);
         } catch (err) {
-            reportEventError(__line, eventName, err);
+            reportError(__line, eventName, err);
         }
     });
 }
@@ -1126,10 +1126,10 @@ function eventToPath(event) {
                 name: emoji.name
             });
 
-            reportEvent(__line, eventName, 'executor.tag', executor.tag, 'emoji.name', emoji.name, 'message.author.tag', user.tag);
+            report(__line, eventName, 'executor.tag', executor.tag, 'emoji.name', emoji.name, 'message.author.tag', user.tag);
             require(eventtopath(event))(reaction, executor, details);
         } catch (err) {
-            reportEventError(__line, eventName, err);
+            reportError(__line, eventName, err);
         }
     });
 }
@@ -1156,10 +1156,10 @@ function eventToPath(event) {
                 name: emoji.name
             });
 
-            reportEvent(__line, eventName, 'executor.tag', executor.tag, 'emoji.name', emoji.name, 'message.author.tag', user.tag);
+            report(__line, eventName, 'executor.tag', executor.tag, 'emoji.name', emoji.name, 'message.author.tag', user.tag);
             require(eventtopath(event))(reaction, executor, details);
         } catch (err) {
-            reportEventError(__line, eventName, err);
+            reportError(__line, eventName, err);
         }
     });
 }
@@ -1178,7 +1178,7 @@ function eventToPath(event) {
 
             require(eventtopath(event))(message, reactions);
         } catch (err) {
-            reportEventError(__line, eventName, err);
+            reportError(__line, eventName, err);
         }
     });
 }
@@ -1197,7 +1197,7 @@ function eventToPath(event) {
 
             require(eventtopath(event))(reactions);
         } catch (err) {
-            reportEventError(__line, eventName, err);
+            reportError(__line, eventName, err);
         }
     });
 }
@@ -1222,10 +1222,10 @@ function eventToPath(event) {
                 datetime: Date.now(),
             });
 
-            reportEvent(__line, eventName, 'user.tag', user.tag, 'channel.name', newMessage.channel.name, 'content', oldMessage.content, '->', newMessage.content);
+            report(__line, eventName, 'user.tag', user.tag, 'channel.name', newMessage.channel.name, 'content', oldMessage.content, '->', newMessage.content);
             require(eventtopath(event))(oldMessage, newMessage);
         } catch (err) {
-            reportEventError(__line, eventName, err);
+            reportError(__line, eventName, err);
         }
     });
 }
@@ -1270,10 +1270,10 @@ function eventToPath(event) {
                 executorId: executor.id,
             });
 
-            reportEvent(__line, eventName, 'executor.tag', executor.tag, 'thread.name', thread.name);
+            report(__line, eventName, 'executor.tag', executor.tag, 'thread.name', thread.name);
             require(eventtopath(event))(thread, newlyCreated);
         } catch (err) {
-            reportEventError(__line, eventName, err);
+            reportError(__line, eventName, err);
         }
     });
 }
@@ -1298,10 +1298,10 @@ function eventToPath(event) {
                 executorId: executor.id,
             });
 
-            reportEvent(__line, eventName, 'executor.tag', executor.tag, 'thread.name', thread.name);
+            report(__line, eventName, 'executor.tag', executor.tag, 'thread.name', thread.name);
             require(eventtopath(event))(thread);
         } catch (err) {
-            reportEventError(__line, eventName, err);
+            reportError(__line, eventName, err);
         }
     });
 }
@@ -1332,10 +1332,10 @@ function eventToPath(event) {
                 executorId: executor.id,
             });
 
-            reportEvent(__line, eventName, 'executor.tag', executor.tag, 'thread.name', oldThread.name, '->', newThread.name);
+            report(__line, eventName, 'executor.tag', executor.tag, 'thread.name', oldThread.name, '->', newThread.name);
             require(eventtopath(event))(oldThread, newThread);
         } catch (err) {
-            reportEventError(__line, eventName, err);
+            reportError(__line, eventName, err);
         }
     });
 }
@@ -1464,12 +1464,12 @@ function eventToPath(event) {
 
             args = [__line, eventName, 'user.tag', user.tag, 'channel.name', channel.name];
             if (executor) args.push('executor.tag', executor.tag);
-            reportEvent(...args, ...updates);
+            report(...args, ...updates);
  
 
             require(eventToPath(event))(oldState, newState);
         } catch (err) {
-            reportEventError(__line, eventName, err);
+            reportError(__line, eventName, err);
             console.log(__line, eventName, err)
         }
     }); 
