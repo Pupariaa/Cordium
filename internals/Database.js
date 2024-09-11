@@ -20,15 +20,15 @@ class Database {
     this.charset = "utf8mb4";
     this.collate = "utf8mb4_unicode_ci";
     global.database = true
-    if (!process.env.dbname || !process.env.dbhost || !process.env.dbuser || !process.env.dbpass || !process.env.dbport) {
+    if (!process.env.db_name || !process.env.db_host || !process.env.db_user || !process.env.db_pass || !process.env.db_port) {
       console.warn('START: Missing database parameters, no saved data, do cn --bdd help');
       this.connected = false;
       return;
     }
 
-    this.sequelize = new Sequelize(process.env.dbname, process.env.dbuser, process.env.dbpass, {
-      host: process.env.dbhost,
-      port: process.env.dbport,
+    this.sequelize = new Sequelize(process.env.db_name, process.env.db_user, process.env.db_pass, {
+      host: process.env.db_host,
+      port: process.env.db_port,
       dialect: 'mysql',
       logging: false
     });
@@ -55,7 +55,7 @@ class Database {
    */
   defineModels() {
 
-    this.DATA_channels = sequelize.define('DATA_channels', {
+    this.DATA_channels = this.sequelize.define('DATA_channels', {
       id: { type: DataTypes.INTEGER, primaryKey: true, allowNull: false },
       name: { type: DataTypes.STRING(64), allowNull: false, defaultValue: '' },
       channelId: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
@@ -69,8 +69,7 @@ class Database {
       charset: this.charset,
       collate: this.collate
     });
-
-    this.EVENTS_channelCreate = sequelize.define('EVENTS_channelCreate', {
+    this.EVENTS_channelCreate = this.sequelize.define('EVENTS_channelCreate', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
       channelId: { type: DataTypes.BIGINT, allowNull: true },
       name: { type: DataTypes.STRING(64), allowNull: true },
@@ -84,8 +83,7 @@ class Database {
       charset: this.charset,
       collate: this.collate
     });
-
-    this.EVENTS_channelPinsUpdate = sequelize.define('EVENTS_channelPinsUpdate', {
+    this.EVENTS_channelPinsUpdate = this.sequelize.define('EVENTS_channelPinsUpdate', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false }
     }, {
       tableName: 'EVENTS_channelPinsUpdate',
@@ -93,7 +91,7 @@ class Database {
       charset: this.charset,
       collate: this.collate
     });
-    this.EVENTS_guildBanAdd = sequelize.define('EVENTS_guildBanAdd', {
+    this.EVENTS_guildBanAdd = this.sequelize.define('EVENTS_guildBanAdd', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
       userid: { type: DataTypes.BIGINT, allowNull: true },
       reason: { type: DataTypes.STRING(255), allowNull: true },
@@ -105,8 +103,7 @@ class Database {
       charset: this.charset,
       collate: this.collate
     });
-
-    this.EVENTS_guildEmojiCreate = sequelize.define('EVENTS_guildEmojiCreate', {
+    this.EVENTS_guildEmojiCreate = this.sequelize.define('EVENTS_guildEmojiCreate', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
       emojiId: { type: DataTypes.BIGINT, allowNull: true },
       emojiPath: { type: DataTypes.TEXT, allowNull: false },
@@ -118,8 +115,7 @@ class Database {
       charset: this.charset,
       collate: this.collate
     });
-
-    this.EVENTS_guildEmojiDelete = sequelize.define('EVENTS_guildEmojiDelete', {
+    this.EVENTS_guildEmojiDelete = this.sequelize.define('EVENTS_guildEmojiDelete', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
       emojiId: { type: DataTypes.BIGINT, allowNull: true },
       oldEmojiPath: { type: DataTypes.TEXT, allowNull: true },
@@ -133,8 +129,7 @@ class Database {
       collate: this.collate,
       indexes: [{ using: 'BTREE', fields: ['id'] }]
     });
-
-    this.EVENTS_guildEmojiUpdate = sequelize.define('EVENTS_guildEmojiUpdate', {
+    this.EVENTS_guildEmojiUpdate = this.sequelize.define('EVENTS_guildEmojiUpdate', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
       emojiId: { type: DataTypes.BIGINT, allowNull: true },
       oldEmojiPath: { type: DataTypes.TEXT, allowNull: false },
@@ -147,8 +142,7 @@ class Database {
       charset: this.charset,
       collate: this.collate
     });
-
-    this.EVENTS_guildMemberAdd = sequelize.define('EVENTS_guildMemberAdd', {
+    this.EVENTS_guildMemberAdd = this.sequelize.define('EVENTS_guildMemberAdd', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
       userid: { type: DataTypes.BIGINT, allowNull: true },
       joinedAt: { type: DataTypes.BIGINT, allowNull: true },
@@ -160,8 +154,7 @@ class Database {
       charset: this.charset,
       collate: this.collate
     });
-
-    this.EVENTS_guildMemberAvailable = sequelize.define('EVENTS_guildMemberAvailable', {
+    this.EVENTS_guildMemberAvailable = this.sequelize.define('EVENTS_guildMemberAvailable', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false }
     }, {
       tableName: 'EVENTS_guildMemberAvailable',
@@ -169,7 +162,7 @@ class Database {
       charset: this.charset,
       collate: this.collate
     });
-    this.EVENTS_guildMemberRemove = sequelize.define('EVENTS_guildMemberRemove', {
+    this.EVENTS_guildMemberRemove = this.sequelize.define('EVENTS_guildMemberRemove', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
       userid: { type: DataTypes.BIGINT, allowNull: true },
       leftAt: { type: DataTypes.BIGINT, allowNull: true },
@@ -180,7 +173,7 @@ class Database {
       charset: this.charset,
       collate: this.collate
     });
-    this.EVENTS_guildMembersChunk = sequelize.define('EVENTS_guildMembersChunk', {
+    this.EVENTS_guildMembersChunk = this.sequelize.define('EVENTS_guildMembersChunk', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false }
     }, {
       tableName: 'EVENTS_guildMembersChunk',
@@ -188,7 +181,7 @@ class Database {
       charset: this.charset,
       collate: this.collate
     });
-    this.EVENTS_guildMemberUpdate = sequelize.define('EVENTS_guildMemberUpdate', {
+    this.EVENTS_guildMemberUpdate = this.sequelize.define('EVENTS_guildMemberUpdate', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
       oldNickname: { type: DataTypes.STRING(50), allowNull: true },
       oldDisplayName: { type: DataTypes.STRING(50), allowNull: true },
@@ -206,7 +199,7 @@ class Database {
       charset: this.charset,
       collate: this.collate
     });
-    this.EVENTS_interactionCreate = sequelize.define('EVENTS_interactionCreate', {
+    this.EVENTS_interactionCreate = this.sequelize.define('EVENTS_interactionCreate', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
       type: { type: DataTypes.INTEGER, allowNull: true },
       datetime: { type: DataTypes.BIGINT, allowNull: true },
@@ -219,7 +212,7 @@ class Database {
       charset: this.charset,
       collate: this.collate
     });
-    this.EVENTS_inviteCreate = sequelize.define('EVENTS_inviteCreate', {
+    this.EVENTS_inviteCreate = this.sequelize.define('EVENTS_inviteCreate', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
       code: { type: DataTypes.TEXT, allowNull: false },
       channelid: { type: DataTypes.BIGINT, allowNull: true },
@@ -234,7 +227,7 @@ class Database {
       charset: this.charset,
       collate: this.collate
     });
-    this.EVENTS_inviteDelete = sequelize.define('EVENTS_inviteDelete', {
+    this.EVENTS_inviteDelete = this.sequelize.define('EVENTS_inviteDelete', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
       code: { type: DataTypes.TEXT, allowNull: false },
       channelid: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
@@ -246,7 +239,7 @@ class Database {
       charset: this.charset,
       collate: this.collate
     });
-    this.EVENTS_messageCreate = sequelize.define('EVENTS_messageCreate', {
+    this.EVENTS_messageCreate = this.sequelize.define('EVENTS_messageCreate', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
       datetime: { type: DataTypes.BIGINT, allowNull: true },
       messageId: { type: DataTypes.BIGINT, allowNull: true },
@@ -264,7 +257,7 @@ class Database {
       charset: this.charset,
       collate: this.collate
     });
-    this.EVENTS_messageDelete = sequelize.define('EVENTS_messageDelete', {
+    this.EVENTS_messageDelete = this.sequelize.define('EVENTS_messageDelete', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
       messageId: { type: DataTypes.BIGINT, allowNull: true },
       datetime: { type: DataTypes.BIGINT, allowNull: true },
@@ -275,7 +268,7 @@ class Database {
       charset: this.charset,
       collate: this.collate
     });
-    this.EVENTS_messageDeleteBulk = sequelize.define('EVENTS_messageDeleteBulk', {
+    this.EVENTS_messageDeleteBulk = this.sequelize.define('EVENTS_messageDeleteBulk', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
       channelId: { type: DataTypes.BIGINT, allowNull: true },
       deletedMessages: { type: DataTypes.INTEGER, allowNull: true },
@@ -287,7 +280,7 @@ class Database {
       charset: this.charset,
       collate: this.collate
     });
-    this.EVENTS_messageReactionAdd = sequelize.define('EVENTS_messageReactionAdd', {
+    this.EVENTS_messageReactionAdd = this.sequelize.define('EVENTS_messageReactionAdd', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
       reactionId: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
       messageId: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
@@ -300,7 +293,7 @@ class Database {
       charset: this.charset,
       collate: this.collate
     });
-    this.EVENTS_messageReactionRemove = sequelize.define('EVENTS_messageReactionRemove', {
+    this.EVENTS_messageReactionRemove = this.sequelize.define('EVENTS_messageReactionRemove', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
       reactionId: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
       messageId: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
@@ -313,7 +306,7 @@ class Database {
       charset: this.charset,
       collate: this.collate
     });
-    this.EVENTS_messageReactionRemoveAll = sequelize.define('EVENTS_messageReactionRemoveAll', {
+    this.EVENTS_messageReactionRemoveAll = this.sequelize.define('EVENTS_messageReactionRemoveAll', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false }
     }, {
       tableName: 'EVENTS_messageReactionRemoveAll',
@@ -321,15 +314,7 @@ class Database {
       charset: this.charset,
       collate: this.collate
     });
-    this.EVENTS_messageReactionRemoveAll = sequelize.define('EVENTS_messageReactionRemoveAll', {
-      id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false }
-    }, {
-      tableName: 'EVENTS_messageReactionRemoveAll',
-      timestamps: false,
-      charset: this.charset,
-      collate: this.collate
-    });
-    this.EVENTS_messageReactionRemoveEmoji = sequelize.define('EVENTS_messageReactionRemoveEmoji', {
+    this.EVENTS_messageReactionRemoveEmoji = this.sequelize.define('EVENTS_messageReactionRemoveEmoji', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false }
     }, {
       tableName: 'EVENTS_messageReactionRemoveEmoji',
@@ -337,7 +322,7 @@ class Database {
       charset: this.charset,
       collate: this.collate
     });
-    this.EVENTS_messageUpdate = sequelize.define('EVENTS_messageUpdate', {
+    this.EVENTS_messageUpdate = this.sequelize.define('EVENTS_messageUpdate', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
       userId: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
       messageId: { type: DataTypes.BIGINT, allowNull: true },
@@ -353,7 +338,7 @@ class Database {
       charset: this.charset,
       collate: this.collate
     });
-    this.EVENTS_presenceUpdate = sequelize.define('EVENTS_presenceUpdate', {
+    this.EVENTS_presenceUpdate = this.sequelize.define('EVENTS_presenceUpdate', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false }
     }, {
       tableName: 'EVENTS_presenceUpdate',
@@ -361,7 +346,7 @@ class Database {
       charset: this.charset,
       collate: this.collate
     });
-    this.EVENTS_roleCreate = sequelize.define('EVENTS_roleCreate', {
+    this.EVENTS_roleCreate = this.sequelize.define('EVENTS_roleCreate', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
       roleId: { type: DataTypes.BIGINT, allowNull: true },
       name: { type: DataTypes.STRING(64), allowNull: true },
@@ -375,7 +360,7 @@ class Database {
       charset: this.charset,
       collate: this.collate
     });
-    this.EVENTS_roleUpdate = sequelize.define('EVENTS_roleUpdate', {
+    this.EVENTS_roleUpdate = this.sequelize.define('EVENTS_roleUpdate', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
       roleId: { type: DataTypes.BIGINT, allowNull: true },
       name: { type: DataTypes.STRING(64), allowNull: true },
@@ -391,7 +376,7 @@ class Database {
       charset: this.charset,
       collate: this.collate
     });
-    this.EVENTS_threadCreate = sequelize.define('EVENTS_threadCreate', {
+    this.EVENTS_threadCreate = this.sequelize.define('EVENTS_threadCreate', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false }
     }, {
       tableName: 'EVENTS_threadCreate',
@@ -399,7 +384,7 @@ class Database {
       charset: this.charset,
       collate: this.collate
     });
-    this.EVENTS_threadDelete = sequelize.define('EVENTS_threadDelete', {
+    this.EVENTS_threadDelete = this.sequelize.define('EVENTS_threadDelete', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false }
     }, {
       tableName: 'EVENTS_threadDelete',
@@ -407,7 +392,7 @@ class Database {
       charset: this.charset,
       collate: this.collate
     });
-    this.EVENTS_threadListSync = sequelize.define('EVENTS_threadListSync', {
+    this.EVENTS_threadListSync = this.sequelize.define('EVENTS_threadListSync', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false }
     }, {
       tableName: 'EVENTS_threadListSync',
@@ -415,7 +400,7 @@ class Database {
       charset: this.charset,
       collate: this.collate
     });
-    this.EVENTS_threadMemberUpdate = sequelize.define('EVENTS_threadMemberUpdate', {
+    this.EVENTS_threadMemberUpdate = this.sequelize.define('EVENTS_threadMemberUpdate', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false }
     }, {
       tableName: 'EVENTS_threadMemberUpdate',
@@ -423,7 +408,7 @@ class Database {
       charset: this.charset,
       collate: this.collate
     });
-    this.EVENTS_threadUpdate = sequelize.define('EVENTS_threadUpdate', {
+    this.EVENTS_threadUpdate = this.sequelize.define('EVENTS_threadUpdate', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false }
     }, {
       tableName: 'EVENTS_threadUpdate',
@@ -431,7 +416,7 @@ class Database {
       charset: this.charset,
       collate: this.collate
     });
-    this.EVENTS_typingStart = sequelize.define('EVENTS_typingStart', {
+    this.EVENTS_typingStart = this.sequelize.define('EVENTS_typingStart', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false }
     }, {
       tableName: 'EVENTS_typingStart',
@@ -439,7 +424,7 @@ class Database {
       charset: this.charset,
       collate: this.collate
     });
-    this.EVENTS_typingStop = sequelize.define('EVENTS_typingStop', {
+    this.EVENTS_typingStop = this.sequelize.define('EVENTS_typingStop', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false }
     }, {
       tableName: 'EVENTS_typingStop',
@@ -447,7 +432,7 @@ class Database {
       charset: this.charset,
       collate: this.collate
     });
-    this.EVENTS_userUpdate = sequelize.define('EVENTS_userUpdate', {
+    this.EVENTS_userUpdate = this.sequelize.define('EVENTS_userUpdate', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false }
     }, {
       tableName: 'EVENTS_userUpdate',
@@ -455,7 +440,7 @@ class Database {
       charset: this.charset,
       collate: this.collate
     });
-    this.EVENTS_voiceServerUpdate = sequelize.define('EVENTS_voiceServerUpdate', {
+    this.EVENTS_voiceServerUpdate = this.sequelize.define('EVENTS_voiceServerUpdate', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false }
     }, {
       tableName: 'EVENTS_voiceServerUpdate',
@@ -463,7 +448,7 @@ class Database {
       charset: this.charset,
       collate: this.collate
     });
-    this.EVENTS_voiceStateUpdate = sequelize.define('EVENTS_voiceStateUpdate', {
+    this.EVENTS_voiceStateUpdate = this.sequelize.define('EVENTS_voiceStateUpdate', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
       userId: { type: DataTypes.BIGINT, allowNull: true },
       oldChannelId: { type: DataTypes.BIGINT, allowNull: true },
@@ -489,7 +474,7 @@ class Database {
       charset: this.charset,
       collate: this.collate
     });
-    this.STATE_voiceLeft = sequelize.define('STATE_voiceLeft', {
+    this.STATE_voiceLeft = this.sequelize.define('STATE_voiceLeft', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
       channelid: { type: DataTypes.BIGINT, allowNull: true },
       userid: { type: DataTypes.BIGINT, allowNull: true },
@@ -500,7 +485,7 @@ class Database {
       charset: this.charset,
       collate: this.collate
     });
-    this.STATS_voiceJoin = sequelize.define('STATS_voiceJoin', {
+    this.STATS_voiceJoin = this.sequelize.define('STATS_voiceJoin', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
       userid: { type: DataTypes.BIGINT, allowNull: true },
       channelid: { type: DataTypes.BIGINT, allowNull: true },
@@ -511,7 +496,7 @@ class Database {
       charset: this.charset,
       collate: this.collate
     });
-    this.STATS_voiceSessions = sequelize.define('STATS_voiceSessions', {
+    this.STATS_voiceSessions = this.sequelize.define('STATS_voiceSessions', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
       type: { type: DataTypes.INTEGER, allowNull: true },
       start: { type: DataTypes.BIGINT, allowNull: true },
@@ -525,15 +510,48 @@ class Database {
     });
 
   }
-
-
-
-
-
-
-
-
-
+  get(name) {
+    this.models = {
+      'EVENTS_userUpdate': this.EVENTS_userUpdate,
+      'EVENTS_voiceServerUpdate': this.EVENTS_voiceServerUpdate,
+      'EVENTS_voiceStateUpdate': this.EVENTS_voiceStateUpdate,
+      'EVENTS_channelUpdate': this.EVENTS_channelUpdate,
+      'EVENTS_channelDelete': this.EVENTS_channelDelete,
+      'EVENTS_channelPinsUpdate': this.EVENTS_channelPinsUpdate,
+      'EVENTS_roleUpdate': this.EVENTS_roleUpdate,
+      'EVENTS_roleDelete': this.EVENTS_roleDelete,
+      'EVENTS_roleCreate': this.EVENTS_roleCreate,
+      'EVENTS_roleUpdate': this.EVENTS_roleUpdate,
+      'EVENTS_threadUpdate': this.EVENTS_threadUpdate,
+      'EVENTS_threadDelete': this.EVENTS_threadDelete,
+      'EVENTS_threadCreate': this.EVENTS_threadCreate,
+      'EVENTS_threadListSync': this.EVENTS_threadListSync,
+      'EVENTS_threadMembersUpdate': this.EVENTS_threadMemberUpdate,
+      'EVENTS_typingStart': this.EVENTS_typingStart,
+      'EVENTS_typingStop': this.EVENTS_typingStop,
+      'EVENTS_presenceUpdate': this.EVENTS_presenceUpdate,
+      'EVENTS_messageCreate': this.EVENTS_messageCreate,
+      'EVENTS_messageUpdate': this.EVENTS_messageUpdate,
+      'EVENTS_messageDelete': this.EVENTS_messageDelete,
+      'EVENTS_messageDeleteBulk': this.EVENTS_messageDeleteBulk,
+      'EVENTS_messageReactionAdd': this.EVENTS_messageReactionAdd,
+      'EVENTS_messageReactionRemove': this.EVENTS_messageReactionRemove,
+      'EVENTS_messageReactionRemoveAll': this.EVENTS_messageReactionRemoveAll,
+      'EVENTS_messageReactionRemoveEmoji': this.EVENTS_messageReactionRemoveEmoji,
+      'EVENTS_interactionCreate': this.EVENTS_interactionCreate,
+      'EVENTS_inviteCreate': this.EVENTS_inviteCreate,
+      'EVENTS_inviteDelete': this.EVENTS_inviteDelete,
+      'EVENTS_guildMemberAdd': this.EVENTS_guildMemberAdd,
+      'EVENTS_guildMemberRemove': this.EVENTS_guildMemberRemove,
+      'EVENTS_guildMemberUpdate': this.EVENTS_guildMemberUpdate,
+      'EVENTS_guildMembersChunk': this.EVENTS_guildMembersChunk,
+      'EVENTS_guildMemberAvailable': this.EVENTS_guildMemberAvailable,
+      'EVENTS_guildEmojiUpdate': this.EVENTS_guildEmojiUpdate,
+      'EVENTS_guildEmojiDelete': this.EVENTS_guildEmojiDelete,
+      'EVENTS_guildEmojiCreate': this.EVENTS_guildEmojiCreate,
+    }
+    return this.models[name];
+  }
 
 
   /**
@@ -565,7 +583,6 @@ class Database {
    */
   async getMessagesBetweenDates(userId, startDate, endDate, channelIds) {
 
-
     try {
       if (!channelIds || channelIds.length === 0) {
         return [];
@@ -594,261 +611,18 @@ class Database {
    * @param {string} description - A description of the type of event being added.
    */
   async addEntry(model, data, description) {
+    if (!this.get(model)) {
+      return console.error('cannot get model:', model)
+    }
+
     try {
       if (this.connected) {
-        await model.create(data);
+        await this.get(model).create(data);
       }
     } catch (error) {
       console.error(`Error adding ${description} entry:`, error);
     }
   }
-
-
-  /**
-   * Adds a new entry to the EVENTS_guildMemberAdd table.
-   * @param {object} data - The data to add to the table.
-   * @return {Promise<void>}
-   */
-  async addGuildMemberAdd(data) {
-    await this.addEntry(this.EVENTS_guildMemberAdd, data, 'Guild Member Add');
-  }
-
-  /**
-   * Adds a new entry to the EVENTS_guildMemberRemove table.
-   * @param {object} data - The data to add to the table.
-   * @return {Promise<void>}
-   */
-  async addGuildMemberRemove(data) {
-    await this.addEntry(this.EVENTS_guildMemberRemove, data, 'Guild Member Remove');
-  }
-
-  /**
-   * Adds a new entry to the EVENTS_messageCreate table.
-   * @param {object} data - The data to add to the table.
-   * @return {Promise<void>}
-   */
-  async addMessageCreate(data) {
-    await this.addEntry(this.EVENTS_messageCreate, data, 'Message Create');
-  }
-
-
-  /**
-   * Adds a new entry to the EVENTS_messageCreate table with the given data, tagged as a 'Guild Member Update' event.
-   * @param {object} data - The data to add to the table.
-   * @return {Promise<void>}
-   */
-  async addGuildMemberUpdate(data) {
-    await this.addEntry(this.EVENTS_guildMemberUpdate, data, 'Guild Member Update');
-  }
-
-  /**
-   * Adds a new entry to the EVENTS_voiceStateUpdate table.
-   * @param {object} data - The data to add to the table.
-   * @return {Promise<void>}
-   */
-  async addVoiceStateUpdate(data) {
-    await this.addEntry(this.EVENTS_voiceStateUpdate, data, 'Voice State Update');
-  }
-
-  /**
-   * Adds a new entry to the EVENTS_interactionCreate table.
-   * @param {object} data - The data to add to the table.
-   * @return {Promise<void>}
-   */
-  async addInteractionCreate(data) {
-    await this.addEntry(this.EVENTS_interactionCreate, data, 'Interaction Create');
-  }
-
-  /**
-   * Adds a new entry to the EVENTS_guildBanAdd table.
-   * @param {object} data - The data to add to the table.
-   * @return {Promise<void>}
-   */
-  async addGuildBanAdd(data) {
-    await this.addEntry(this.EVENTS_guildBanAdd, data, 'Guild Ban Add');
-  }
-
-  /**
-   * Adds a new entry to the EVENTS_inviteCreate table.
-   * @param {object} data - The data to add to the table.
-   * @return {Promise<void>}
-   */
-  async addInviteCreate(data) {
-    await this.addEntry(this.EVENTS_inviteCreate, data, 'Invite Create');
-  }
-
-  /**
-   * Adds a new entry to the EVENTS_inviteDelete table.
-   * @param {object} data - The data to add to the table.
-   * @return {Promise<void>}
-   */
-  async addInviteDelete(data) {
-    await this.addEntry(this.EVENTS_inviteDelete, data, 'Invite Delete');
-  }
-
-  /**
-   * Adds a new entry to the EVENTS_messageUpdate table.
-   * @param {object} data - The data to add to the table.
-   * @return {Promise<void>}
-   */
-  async addMessageUpdate(data) {
-    await this.addEntry(this.EVENTS_messageUpdate, data, 'Message Update');
-  }
-
-  /**
-   * Adds a new entry to the EVENTS_roleCreate table.
-   * @param {object} data - The data to add to the table.
-   * @return {Promise<void>}
-   */
-  async addRoleCreate(data) {
-    await this.addEntry(this.EVENTS_roleCreate, data, 'Role Create');
-  }
-
-  /**
-   * Adds a new entry to the EVENTS_roleUpdate table.
-   * @param {object} data - The data to add to the table.
-   * @return {Promise<void>}
-   */
-  async addRoleUpdate(data) {
-    await this.addEntry(this.EVENTS_roleUpdate, data, 'Role Update');
-  }
-
-  /**
-   * Adds a new entry to the EVENTS_messageDelete table.
-   * @param {object} data - The data to add to the table.
-   * @return {Promise<void>}
-   */
-  async addMessageDelete(data) {
-    await this.addEntry(this.EVENTS_messageDelete, data, 'Message Delete');
-  }
-
-  /**
-   * Adds a new entry to the EVENTS_channelCreate table.
-   * @param {object} data - The data to add to the table.
-   * @return {Promise<void>}
-   */
-  async addChannelCreate(data) {
-    await this.addEntry(this.EVENTS_channelCreate, data, 'Channel Create');
-  }
-
-
-  /**
-   * Adds a new entry to the EVENTS_channelDelete table.
-   * @param {object} data - The data to add to the table.
-   * @return {Promise<void>}
-   */
-  async addChannelDelete(data) {
-    await this.addEntry(this.EVENTS_channelDelete, data, 'Channel Delete');
-  }
-
-  /**
-   * Adds a new entry to the EVENTS_channelUpdate table.
-   * @param {object} data - The data to add to the table.
-   * @return {Promise<void>}
-   */
-  async addChannelUpdate(data) {
-    await this.addEntry(this.EVENTS_channelUpdate, data, 'Channel Update');
-  }
-
-  /**
-   * Adds a new entry to the EVENTS_guildBanAdd table.
-   * @param {object} data - The data to add to the table.
-   * @return {Promise<void>}
-   */
-  async addGuildBanRemove(data) {
-    await this.addEntry(this.EVENTS_guildBanAdd, data, 'Guild Ban Remove');
-  }
-
-  /**
-   * Adds a new entry to the EVENTS_emojiCreate table.
-   * @param {object} data - The data to add to the table.
-   * @return {Promise<void>}
-   */
-  async addEmojiCreate(data) {
-    await this.addEntry(this.EVENTS_emojiCreate, data, 'Emoji Create');
-  }
-
-  /**
-   * Adds a new entry to the EVENTS_emojiUpdate table.
-   * @param {object} data - The data to add to the table.
-   * @return {Promise<void>}
-   */
-  async addEmojiUpdate(data) {
-    await this.addEntry(this.EVENTS_emojiUpdate, data, 'Emoji Update');
-  }
-
-  /**
-   * Adds a new entry to the EVENTS_messageReactionAdd table.
-   * @param {object} data - The data to add to the table.
-   * @return {Promise<void>}
-   */
-  async addMessageReactionAdd(data) {
-    await this.addEntry(this.EVENTS_messageReactionAdd, data, 'Message Reaction Add');
-  }
-
-  /**
-   * Adds a new entry to the EVENTS_messageReactionRemove table.
-   * @param {object} data - The data to add to the table.
-   * @return {Promise<void>}
-   */
-  async addMessageReactionRemove(data) {
-    await this.addEntry(this.EVENTS_messageReactionRemove, data, 'Message Reaction Remove');
-  }
-
-  /**
-   * Adds a new entry to the EVENTS_messageDeleteBulk table.
-   * @param {object} data - The data to add to the table.
-   * @return {Promise<void>}
-   */
-  async addMessageDeleteBulk(data) {
-    await this.addEntry(this.EVENTS_messageDeleteBulk, data, 'Message Delete Bulk');
-  }
-
-  /**
-   * Adds a new entry to the EVENTS_channelCreate table.
-   * @param {object} data - The data to add to the table.
-   * @return {Promise<void>}
-   */
-  async addThreadCreate(data) {
-    await this.addEntry(this.EVENTS_channelCreate, data, 'Thread Create');
-  }
-
-  /**
-   * Adds a new entry to the EVENTS_channelDelete table with the given data, tagged as a 'Thread Delete' event.
-   * @param {object} data - The data to add to the table.
-   * @return {Promise<void>}
-   */
-  async addThreadDelete(data) {
-    await this.addEntry(this.EVENTS_channelDelete, data, 'Thread Delete');
-  }
-
-  /**
-   * Adds a new entry to the EVENTS_channelUpdate table with the given data, tagged as a 'Thread Update' event.
-   * @param {object} data - The data to add to the table.
-   * @return {Promise<void>}
-   */
-  async addThreadUpdate(data) {
-    await this.addEntry(this.EVENTS_channelUpdate, data, 'Thread Update');
-  }
-
-  /**
-   * Adds a new entry to the EVENTS_emojiCreate table with the given data, tagged as a 'Sticker Create' event.
-   * @param {object} data - The data to add to the table.
-   * @return {Promise<void>}
-   */
-  async addStickerCreate(data) {
-    await this.addEntry(this.EVENTS_emojiCreate, data, 'Sticker Create');
-  }
-
-  /**
-   * Adds a new entry to the EVENTS_emojiUpdate table with the given data, tagged as a 'Sticker Delete' event.
-   * @param {object} data - The data to add to the table.
-   * @return {Promise<void>}
-   */
-  async addStickerDelete(data) {
-    await this.addEntry(this.EVENTS_emojiUpdate, data, 'Sticker Delete');
-  }
-
 }
 
 module.exports = Database;
