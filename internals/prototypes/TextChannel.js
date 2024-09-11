@@ -1,5 +1,7 @@
 'use strict';
 const { TextChannel } = require('discord.js');
+const { __cfn, __cf } = eval(require(`current_filename`));
+const { report, reportWarn, reportError } = console.createReports(__cf);
 
 TextChannel.prototype.fetchAllMessages = async function () {
     const functionName = 'fetchAllMessages';
@@ -20,7 +22,7 @@ TextChannel.prototype.fetchAllMessages = async function () {
         } while (fetchedMessages.length === 100);
         return r;
     } catch (err) {
-        console.error(`${functionName}: ${err}`);
+        reportError(__line, functionName, err);
     }
 };
 

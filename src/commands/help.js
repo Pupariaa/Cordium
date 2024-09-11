@@ -28,7 +28,7 @@ module.exports = {
             }
             await interaction.reply(replyObject);
         } catch (err) {
-            console.error(`${__filename} - Line ${__line} (${functionName}): `, err);
+            reportError(__line, functionName, err);
         }
     }
 };

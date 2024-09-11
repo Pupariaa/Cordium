@@ -1,6 +1,8 @@
 'use strict';
 const { SlashCommandBuilder } = require('discord.js');
 require('puparia.getlines.js');
+const { __cfn, __cf } = eval(require(`current_filename`));
+const { report, reportWarn, reportError } = console.createReports(__cf);
 
 const cmdName = 'ping';
 const cmdDescription = 'ping the bot';
@@ -19,7 +21,7 @@ module.exports = {
         try {
             await interaction.reply(`pong (${Math.round((interaction.createdTimestamp - Date.now())/1000)}ms)`);
         } catch (err) {
-            console.error(`${__filename} - Line ${__line} (${functionName}): `, err);
+            reportError(__line, functionName, err);
         }
     }
 };

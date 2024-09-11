@@ -1,13 +1,13 @@
 'use strict';
 require('puparia.getlines.js');
+const { __cfn, __cf } = eval(require(`current_filename`));
+const { report, reportWarn, reportError } = console.createReports(__cf);
+
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 const { v4: uuidv4 } = require('uuid');
 const sanitizeFilename = require('sanitize-filename');
-
-const report = console.createReportFunction(__filename);
-const reportError = console.createReportErrorFunction(__filename);
 
 class AttachmentManager {
     constructor() {

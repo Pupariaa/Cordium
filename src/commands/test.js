@@ -1,6 +1,8 @@
 'use strict';
 const { SlashCommandBuilder } = require('discord.js');
 require('puparia.getlines.js');
+const { __cfn, __cf } = eval(require(`current_filename`));
+const { report, reportWarn, reportError } = console.createReports(__cf);
 
 const wait = require('node:timers/promises').setTimeout;
 
@@ -19,8 +21,6 @@ module.exports = {
     async execute(interaction) {
         const functionName = 'execute';
         try {
-            // const channel = await global.client.channels.fetch('1282726820336373904');
-            // console.log(channel);
 
             await interaction.reply({
                 ephemeral: true,
@@ -31,7 +31,7 @@ module.exports = {
 
             interaction.deleteReply();
         } catch (err) {
-            console.error(`${__filename} - Line ${__line} (${functionName}): `, err);
+            reportError(__cfn, functionName, err);
         }
     }
 };

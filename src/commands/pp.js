@@ -1,6 +1,8 @@
 'use strict';
 const { SlashCommandBuilder } = require('discord.js');
 require('puparia.getlines.js');
+const { __cfn, __cf } = eval(require(`current_filename`));
+const { report, reportWarn, reportError } = console.createReports(__cf);
 
 const cmdName = 'pp';
 const cmdDescription = 'send the given user\'s profile pictures';
@@ -27,7 +29,7 @@ module.exports = {
                 content: `global profile picture: ${user.avatarURL()}\nthis server's profile picture: ${user.displayAvatarURL()}`
             });
         } catch (err) {
-            console.error(`${__filename} - Line ${__line} (${functionName}): `, err);
+            reportError(__line, functionName, err);
         }
     }
 };

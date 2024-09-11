@@ -8,14 +8,14 @@ const endpointsPath = path.join(__dirname, '../../src/api/endpoints');
 const endpoints = require(endpointsPath);
 const port = process.env.api_port;
 
-const report = console.createReportFunction(__filename);
-const reportError = console.createReportErrorFunction(__filename);
+const { __cfn, __cf } = eval(require(`current_filename`));
+const { report, reportWarn, reportError } = console.createReports(__cf);
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use((req, res, next) => {
-    console.log(`Requête reçue: ${req.method} ${req.path}`);
+    report(__line, __cfn, `Requête reçue: ${req.method} ${req.path}`);
     next();
 });
 
@@ -43,7 +43,6 @@ const rh = async (req, res) => {
         if (e) {
             const eFolder = e.type === 'private' ? 'private' : 'public';
             const fPath = path.join(endpointsPath, eFolder, `${ePath}.js`);
-            // console.log(fPath);
             try {
                 if (fs.existsSync(fPath)) {
                     const eHandler = require(fPath);
@@ -80,14 +79,14 @@ if (port && process.env.api_enable && global.database) {
 
     const srv = http.createServer(app);
     srv.listen(port, () => {
-        console.success(`START: API is Running on port ${port}`);
+        report(__line, __cfn, `API is Running on port ${port}`);
     });
 } else {
     if (!global.database && process.env.db_host) {
-        reportError(__line, __filename, 'START: The API could not start because the database was not resolved. Do cn bdd-test for more details');
+        reportError(__line, __cfn, 'The API could not start because the database was not resolved. Do cn bdd-test for more details');
     } else if (!global.database && !process.env.db_host){
-        console.warn('START: The API could not start because the database was not configured. Do cn -bdd -host "hostname" --dbname "<database name>" --dbuser "<database username>" --dbpass "<database password>" --dbport <database port> --create')
+        reportWarn(__line, __cfn, 'The API could not start because the database was not configured. Do cn -bdd -host "hostname" --dbname "<database name>" --dbuser "<database username>" --dbpass "<database password>" --dbport <database port> --create');
     } else {
-        console.warn('START: API is not setup properly, check environment variables');
+        reportWarn(__line, __cfn, 'API is not setup properly, check environment variables');
     }
 }

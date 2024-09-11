@@ -179,21 +179,6 @@ require('../../logutils') // for commands handlers
 ```
 <br>
 
-#### Implement one of these lines according to your needs
-```js
-//in any file
-console.error(`${filePath} - Line ${__line} (${functionName}): Your information of the type of process :`, error);
-```
-```js
-//in any file
-console.info(`${filePath} - Line ${__line} (${functionName}): Your information of the type of process :`, info);
-```
-```js
-//in any file
-console.log(`${filePath} - Line ${__line} (${functionName}): Your information of the type of process :`, log);
-```
-<br>
-
 > Find the logs in the " *src/common/logs* " folder, they are dated 
 <br>
 <br>

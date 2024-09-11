@@ -1,29 +1,24 @@
 'use-strict'
-const fs = require('fs')
-const path = require('path')
+const fs = require('fs');
 const Discord = require('discord.js');
 const CommandManager = require('./CommandManager');
 require('puparia.getlines.js');
-
-const report = console.createReportFunction(__filename);
-const reportError = console.createReportErrorFunction(__filename);
+const { __cfn, __cf } = eval(require(`current_filename`));
+const { report, reportWarn, reportError } = console.createReports(__cf);
 
 function checkEnvVariables() {
+    const functionName = 'checkEnvVariables';
     const requiredVars = ['client_token', 'client_id', 'discord_guild_id'];
     const missingVars = requiredVars.filter(v => !process.env[v]);
 
     if (missingVars.length > 0) {
-        console.error(`Missing required environment variables: ${missingVars.join(', ')}`);
-        console.error(`cn init --token "yourToken" --id "yourClientID" --guid "yourGuildID" --rsrole "yourRestrictedRoleID"`);
+        reportError(__line, functionName, 'Missing required environment variables:', ...missingVars);
+        reportError(__line, functionName, 'cn init --token "yourToken" --id "yourClientID" --guid "yourGuildID" --rsrole "yourRestrictedRoleID');
         process.exit(1);
     }
 }
 
-if (process.env.prod) {
-    console.info('Run in production')
-} else {
-    console.info('Run is dev')
-}
+report(__line, __cfn, process.env.prod ? 'Run in production' : 'Run is dev');
 
 class CQD {
     constructor() {
