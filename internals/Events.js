@@ -293,7 +293,7 @@ function eventToPath(event) {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'channel.type', global.guild.channelTypeStr(channel.type), 'channel.name', channel.name);
-            require(eventtopath(event))(channel);
+            require(eventToPath(event))(channel);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -322,7 +322,7 @@ function eventToPath(event) {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'channel.type', global.guild.channelTypeStr(channel.type), 'channel.name', channel.name);
-            require(eventtopath(event))(channel);
+            require(eventToPath(event))(channel);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }  
@@ -342,7 +342,7 @@ function eventToPath(event) {
             // TODO
 
             reportEvent(__line, eventName);
-            require(eventtopath(event))(channel, date);
+            require(eventToPath(event))(channel, date);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -373,7 +373,7 @@ function eventToPath(event) {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'channel.type', global.guild.channelTypeStr(newChannel.type), 'channel.name', oldChannel.name, '->', newChannel.name);
-            require(eventtopath(event))(oldChannel, newChannel);
+            require(eventToPath(event))(oldChannel, newChannel);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -417,7 +417,7 @@ function eventToPath(event) {
             });
 
             reportEvent(__line, eventName, 'user.tag', user.tag, 'executor.tag', executor.tag, 'reason', ban.reason);
-            require(eventtopath(event))(ban);
+            require(eventToPath(event))(ban);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -445,7 +445,7 @@ function eventToPath(event) {
             });
 
             reportEvent(__line, eventName, 'user.tag', user.tag, 'executor.tag', executor.tag);
-            require(eventtopath(event))(ban);
+            require(eventToPath(event))(ban);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -476,7 +476,7 @@ function eventToPath(event) {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'emoji.name', emoji.name, 'emoji.url', emoji.url);
-            require(eventtopath(event))(emoji);
+            require(eventToPath(event))(emoji);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -504,7 +504,7 @@ function eventToPath(event) {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'emoji.name', emoji.name, 'emoji.url', emoji.url);
-            require(eventtopath(event))(emoji);
+            require(eventToPath(event))(emoji);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -532,7 +532,7 @@ function eventToPath(event) {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'emoji.name', oldEmoji.name, '->', newEmoji.name, 'emoji.url', oldEmoji.url, '->', newEmoji.url);
-            require(eventtopath(event))(oldEmoji, newEmoji);
+            require(eventToPath(event))(oldEmoji, newEmoji);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -560,7 +560,7 @@ function eventToPath(event) {
             });
 
             reportEvent(__line, eventName, 'user.tag', user.tag);
-            require(eventtopath(event))(member);
+            require(eventToPath(event))(member);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -580,7 +580,7 @@ function eventToPath(event) {
             // TODO
 
             reportEvent(__line, eventName, 'member.user.tag', member.user.tag);
-            require(eventtopath(event))(member);
+            require(eventToPath(event))(member);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -609,7 +609,7 @@ function eventToPath(event) {
             });
 
             reportEvent(__line, eventName, 'user.tag', user.tag);
-            require(eventtopath(event))(member);
+            require(eventToPath(event))(member);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -659,7 +659,7 @@ function eventToPath(event) {
             // }
 
             reportEvent(__line, eventName, 'user.tag', oldMember.user.tag, '->', newMember.user.tag);
-            require(eventtopath(event))(oldMember, newMember);
+            require(eventToPath(event))(oldMember, newMember);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -688,7 +688,7 @@ function eventToPath(event) {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'role.name', role.name);
-            require(eventtopath(event))(role);
+            require(eventToPath(event))(role);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -716,7 +716,7 @@ function eventToPath(event) {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'role.name', role.name);
-            require(eventtopath(event))(role);
+            require(eventToPath(event))(role);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -743,7 +743,7 @@ function eventToPath(event) {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'role.name', oldRole.name, '->', newRole.name, 'role.color', oldRole.hexColor, '->', newRole.hexColor);
-            require(eventtopath(event))(role);
+            require(eventToPath(event))(role);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -780,7 +780,7 @@ function eventToPath(event) {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'sticker.name', sticker.name);
-            require(eventtopath(event))(sticker);
+            require(eventToPath(event))(sticker);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -808,7 +808,7 @@ function eventToPath(event) {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'sticker.name', sticker.name);
-            require(eventtopath(event))(sticker);
+            require(eventToPath(event))(sticker);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -835,7 +835,7 @@ function eventToPath(event) {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'sticker.name', oldSticker.name, '->', newSticker.name);
-            require(eventtopath(event))(sticker);
+            require(eventToPath(event))(sticker);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -942,7 +942,7 @@ function eventToPath(event) {
                 console.warn(`${__filename} - Line ${__line} (${eventName}): unknown interaction of type "${interaction.type}"`);
             }
 
-            require(eventtopath(event))(interaction);
+            require(eventToPath(event))(interaction);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -975,7 +975,7 @@ function eventToPath(event) {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'url', invite.url);
-            require(eventtopath(event))(invite);
+            require(eventToPath(event))(invite);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -1002,7 +1002,7 @@ function eventToPath(event) {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'url', invite.url);
-            require(eventtopath(event))(invite);
+            require(eventToPath(event))(invite);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -1029,7 +1029,7 @@ function eventToPath(event) {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'messages.size', messages.size);
-            require(eventtopath(event))(messages, channel);
+            require(eventToPath(event))(messages, channel);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -1067,7 +1067,7 @@ function eventToPath(event) {
 
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'channel.name', channel.name, 'content', content);
-            require(eventtopath(event))(message);
+            require(eventToPath(event))(message);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -1093,7 +1093,7 @@ function eventToPath(event) {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'channel.name', message.channel.name, 'content', message.content);
-            require(eventtopath(event))(message);
+            require(eventToPath(event))(message);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -1127,7 +1127,7 @@ function eventToPath(event) {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'emoji.name', emoji.name, 'message.author.tag', user.tag);
-            require(eventtopath(event))(reaction, executor, details);
+            require(eventToPath(event))(reaction, executor, details);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -1157,7 +1157,7 @@ function eventToPath(event) {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'emoji.name', emoji.name, 'message.author.tag', user.tag);
-            require(eventtopath(event))(reaction, executor, details);
+            require(eventToPath(event))(reaction, executor, details);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -1176,7 +1176,7 @@ function eventToPath(event) {
 
             // TODO
 
-            require(eventtopath(event))(message, reactions);
+            require(eventToPath(event))(message, reactions);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -1195,7 +1195,7 @@ function eventToPath(event) {
 
             // TODO
 
-            require(eventtopath(event))(reactions);
+            require(eventToPath(event))(reactions);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -1223,7 +1223,7 @@ function eventToPath(event) {
             });
 
             reportEvent(__line, eventName, 'user.tag', user.tag, 'channel.name', newMessage.channel.name, 'content', oldMessage.content, '->', newMessage.content);
-            require(eventtopath(event))(oldMessage, newMessage);
+            require(eventToPath(event))(oldMessage, newMessage);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -1271,7 +1271,7 @@ function eventToPath(event) {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'thread.name', thread.name);
-            require(eventtopath(event))(thread, newlyCreated);
+            require(eventToPath(event))(thread, newlyCreated);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -1299,7 +1299,7 @@ function eventToPath(event) {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'thread.name', thread.name);
-            require(eventtopath(event))(thread);
+            require(eventToPath(event))(thread);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -1333,7 +1333,7 @@ function eventToPath(event) {
             });
 
             reportEvent(__line, eventName, 'executor.tag', executor.tag, 'thread.name', oldThread.name, '->', newThread.name);
-            require(eventtopath(event))(oldThread, newThread);
+            require(eventToPath(event))(oldThread, newThread);
         } catch (err) {
             reportEventError(__line, eventName, err);
         }
@@ -1373,7 +1373,7 @@ function eventToPath(event) {
 
             const impossibleCaseReached = function (msg) {
                 console.warn(`${__filename} - Line ${__line} (${eventName}): impossible case reached: ${msg}`);
-                require(eventtopath(event))(oldState, newState);
+                require(eventToPath(event))(oldState, newState);
             }
 
             if (!oldState.channelId && !newState.channelId) {
