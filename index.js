@@ -30,11 +30,11 @@ process.on('unhandledRejection', (reason, promise) => {
     reportError(__line, 'unhandledRejection', 'Unhandled rejection at', promise, 'reason:', reason instanceof Error ? reason.message : reason);
 });
 
-const event = Events.ClientReady;
+const eventClientReady = Events.ClientReady;
 
-global.client.on(event, async () => {
+global.client.on(eventClientReady, async () => {
     try {
-        report(__line, event, `Client ready`);
+        report(__line, eventClientReady, `Client ready`);
         require('./internals/api/API');
         // Initialize invite cache
         global.client.invitesCache = new Map();
@@ -43,7 +43,7 @@ global.client.on(event, async () => {
         // Get guild
         global.guild = global.client.guilds.cache.get(process.env.discord_guild_id);
         if (!global.guild) {
-            reportError(__line, event, 'Guild not found. Check the "discord_guild_id" in config.env');
+            reportError(__line, eventClientReady, 'Guild not found. Check the "discord_guild_id" in config.env');
             process.exit(1);
         }
         global.initCount = (await global.guild.latestAuditLog())?.extra?.count || 0;
@@ -54,24 +54,25 @@ global.client.on(event, async () => {
         
         const invites = await global.guild.invites.fetch();
         invites.forEach(invite => global.client.invitesCache.set(invite.code, invite.uses));
-        report(__line, event, 'Invites cache initialized');
+        report(__line, eventClientReady, 'Invites cache initialized');
 
         // Interaction handler
-        global.client.on(Events.InteractionCreate, async (interaction) => {
+        const eventInteractionCreate = Events.InteractionCreate;
+        global.client.on(eventInteractionCreate, async (interaction) => {
             if (!interaction.isChatInputCommand()) return;
 
             const command = interaction.client.commands.get(interaction.commandName);
             if (!command) {
                 await interaction.reply('Not a command');
-                reportError(__line, event, `No command matching ${interaction.commandName} was found`);
+                reportError(__line, eventInteractionCreate, `No command matching ${interaction.commandName} was found`);
                 return;
             }
 
             try {
                 await command.execute(interaction);
-                report(__line, event, `Executed command ${interaction.commandName} successfully`);
+                report(__line, eventInteractionCreate, `Executed command ${interaction.commandName} successfully`);
             } catch (err) {
-                reportError(__line, event, `Error executing command ${interaction.commandName}:`, err);
+                reportError(__line, eventInteractionCreate, `Error executing command ${interaction.commandName}:`, err);
                 const responseMessage = { content: 'There was an error while executing this command!', ephemeral: true };
                 if (interaction.replied || interaction.deferred) {
                     await interaction.followUp(responseMessage);
@@ -81,6 +82,6 @@ global.client.on(event, async () => {
             }
         });
     } catch (err) {
-        reportError(__line, event, 'Error during bot initialization:', err);
+        reportError(__line, eventClientReady, 'Error during bot initialization:', err);
     }
 });
