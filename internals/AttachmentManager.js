@@ -5,32 +5,31 @@ const { report, reportWarn, reportError } = console.createReports(__cfn);
 
 const fs = require('fs');
 const path = require('path');
-const axios = require('axios');
 const { v4: uuidv4 } = require('uuid');
 const sanitizeFilename = require('sanitize-filename');
+const { downloadFile } = require(global.utilsPath);
 
 class AttachmentManager {
     constructor() {
-        this.client = global.client;
-        this.attachmentsFile = path.join(__dirname, '../src/files/');
+        this.attachmentsFiles = './attachmentsFiles';
     }
 
     loadAttachments() {
         const functionName = 'loadAttachments';
         try {
-            const data = fs.readFileSync(path.join(this.attachmentsFile, 'index.json'), 'utf8');
+            const data = fs.readFileSync(path.join(this.attachmentsFiles, 'index.json'), 'utf8');
             return JSON.parse(data);
         } catch (err) {
             reportError(__line, functionName, `Error loading attachments:`, err);
-            return [];
         }
+        return [];
     }
 
     saveAttachments(attachments) {
         const functionName = 'saveAttachments';
         try {
             fs.writeFileSync(
-                path.join(this.attachmentsFile, 'index.json'),
+                path.join(this.attachmentsFiles, 'index.json'),
                 JSON.stringify(attachments, null, 2)
             );
         } catch (err) {
@@ -46,37 +45,8 @@ class AttachmentManager {
             const filename = path.basename(pathname);
             return sanitizeFilename(filename);
         } catch (err) {
-            reportError(__line, functionName, `Error extracting filename from ${url}:`, err);
+            reportError(__line, functionName, `Error extracting filename from ${global.colors.FgYellow}${url}${global.colors.Reset}:`, err);
             return 'unknown';
-        }
-    }
-
-    async downloadFile(url, filename) {
-        const functionName = 'downloadFile';
-        try {
-            const response = await axios({
-                url,
-                method: 'GET',
-                responseType: 'stream',
-            });
-
-            const filePath = path.join(this.attachmentsFile, 'downloads', filename);
-            const writer = fs.createWriteStream(filePath);
-
-            response.data.pipe(writer);
-
-            return new Promise((resolve, reject) => {
-                writer.on('finish', () => {
-                    resolve(filePath);
-                });
-                writer.on('error', (err) => {
-                    reportError(__line, functionName, `Error during download ${url}:`, err);
-                    reject(err);
-                });
-            });
-        } catch (err) {
-            reportError(__line, functionName, `Error initiating download of ${url}:`, err);
-            throw error;
         }
     }
 
@@ -91,7 +61,7 @@ class AttachmentManager {
                 for (const attachment of message.attachments.values()) {
                     const originalFilename = this.extractFilenameFromUrl(attachment.url);
                     const uniqueId = uuidv4() + path.extname(originalFilename);
-                    const filePath = await this.downloadFile(attachment.url, uniqueId);
+                    const filePath = downloadFile(attachment.url, path.join(this.attachmentsFiles, uniqueId));
 
                     const attachmentInfo = {
                         type: attachment.contentType ? attachment.contentType.split('/')[0] : 'file',
@@ -109,14 +79,11 @@ class AttachmentManager {
                 }
 
                 this.saveAttachments(attachments);
-            } else {
             }
 
             return newAttachments;
-
         } catch (err) {
-            reportError(__line, functionName, `Error handling attachments:`, err);
-            throw error;
+            reportError(__line, functionName, err);
         }
     }
 
@@ -127,7 +94,7 @@ class AttachmentManager {
             const filteredAttachments = attachments.filter(att => att.messageId === messageId);
             return filteredAttachments;
         } catch (err) {
-            reportError(__line, functionName, `Error retrieving attachments:`, err);
+            reportError(__line, functionName, err);
             return [];
         }
     }
