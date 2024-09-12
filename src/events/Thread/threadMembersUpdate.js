@@ -1,5 +1,9 @@
 'use strict';
+require('puparia.getlines.js');
+const { __cf } = eval(require(`current_filename`));
+const { report, reportWarn, reportError } = console.createReports(__cf);
 
-module.exports = async function(addedMembers, removedMembers, thread) {
-    
+module.exports = {
+    callback: async function(addedMembers, removedMembers, thread) {
+    }
 }

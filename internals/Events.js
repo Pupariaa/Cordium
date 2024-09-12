@@ -1,26 +1,29 @@
 'use strict';
 const path = require('path');
 const { AuditLogEvent, Events } = require('discord.js');
-const { cp } = require('fs');
 require('puparia.getlines.js');
 
 const { __cfn } = eval(require(`current_filename`));
 
-function formatArgs(...args) {
+function formatArgs(logContext, ...args) {
     let i = 0;
     let formattedArgs = '';
+    const mustEndWith = `${global.colors.Reset}"`;
     while (i < args.length) {
-        formattedArgs += ` ${colors['FgCyan']}${args[i]}${colors['Reset']}="${colors['FgYellow']}${args[i + 1]}${colors['Reset']}"`;
+        const left = `\n ${colors['FgCyan']}${args[i]}${colors['Reset']}="${colors['FgYellow']}${args[i + 1]}`;
         if (i + 2 < args.length && args[i + 2] === '->') {
-            formattedArgs += `->"${colors['FgYellow']}${args[i + 3]}${colors['Reset']}"`;
+            formattedArgs += console.fitOnTerm(`${left}${colors['Reset']}"->"${colors['FgYellow']}${args[i + 3]}${mustEndWith}`, mustEndWith);
             i += 2;
+        } else {
+            formattedArgs += `${left}${mustEndWith}`;
         }
         i += 2;
     }
-    return formattedArgs;
+    return console.fitOnTerm(formattedArgs, mustEndWith);
 }
 
-function shouldLog(eventName, ...args) {
+function shouldLog(logContext, ...args) {
+    const { callContext: eventName } = logContext;
     return global.reportEvents && global.configReportEvents[eventName.split('.')[0]];
 }
 
@@ -276,113 +279,86 @@ function eventToPath(event) {
     return path.join('../', process.env.events_folder, category, String(event) + '.js');
 }
 
-{
-    const event = Events.ChannelCreate;
-    let eventName;
-
-    global.client.on(event, async (channel) => {
-        eventName = String(event);
-
-        try {
-            if (global.guild.id !== channel.guild.id) return;
-            
-            const executor = (await global.guild.latestAuditLog()).executor;
-            
-            global.database.addEntry('EVENTS_'+eventName, {
-                channelId: channel.id,
-                name: channel.name,
-                permissions: channel.permissionOverwrites.cache,
-                datetime: Date.now(),
-                executorId: executor.id,
-            });
-
-            report(__line, eventName, 'executor.tag', executor.tag, 'channel.type', global.guild.channelTypeStr(channel.type), 'channel.name', channel.name);
-            require(eventToPath(event))(channel);
-        } catch (err) {
-            reportError(__line, eventName, err);
-        }
-    });
+function registerEvent(event, guildId, trigger) {
+    const eventScope = {};
+    const set = function (o, k, v, w=false, e=true) {
+        Object.defineProperty(o, k, { value: v, writable: w, enumerable: e });
+    };
+    const eventScopeSet = function (key, value) {
+        Object.defineProperty(eventScope, key, { value: value, writable: true, enumerable: true });
+        return eventScope;
+    };
+    const listen = function () {
+        global.client.on(eventScope.event, async function (...args) {
+            eventScope.eventName = String(eventScope.event);
+            try {
+                if (global.guild.id !== eventScope.guildId(...args)) return;
+                await eventScope.trigger(...args);
+                const module = require(eventToPath(eventScope.event));
+                module.event = eventScope.event;
+                module.callback(...args);
+            } catch (err) {
+                reportError(__line, eventScope.eventName, err);
+            }
+        });
+    };
+    set(eventScope, 'event', event);
+    set(eventScope, 'eventName', undefined, true);
+    set(eventScope, 'set', eventScopeSet.bind(eventScope));
+    set(eventScope, 'guildId', guildId.bind(eventScope));
+    set(eventScope, 'trigger', trigger.bind(eventScope));
+    set(eventScope, 'listen', listen.bind(eventScope));
+    return eventScope;
 }
 
-{
-    const event = Events.ChannelDelete;
-    let eventName;
+registerEvent(Events.ChannelCreate, (channel) => channel.guild.id, async function (channel) {
+    const executor = (await global.guild.latestAuditLog()).executor;
 
-    global.client.on(event, async (channel) => {
-        eventName = String(event);
-
-        try {
-            if (global.guild.id !== channel.guild.id) return;
-
-            const executor = (await global.guild.latestAuditLog()).executor;
-
-            global.database.addEntry('EVENTS_'+eventName, {
-                channelId: channel.id,
-                name: channel.name,
-                permissions: channel.permissionOverwrites.cache,
-                datetime: Date.now(),
-                isDelete: true,
-                executorId: executor.id,
-            });
-
-            report(__line, eventName, 'executor.tag', executor.tag, 'channel.type', global.guild.channelTypeStr(channel.type), 'channel.name', channel.name);
-            require(eventToPath(event))(channel);
-        } catch (err) {
-            reportError(__line, eventName, err);
-        }  
+    global.database.addEntry('EVENTS_' + String(this.event), {
+        channelId: channel.id,
+        name: channel.name,
+        permissions: channel.permissionOverwrites.cache,
+        datetime: Date.now(),
+        executorId: executor.id,
     });
-}
 
-{
-    const event = Events.ChannelPinsUpdate;
-    let eventName;
+    report(__line, this.eventName, 'executor.tag', executor.tag, 'channel.type', global.guild.channelTypeStr(channel.type), 'channel.name', channel.name);
+}).listen();
 
-    global.client.on(event, async (channel, date)  => {
-        eventName = String(event);
+registerEvent(Events.ChannelDelete, (channel) => channel.guild.id, async function (channel) {
+    const executor = (await global.guild.latestAuditLog()).executor;
 
-        try {
-            if (global.guild.id !== channel.guild.id) return;
-
-            // TODO
-
-            report(__line, eventName);
-            require(eventToPath(event))(channel, date);
-        } catch (err) {
-            reportError(__line, eventName, err);
-        }
+    global.database.addEntry('EVENTS_' + String(this.event), {
+        channelId: channel.id,
+        name: channel.name,
+        permissions: channel.permissionOverwrites.cache,
+        datetime: Date.now(),
+        isDelete: true,
+        executorId: executor.id,
     });
-}
 
-{
-    const event = Events.ChannelUpdate;
-    let eventName;
+    report(__line, this.eventName, 'executor.tag', executor.tag, 'channel.type', global.guild.channelTypeStr(channel.type), 'channel.name', channel.name);
+}).listen();
 
-    global.client.on(event, async (oldChannel, newChannel) => {
-        eventName = String(event);
+registerEvent(Events.ChannelPinsUpdate, (channel) => channel.guild.id, async function (channel, date) {
+    // TODO
+}).listen();
 
-        try {
-            if (global.guild.id !== newChannel.guild.id) return;
+registerEvent(Events.ChannelUpdate, (oldChannel, newChannel) => newChannel.guild.id, async function (oldChannel, newChannel) {
+    const executor = (await global.guild.latestAuditLog()).executor;
 
-            const executor = (await global.guild.latestAuditLog()).executor;
-
-            const executorId = (await global.guild.latestAuditLog()).executorId;
-            global.database.addEntry('EVENTS_'+eventName, {
-                channelId: newChannel.id,
-                oldName: oldChannel.name,
-                newName: newChannel.name,
-                oldPermissions: oldChannel.permissionOverwrites.cache,
-                newPermissions: newChannel.permissionOverwrites.cache,
-                datetime: Date.now(),
-                executorId: executor.id,
-            });
-
-            report(__line, eventName, 'executor.tag', executor.tag, 'channel.type', global.guild.channelTypeStr(newChannel.type), 'channel.name', oldChannel.name, '->', newChannel.name);
-            require(eventToPath(event))(oldChannel, newChannel);
-        } catch (err) {
-            reportError(__line, eventName, err);
-        }
+    global.database.addEntry('EVENTS_'+String(this.event), {
+        channelId: newChannel.id,
+        oldName: oldChannel.name,
+        newName: newChannel.name,
+        oldPermissions: oldChannel.permissionOverwrites.cache,
+        newPermissions: newChannel.permissionOverwrites.cache,
+        datetime: Date.now(),
+        executorId: executor.id,
     });
-}
+
+    report(__line, this.eventName, 'executor.tag', executor.tag, 'channel.type', global.guild.channelTypeStr(newChannel.type), 'channel.name', oldChannel.name, '->', newChannel.name);
+}).listen();
 
 // DONE: ClientReady
 
@@ -400,359 +376,161 @@ function eventToPath(event) {
 
 // TODO: GuildAvailable
 
-{
-    const event = Events.GuildBanAdd;
-    let eventName;
+registerEvent(Events.GuildBanAdd, (ban) => ban.guild.id, async function (ban) {
+    const user = ban.user;
+    const executor = (await global.guild.latestAuditLog()).executor;
 
-    global.client.on(event, async (ban) => {
-        eventName = String(event);
-
-        try {
-            if (global.guild.id !== ban.guild.id) return;
-
-            const user = ban.user;
-            const executor = (await global.guild.latestAuditLog()).executor;
-
-            global.database.addEntry('EVENTS_'+eventName, {
-                userid: user.id,
-                reason: ban.reason,
-                datetime: Date.now(),
-                executorId: executor.id,
-            });
-
-            report(__line, eventName, 'user.tag', user.tag, 'executor.tag', executor.tag, 'reason', ban.reason);
-            require(eventToPath(event))(ban);
-        } catch (err) {
-            reportError(__line, eventName, err);
-        }
+    global.database.addEntry('EVENTS_'+String(this.event), {
+        userid: user.id,
+        reason: ban.reason,
+        datetime: Date.now(),
+        executorId: executor.id,
     });
-}
 
-{
-    const event = Events.GuildBanRemove;
-    let eventName;
+    report(__line, this.eventName, 'user.tag', user.tag, 'executor.tag', executor.tag, 'reason', ban.reason);
+}).listen();
 
-    global.client.on(event, async (ban) => {
-        eventName = String(event);
+registerEvent(Events.GuildBanRemove, (ban) => ban.guild.id, async function (ban) {
+    const user = ban.user;
+    const executor = (await global.guild.latestAuditLog()).executor;
 
-        try {
-            if (global.guild.id !== ban.guild.id) return;
-
-            const user = ban.user;
-            const executor = (await global.guild.latestAuditLog()).executor;
-
-            global.database.addEntry('EVENTS_'+eventName, {
-                userid: user.id,
-                datetime: Date.now(),
-                isDelete: true,
-                executorId: executor.id,
-            });
-
-            report(__line, eventName, 'user.tag', user.tag, 'executor.tag', executor.tag);
-            require(eventToPath(event))(ban);
-        } catch (err) {
-            reportError(__line, eventName, err);
-        }
+    global.database.addEntry('EVENTS_'+String(this.event), {
+        userid: user.id,
+        datetime: Date.now(),
+        isDelete: true,
+        executorId: executor.id,
     });
-}
+
+    report(__line, this.eventName, 'user.tag', user.tag, 'executor.tag', executor.tag);
+}).listen();
 
 // TODO: GuildCreate
 
 // TODO: GuildDelete
 
-{
-    const event = Events.GuildEmojiCreate;
-    let eventName;
+registerEvent(Events.GuildEmojisUpdate, (oldEmojis, newEmojis) => newEmojis.guild.id, async function (oldEmojis, newEmojis) {
+    const executor = (await global.guild.latestAuditLog()).executor;
 
-    global.client.on(event, async (emoji) => {
-        eventName = String(event);
-
-        try {
-            if (global.guild.id !== emoji.guild.id) return;
-
-            const executor = (await global.guild.latestAuditLog()).executor;
-
-            global.database.addEntry('EVENTS_'+eventName, {
-                emojiId: emoji.id,
-                emojiPath: emoji.url,
-                datetime: Date.now(),
-                executorId: executor.id,
-            });
-
-            report(__line, eventName, 'executor.tag', executor.tag, 'emoji.name', emoji.name, 'emoji.url', emoji.url);
-            require(eventToPath(event))(emoji);
-        } catch (err) {
-            reportError(__line, eventName, err);
-        }
+    global.database.addEntry('EVENTS_' + String(this.event), {
+        emojiId: emoji.id,
+        emojiPath: emoji.url,
+        datetime: Date.now(),
+        executorId: executor.id,
     });
-}
 
-{
-    const event = Events.GuildEmojiDelete;
-    let eventName;
+    report(__line, this.eventName, 'executor.tag', executor.tag, 'emoji.name', emoji.name, 'emoji.url', emoji.url);
+}).listen();
 
-    global.client.on(event, async (emoji) => {
-        eventName = String(event);
-
-        try {
-            if (global.guild.id !== emoji.guild.id) return;
-
-            const executor = (await global.guild.latestAuditLog()).executor;
+registerEvent(Events.GuildEmojiDelete, (emoji) => emoji.guild.id, async function (emoji) {
+    const executor = (await global.guild.latestAuditLog()).executor;
             
-            // TODO: add "addEmojiDelete" to DB
-            global.database.addEntry('EVENTS_'+eventName, {
-                emojiId: emoji.id,
-                datetime: Date.now(),
-                isDelete: true,
-                executorId: executor.id,
-            });
-
-            report(__line, eventName, 'executor.tag', executor.tag, 'emoji.name', emoji.name, 'emoji.url', emoji.url);
-            require(eventToPath(event))(emoji);
-        } catch (err) {
-            reportError(__line, eventName, err);
-        }
+    // TODO: add "addEmojiDelete" to DB
+    global.database.addEntry('EVENTS_' + String(this.event), {
+        emojiId: emoji.id,
+        datetime: Date.now(),
+        isDelete: true,
+        executorId: executor.id,
     });
-}
 
-{
-    const event = Events.GuildEmojiUpdate;
-    let eventName;
+    report(__line, this.eventName, 'executor.tag', executor.tag, 'emoji.name', emoji.name, 'emoji.url', emoji.url);
+}).listen();
 
-    global.client.on(event, async (oldEmoji, newEmoji) => {
-        eventName = String(event);
-
-        try {
-            if (global.guild.id !== newEmoji.guild.id) return;
-
-            const executor = (await global.guild.latestAuditLog()).executor;
+registerEvent(Events.GuildEmojiUpdate, (oldEmoji, newEmoji) => newEmoji.guild.id, async function (oldEmoji, newEmoji) {
+    const executor = (await global.guild.latestAuditLog()).executor;
             
-            global.database.addEntry('EVENTS_'+eventName, {
-                emojiId: newEmoji.id,
-                oldEmojiPath: oldEmoji.url,
-                newEmojiPath: newEmoji.url,
-                datetime: Date.now(),
-                executorId: executor.id,
-            });
-
-            report(__line, eventName, 'executor.tag', executor.tag, 'emoji.name', oldEmoji.name, '->', newEmoji.name, 'emoji.url', oldEmoji.url, '->', newEmoji.url);
-            require(eventToPath(event))(oldEmoji, newEmoji);
-        } catch (err) {
-            reportError(__line, eventName, err);
-        }
+    global.database.addEntry('EVENTS_' + String(event), {
+        emojiId: newEmoji.id,
+        oldEmojiPath: oldEmoji.url,
+        newEmojiPath: newEmoji.url,
+        datetime: Date.now(),
+        executorId: executor.id,
     });
-}
+
+    report(__line, this.eventName, 'executor.tag', executor.tag, 'emoji.name', oldEmoji.name, '->', newEmoji.name, 'emoji.url', oldEmoji.url, '->', newEmoji.url);
+}).listen();
 
 // TODO: GuildIntegrationsUpdate
 
-{
-    const event = Events.GuildMemberAdd;
-    let eventName;
+registerEvent(Events.GuildMemberAdd, (member) => member.guild.id, async function (member) {
+    const user = member.user;
 
-    global.client.on(event, (member) => {
-        eventName = String(event);
-
-        try {
-            if (global.guild.id !== member.guild.id) return;
-
-            const user = member.user;
-
-            global.database.addEntry('EVENTS_'+eventName, {
-                userid: user.id,
-                joinedAt: Date.now(),
-                nickname: member.nickname || '',
-            });
-
-            report(__line, eventName, 'user.tag', user.tag);
-            require(eventToPath(event))(member);
-        } catch (err) {
-            reportError(__line, eventName, err);
-        }
+    global.database.addEntry('EVENTS_' + String(this.event), {
+        userid: user.id,
+        joinedAt: Date.now(),
+        nickname: member.nickname || '',
     });
-}
 
-{
-    const event = Events.GuildMemberAvailable;
-    let eventName;
+    report(__line, this.eventName, 'user.tag', user.tag);
+}).listen();
 
-    global.client.on(event, async (member) => {
-        eventName = String(event);
+registerEvent(Events.GuildMemberAvailable, (oldMember, newMember) => newMember.guild.id, async function (oldMember, newMember) {
+    // TODO
 
-        try {
-            if (global.guild.id !== member.guild.id) return;
+    report(__line, this.eventName, 'member.user.tag', member.user.tag);
+}).listen();
 
-            // TODO
+registerEvent(Events.GuildMemberRemove, (member) => member.guild.id, async function (member) {
+    const user = member.user;
 
-            report(__line, eventName, 'member.user.tag', member.user.tag);
-            require(eventToPath(event))(member);
-        } catch (err) {
-            reportError(__line, eventName, err);
-        }
+    const latestAuditLog = await global.guild.latestAuditLog();
+    if (latestAuditLog?.action === AuditLogEvent.GuildBanAdd && latestAuditLog?.target.id === user.id) return;
+
+    // TODO: rename leftedAt to leftAt in DB
+    global.database.addEntry('EVENTS_' + String(this.event), {
+        userid: user.id,
+        leftAt: Date.now(),
     });
-}
 
-{
-    const event = Events.GuildMemberRemove;
-    let eventName;
-
-    global.client.on(event, async (member) => {
-        eventName = String(event);
-
-        try {
-            if (global.guild.id !== member.guild.id) return;
-
-            const user = member.user;
-
-            const latestAuditLog = await global.guild.latestAuditLog();
-            if (latestAuditLog?.action === AuditLogEvent.GuildBanAdd && latestAuditLog?.target.id === user.id) return;
-
-            // TODO: rename leftedAt to leftAt in DB
-            global.database.addEntry('EVENTS_'+eventName, {
-                userid: user.id,
-                leftAt: Date.now(),
-            });
-
-            report(__line, eventName, 'user.tag', user.tag);
-            require(eventToPath(event))(member);
-        } catch (err) {
-            reportError(__line, eventName, err);
-        }
-    });
-}
+    report(__line, this.eventName, 'user.tag', user.tag);
+}).listen();
 
 // TODO: GuildMembersChunk
 
-{
-    const event = Events.GuildMemberUpdate;
-    let eventName;
+registerEvent(Events.GuildMemberUpdate, (oldMember, newMember) => newMember.guild.id, async function (oldMember, newMember) {
+    report(__line, this.eventName, 'user.tag', oldMember.user.tag, '->', newMember.user.tag);
+}).listen();
 
-    global.client.on(event, async (oldMember, newMember) => {
-        eventName = String(event)
+registerEvent(Events.GuildRoleCreate, (role) => role.guild.id, async function (role) {
+    const executor = (await global.guild.latestAuditLog()).executor;
 
-        try {
-            if (global.guild.id !== newMember.guild.id) return;
-
-            // TODO
-
-            // let data = {}
-            // let trigger = false
-
-            // if(oldMember.nickname !== newMember.nickname){
-            //     data.oldNickname= oldMember.nickname,
-            //     data.newNickname= newMember.nickname,
-            //     trigger = true
-            // }
-
-            // if(oldMember.displayName !== newMember.displayName){
-            //     data.oldDisplayName= oldMember.displayName,
-            //     data.newDisplayName= newMember.displayName,
-            
-            //     trigger = true
-
-            // }
-
-            // if(oldMember.displayAvatarURL !== newMember.displayAvatarURL){
-            //     data.oldAvatar = oldMember.displayAvatarURL,
-            //     data.newAvatar = newMember.displayAvatarURL,
-            //     trigger = true
-
-            // }
-
-            // if(trigger){
-            //     await global.database.addGuildMemberUpdate(data);
-            // }
-
-            report(__line, eventName, 'user.tag', oldMember.user.tag, '->', newMember.user.tag);
-            require(eventToPath(event))(oldMember, newMember);
-        } catch (err) {
-            reportError(__line, eventName, err);
-        }
+    global.database.addEntry('EVENTS_' + String(this.event), {
+        roleId: role.id,
+        name: role.name,
+        color: role.hexColor,
+        permissions: role.permissions,
+        datetime: Date.now(),
+        executorId: executor.id,
     });
-}
 
-{
-    const event = Events.GuildRoleCreate;
-    let eventName;
+    report(__line, this.eventName, 'executor.tag', executor.tag, 'role.name', role.name);
+}).listen();
 
-    global.client.on(event, async (role) => {
-        eventName = String(event);
+registerEvent(Events.GuildRoleDelete, (role) => role.guild.id, async function (role) {
+    const executor = (await global.guild.latestAuditLog()).executor;
 
-        try {
-            if (global.guild.id !== invite.guild.id) return;
-
-            const executor = (await global.guild.latestAuditLog()).executor;
-
-            global.database.addEntry('EVENTS_'+eventName, {
-                roleId: role.id,
-                name: role.name,
-                color: role.hexColor,
-                permissions: role.permissions,
-                datetime: Date.now(),
-                executorId: executor.id,
-            });
-
-            report(__line, eventName, 'executor.tag', executor.tag, 'role.name', role.name);
-            require(eventToPath(event))(role);
-        } catch (err) {
-            reportError(__line, eventName, err);
-        }
+    global.database.addEntry('EVENTS_' + String(this.event), {
+        roleId: role.id,
+        name: role.name,
+        datetime: Date.now(),
+        isDelete: true,
+        executorId: executor.id,
     });
-}
 
-{
-    const event = Events.GuildRoleDelete;
-    let eventName;
+    report(__line, this.eventName, 'executor.tag', executor.tag, 'role.name', role.name);
+}).listen();
 
-    global.client.on(event, async (role) => {
-        eventName = String(event);
+registerEvent(Events.GuildRoleUpdate, (oldRole, newRole) => newRole.guild.id, async function (oldRole, newRole) {
+    const executor = (await global.guild.latestAuditLog()).executor;
 
-        try {
-            if (global.guild.id !== invite.guild.id) return;
-
-            const executor = (await global.guild.latestAuditLog()).executor;
-
-            global.database.addEntry('EVENTS_'+eventName, {
-                roleId: role.id,
-                name: role.name,
-                datetime: Date.now(),
-                isDelete: true,
-                executorId: executor.id,
-            });
-
-            report(__line, eventName, 'executor.tag', executor.tag, 'role.name', role.name);
-            require(eventToPath(event))(role);
-        } catch (err) {
-            reportError(__line, eventName, err);
-        }
+    global.database.addEntry('EVENTS_' + String(this.event), {
+        roleId: newRole.id,
+        name: newRole.name,
+        datetime: Date.now(),
+        executorId: executor.id,
     });
-}
 
-{
-    const event = Events.GuildRoleUpdate;
-    let eventName;
-
-    global.client.on(event, async (oldRole, newRole) => {
-        eventName = String(event);
-
-        try {
-            if (global.guild.id !== invite.guild.id) return;
-
-            const executor = (await global.guild.latestAuditLog()).executor;
-
-            global.database.addEntry('EVENTS_'+eventName, {
-                roleId: newRole.id,
-                name: newRole.name,
-                datetime: Date.now(),
-                executorId: executor.id,
-            });
-
-            report(__line, eventName, 'executor.tag', executor.tag, 'role.name', oldRole.name, '->', newRole.name, 'role.color', oldRole.hexColor, '->', newRole.hexColor);
-            require(eventToPath(event))(role);
-        } catch (err) {
-            reportError(__line, eventName, err);
-        }
-    });
-}
+    report(__line, this.eventName, 'executor.tag', executor.tag, 'role.name', oldRole.name, '->', newRole.name, 'role.color', oldRole.hexColor, '->', newRole.hexColor);
+}).listen();
 
 // TODO: GuildScheduledEventCreate
 
@@ -764,473 +542,269 @@ function eventToPath(event) {
 
 // TODO: GuildScheduledEventUserRemove
 
-{
-    const event = Events.GuildStickerCreate;
-    let eventName;
+registerEvent(Events.GuildStickerCreate, (oldSticker, newSticker) => newSticker.guild.id, async function (oldSticker, newSticker) {
+    const executor = (await global.guild.latestAuditLog()).executor;
 
-    global.client.on(event, async (sticker) => {
-        eventName = String(event);
-
-        try {
-            if (global.guild.id !== sticker.guild.id) return;
-
-            const executor = (await global.guild.latestAuditLog()).executor;
-
-            global.database.addEntry('EVENTS_'+eventName, {
-                emojiId: sticker.id,
-                emojiPath: sticker.url,
-                datetime: Date.now(),
-                executorId: executor.id,
-            });
-
-            report(__line, eventName, 'executor.tag', executor.tag, 'sticker.name', sticker.name);
-            require(eventToPath(event))(sticker);
-        } catch (err) {
-            reportError(__line, eventName, err);
-        }
+    global.database.addEntry('EVENTS_' + String(this.event), {
+        emojiId: sticker.id,
+        emojiPath: sticker.url,
+        datetime: Date.now(),
+        executorId: executor.id,
     });
-}
 
-{
-    const event = Events.GuildStickerDelete;
-    let eventName;
+    report(__line, this.eventName, 'executor.tag', executor.tag, 'sticker.name', sticker.name);
+}).listen();
 
-    global.client.on(event, async (sticker) => {
-        eventName = String(event)
+registerEvent(Events.GuildStickerDelete, (sticker) => sticker.guild.id, async function (sticker) {
+    const executor = (await global.guild.latestAuditLog()).executor;
 
-        try {
-            if (global.guild.id !== sticker.guild.id) return;
-
-            const executor = (await global.guild.latestAuditLog()).executor;
-
-            // TODO: isDelete?
-            global.database.addEntry('EVENTS_'+eventName, {
-                emojiId: sticker.id,
-                datetime: Date.now(),
-                // isDelete: true,
-                executorId: executor.id,
-            });
-
-            report(__line, eventName, 'executor.tag', executor.tag, 'sticker.name', sticker.name);
-            require(eventToPath(event))(sticker);
-        } catch (err) {
-            reportError(__line, eventName, err);
-        }
+    // TODO: isDelete?
+    global.database.addEntry('EVENTS_' + String(this.event), {
+        emojiId: sticker.id,
+        datetime: Date.now(),
+        // isDelete: true,
+        executorId: executor.id,
     });
-}
 
+    report(__line, this.eventName, 'executor.tag', executor.tag, 'sticker.name', sticker.name);
+}).listen();
 
-{
-    const event = Events.GuildStickerUpdate;
-    let eventName = String(event)
+registerEvent(Events.GuildStickerUpdate, (oldSticker, newSticker) => newSticker.guild.id, async function (oldSticker, newSticker) {
+    const executor = (await global.guild.latestAuditLog()).executor;
 
-    global.client.on(event, async (oldSticker, newSticker) => {
-        try {
-            if (global.guild.id !== sticker.guild.id) return;
-
-            const executor = (await global.guild.latestAuditLog()).executor;
-
-            // TODO: isDelete? add addStickerUpdate to the DB
-            global.database.addEntry('EVENTS_'+eventName, {
-                emojiId: sticker.id,
-                datetime: Date.now(),
-                // isDelete: true,
-                executorId: executor.id,
-            });
-
-            report(__line, eventName, 'executor.tag', executor.tag, 'sticker.name', oldSticker.name, '->', newSticker.name);
-            require(eventToPath(event))(sticker);
-        } catch (err) {
-            reportError(__line, eventName, err);
-        }
+    // TODO: isDelete? add addStickerUpdate to the DB
+    global.database.addEntry('EVENTS_' + String(this.event), {
+        emojiId: sticker.id,
+        datetime: Date.now(),
+        // isDelete: true,
+        executorId: executor.id,
     });
-}
+
+    report(__line, this.eventName, 'executor.tag', executor.tag, 'sticker.name', oldSticker.name, '->', newSticker.name);
+}).listen();
 
 // TODO: GuildUnavailable
 
 // TODO: GuildUpdate
 
-{
-    const event = Events.InteractionCreate;
-    let eventName;
+registerEvent(Events.InteractionCreate, (interaction) => interaction.guildId, async function (interaction) {
+    const executor = interaction.user;
 
-    const reportDefault = (interaction) => {
-        try {
-            report(__line, eventName, 'executor.tag', interaction.user.tag, 'client.tag', interaction.client.user.tag, 'channel.name', interaction.channel.name);
-        } catch(err) {
-            reportError(__line, eventName, err);
-        }
-    } 
-
-    function reportChatInputCommand(interaction) {
-        const functionName = 'reportChatInputCommand';
-        eventName += '.chatInputCommand';
-        try {
-            let cmd = `/${interaction.commandName}`;
-            for (const option of interaction.options._hoistedOptions) {
-                switch (option.type) {
-                    case 3:
-                        cmd += ` ${option.name}: ${option.value}`;
-                        break;
-                    case 6:
-                        cmd += ` user: @${option.member.displayName}`;
-                        break;
-                    default:
-                        reportWarn(__line, functionName, 'executor.tag', interaction.user.tag, 'client.tag', interaction.client.user.tag, 'channel.name', interaction.channel.name, 'command', cmd, 'unsupported option type', option.type);
-                        break;
-                }
-            }
-            report(__line, eventName, 'executor.tag', interaction.user.tag, 'client.tag', interaction.client.user.tag, 'channel.name', interaction.channel.name, 'command', cmd);
-        } catch(err) {
-            reportError(__line, eventName, err);
-        }
-    }
-
-    global.client.on(event, (interaction) => {
-        eventName = String(event);
-
-        try {
-            if (global.guild.id !== interaction.guildId) return;
-            
-            const executor = interaction.user;
-
-            global.database.addEntry('EVENTS_'+eventName, {
-                type: interaction.type,
-                datetime: Date.now(),
-                commandName: interaction.commandName,
-                executorId: executor.id,
-                channelid: interaction.channelId,
-            });
-
-            if (interaction.isAutocomplete()) {
-                eventName += '.autocomplete';
-                reportDefault(interaction);
-            } else if (interaction.isButton()) {
-                eventName += '.button';
-                reportDefault(interaction);
-            } else if (interaction.isMessageComponent()) {
-                eventName += '.messageComponent';
-                reportDefault(interaction);
-            } else if (interaction.isModalSubmit()) {
-                eventName += '.modalSubmit';
-                reportDefault(interaction);
-            } else if (interaction.isChatInputCommand()) {
-                reportChatInputCommand(interaction);
-            } else if (interaction.isUserContextMenuCommand()) {
-                eventName += '.userContextMenuCommand';
-                reportDefault(interaction);
-            } else if (interaction.isContextMenuCommand()) {
-                eventName += '.contextMenuCommand';
-                reportDefault(interaction);
-            } else if (interaction.isMessageContextMenuCommand()) {
-                eventName += '.messageContextMenuCommand';
-                reportDefault(interaction);
-            } else if (interaction.isStringSelectMenu()) {
-                eventName += '.stringSelectMenu';
-                reportDefault(interaction);
-            } else if (interaction.isUserSelectMenu()) {
-                eventName += '.userSelectMenu';
-                reportDefault(interaction);
-            } else if (interaction.isRoleSelectMenu()) {
-                eventName += '.roleSelectMenu';
-                reportDefault(interaction);
-            } else if (interaction.isMentionableSelectMenu()) {
-                eventName += '.mentionableSelectMenu';
-                reportDefault(interaction);
-            } else if (interaction.isChannelSelectMenu()) {
-                eventName += '.channelSelectMenu';
-                reportDefault(interaction);
-            } else {
-                reportWarn(__line, eventName, 'executor.tag', interaction.user.tag, 'client.tag', interaction.client.user.tag, 'channel.name', interaction.channel.name, 'unknown interaction of type', interaction.type);
-            }
-
-            require(eventToPath(event))(interaction);
-        } catch (err) {
-            reportError(__line, eventName, err);
-        }
+    global.database.addEntry('EVENTS_'+String(this.event), {
+        type: interaction.type,
+        datetime: Date.now(),
+        commandName: interaction.commandName,
+        executorId: executor.id,
+        channelid: interaction.channelId,
     });
-}
+
+    if (interaction.isAutocomplete()) {
+        this.eventName += '.autocomplete';
+        this.reportDefault(interaction);
+    } else if (interaction.isButton()) {
+        this.eventName += '.button';
+        this.reportDefault(interaction);
+    } else if (interaction.isMessageComponent()) {
+        this.eventName += '.messageComponent';
+        this.reportDefault(interaction);
+    } else if (interaction.isModalSubmit()) {
+        this.eventName += '.modalSubmit';
+        this.reportDefault(interaction);
+    } else if (interaction.isChatInputCommand()) {
+        this.reportChatInputCommand(interaction);
+    } else if (interaction.isUserContextMenuCommand()) {
+        this.eventName += '.userContextMenuCommand';
+        this.reportDefault(interaction);
+    } else if (interaction.isContextMenuCommand()) {
+        this.eventName += '.contextMenuCommand';
+        this.reportDefault(interaction);
+    } else if (interaction.isMessageContextMenuCommand()) {
+        this.eventName += '.messageContextMenuCommand';
+        this.reportDefault(interaction);
+    } else if (interaction.isStringSelectMenu()) {
+        this.eventName += '.stringSelectMenu';
+        this.reportDefault(interaction);
+    } else if (interaction.isUserSelectMenu()) {
+        this.eventName += '.userSelectMenu';
+        this.reportDefault(interaction);
+    } else if (interaction.isRoleSelectMenu()) {
+        this.eventName += '.roleSelectMenu';
+        this.reportDefault(interaction);
+    } else if (interaction.isMentionableSelectMenu()) {
+        this.eventName += '.mentionableSelectMenu';
+        this.reportDefault(interaction);
+    } else if (interaction.isChannelSelectMenu()) {
+        this.eventName += '.channelSelectMenu';
+        this.reportDefault(interaction);
+    } else {
+        reportWarn(__line, this.eventName, 'executor.tag', interaction.user.tag, 'client.tag', interaction.client.user.tag, 'channel.name', interaction.channel.name, 'unknown interaction of type', interaction.type);
+    }
+}).set('reportDefault', function (interaction) {
+    try {
+        report(__line, this.eventName, 'executor.tag', interaction.user.tag, 'client.tag', interaction.client.user.tag, 'channel.name', interaction.channel.name);
+    } catch(err) {
+        reportError(__line, this.eventName, err);
+    }
+}).set('reportChatInputCommand', function (interaction) {
+    try {
+        this.eventName += '.chatInputCommand';
+        let cmd = `/${interaction.commandName}`;
+        for (const option of interaction.options._hoistedOptions) {
+            switch (option.type) {
+                case 3:
+                    cmd += ` ${option.name}: ${option.value}`;
+                    break;
+                case 6:
+                    cmd += ` user: @${option.member.displayName}`;
+                    break;
+                default:
+                    reportWarn(__line, this.eventName, 'executor.tag', interaction.user.tag, 'client.tag', interaction.client.user.tag, 'channel.name', interaction.channel.name, 'command', cmd, 'unsupported option type', option.type);
+                    break;
+            }
+        }
+        report(__line, this.eventName, 'executor.tag', interaction.user.tag, 'client.tag', interaction.client.user.tag, 'channel.name', interaction.channel.name, 'command', cmd);
+    } catch(err) {
+        reportError(__line, this.eventName, err);
+    }
+}).listen();
 
 // TODO: Invalidated
 
-{
-    const event = Events.InviteCreate;
-    let eventName;
-
-    global.client.on(event, async (invite) => {
-        eventName = String(event);
-
-        try {
-            if (global.guild.id !== invite.guild.id) return;
-
-            const executor = invite.inviter || (await global.guild.latestAuditLog()).executor;
+registerEvent(Events.InviteCreate, (invite) => invite.guild.id, async function (invite) {
+    const executor = invite.inviter || (await global.guild.latestAuditLog()).executor;
         
-            // TODO: remove userid from DB
-            global.database.addEntry('EVENTS_'+eventName, {
-                // userid: user.id,
-                code: invite.code,
-                channelid: invite.channel.id,
-                maxUses: invite.maxUses,
-                expiresAt: invite.expiresTimestamp,
-                executorId: executor.id,
-                datetime: Date.now(),
-            });
-
-            report(__line, eventName, 'executor.tag', executor.tag, 'url', invite.url);
-            require(eventToPath(event))(invite);
-        } catch (err) {
-            reportError(__line, eventName, err);
-        }
+    // TODO: remove userid from DB
+    global.database.addEntry('EVENTS_' + String(this.event), {
+        // userid: user.id,
+        code: invite.code,
+        channelid: invite.channel.id,
+        maxUses: invite.maxUses,
+        expiresAt: invite.expiresTimestamp,
+        executorId: executor.id,
+        datetime: Date.now(),
     });
-}
 
-{
-    const event = Events.InviteDelete;
-    let eventName;
+    report(__line, this.eventName, 'executor.tag', executor.tag, 'url', invite.url);
+}).listen();
 
-    global.client.on(event, async (invite) => {
-        eventName = String(event);
-
-        try {
-            if (global.guild.id !== invite.guild.id) return;
+registerEvent(Events.InviteDelete, (invite) => invite.guild.id, async function (invite) {
+    const executor = invite.inviter || (await global.guild.latestAuditLog()).executor;
             
-            const executor = invite.inviter || (await global.guild.latestAuditLog()).executor;
+    global.database.addEntry('EVENTS_' + String(this.event), {
+        code: invite.code,
+        channelid: invite.channel.id,
+        executorId: executor.id,
+        datetime: Date.now(),
+    });
+
+    report(__line, this.eventName, 'executor.tag', executor.tag, 'url', invite.url);
+}).listen();
+
+registerEvent(Events.MessageBulkDelete, (messages, channel) => channel.guild.id, async function (messages, channel) {
+    const executor = (await global.guild.latestAuditLog()).executor;
+
+    global.database.addEntry('EVENTS_' + String(this.event), {
+        channelId: channel.id,
+        deletedMessages: messages.size,
+        datetime: Date.now(),
+        executorId: executor.id,
+    });
+
+    report(__line, this.eventName, 'executor.tag', executor.tag, 'messages.size', messages.size);
+}).listen();
+
+registerEvent(Events.MessageCreate, (message) => message.guild.id, async function (message) {
+    const executor = message.author;
+    const channel = message.channel;
+    const content = message.content;
+
+    const attachments = await global.attachment.handleAttachments(message);
+    let filenames;
+    if (attachments) {
+        filenames = attachments.map(attachment => attachment.filename);
+    }
+
+    // TODO: rename userId to executorId in DB
+    global.database.addEntry('EVENTS_' + String(this.event), {
+        userId: executor.id,
+        messageId: message.id,
+        channelId: channel.id,
+        content: content,
+        datetime: Date.now(),
+        attachments: filenames ? JSON.stringify(filenames) : null,
+        isDelete: 0,
+        isReply: message.reference ? 1 : 0,
+        replyToMessageId: message.reference ? message.reference.messageId : null,
+    });
+
+    report(__line, this.eventName, 'channel.name', channel.name, 'executor.tag', executor.tag, 'content', content);
+}).listen();
+
+registerEvent(Events.MessageDelete, (message) => message.guild.id, async function (message) {
+    const executor = (await global.guild.latestAuditLog()).executor;
             
-            global.database.addEntry('EVENTS_'+eventName, {
-                code: invite.code,
-                channelid: invite.channel.id,
-                executorId: executor.id,
-                datetime: Date.now(),
-            });
-
-            report(__line, eventName, 'executor.tag', executor.tag, 'url', invite.url);
-            require(eventToPath(event))(invite);
-        } catch (err) {
-            reportError(__line, eventName, err);
-        }
+    global.database.addEntry('EVENTS_' + String(this.event), {
+        messageId: message.id,
+        datetime: Date.now(),
+        executorId: executor.id,
     });
-}
 
-{
-    const event = Events.MessageBulkDelete;
-    let eventName;
-
-    global.client.on(event, async (messages, channel) => {
-        eventName = String(event);
-
-        try {
-            if (global.guild.id !== channel.guild.id) return;
-
-            const executor = (await global.guild.latestAuditLog()).executor;
-
-            global.database.addEntry('EVENTS_'+eventName, {
-                channelId: channel.id,
-                deletedMessages: messages.size,
-                datetime: Date.now(),
-                executorId: executor.id,
-            });
-
-            report(__line, eventName, 'executor.tag', executor.tag, 'messages.size', messages.size);
-            require(eventToPath(event))(messages, channel);
-        } catch (err) {
-            reportError(__line, eventName, err);
-        }
-    });
-}
-
-{
-    const event = Events.MessageCreate;
-    let eventName;
-
-    global.client.on(event, async (message) => {
-        eventName = String(event);
-
-        try {
-            if (global.guild.id !== message.guild.id) return;
-           
-            const executor = message.author;
-            const channel = message.channel;
-            const content = message.content;
-
-            // TODO: rename userId to executorId in DB
-            const attachments = await global.attachment.handleAttachments(message)
-            const filenames = attachments.map(attachment => attachment.filename);
-            global.database.addEntry('EVENTS_'+eventName, {
-                userId: executor.id,
-                messageId: message.id,
-                channelId: channel.id,
-                content: content,
-                datetime: Date.now(),
-                attachments: JSON.stringify(filenames),
-                isDelete: 0,
-                isReply: message.reference ? 1 : 0,
-                replyToMessageId: message.reference ? message.reference.messageId : null,
-            });
-
-
-            report(__line, eventName, 'executor.tag', executor.tag, 'channel.name', channel.name, 'content', content);
-            require(eventToPath(event))(message);
-        } catch (err) {
-            reportError(__line, eventName, err);
-        }
-    });
-}
-
-{
-    const event = Events.MessageDelete;
-    let eventName;
-
-    global.client.on(event, async (message) => {
-        eventName = String(event);
-
-        try {
-            if (global.guild.id !== message.guild.id) return;
-
-            const executor = (await global.guild.latestAuditLog()).executor;
-            
-            global.database.addEntry('EVENTS_'+eventName, {
-                messageId: message.id,
-                datetime: Date.now(),
-                executorId: executor.id,
-            });
-
-            report(__line, eventName, 'executor.tag', executor.tag, 'channel.name', message.channel.name, 'content', message.content);
-            require(eventToPath(event))(message);
-        } catch (err) {
-            reportError(__line, eventName, err);
-        }
-    });
-}
+    report(__line, this.eventName, 'executor.tag', executor.tag, 'channel.name', message.channel.name, 'content', message.content);
+}).listen();
 
 // TODO: MessagePollVoteAdd
 
 // TODO: MessagePollVoteRemove
 
-{
-    const event = Events.MessageReactionAdd;
-    let eventName;
+registerEvent(Events.MessageReactionAdd, (reaction, executor, details) => reaction.message.guild.id, async function (reaction, executor, details) {
+    const emoji = reaction.emoji;
+    const message = reaction.message;
+    const user = message.author;
 
-    global.client.on(event, (reaction, executor, details) => {
-        eventName = String(event);
-
-        try {
-            if (global.guild.id !== reaction.message.guild.id) return;
-
-            const emoji = reaction.emoji;
-            const message = reaction.message;
-            const user = message.author;
-
-            global.database.addEntry('EVENTS_'+eventName, {
-                reactionId: emoji.id || 0,
-                messageId: message.id,
-                userId: user.id,
-                datetime: Date.now(),
-                name: emoji.name
-            });
-
-            report(__line, eventName, 'executor.tag', executor.tag, 'emoji.name', emoji.name, 'message.author.tag', user.tag);
-            require(eventToPath(event))(reaction, executor, details);
-        } catch (err) {
-            reportError(__line, eventName, err);
-        }
+    global.database.addEntry('EVENTS_' + String(this.event), {
+        reactionId: emoji.id || 0,
+        messageId: message.id,
+        userId: user.id,
+        datetime: Date.now(),
+        name: emoji.name
     });
-}
 
-{
-    const event = Events.MessageReactionRemove;
-    let eventName;
+    report(__line, this.eventName, 'executor.tag', executor.tag, 'emoji.name', emoji.name, 'message.author.tag', user.tag);
+}).listen();
 
-    global.client.on(event, (reaction, executor, details) => {
-        eventName = String(event);
+registerEvent(Events.MessageReactionRemove, (reaction, executor, details) => reaction.message.guild.id, async function (reaction, executor, details) {
+    const emoji = reaction.emoji;
+    const message = reaction.message;
+    const user = message.author;
 
-        try {
-            if (global.guild.id !== reaction.message.guild.id) return;
-
-            const emoji = reaction.emoji;
-            const message = reaction.message;
-            const user = message.author;
-
-            global.database.addEntry('EVENTS_'+eventName, {
-                reactionId: emoji.id || 0,
-                messageId: message.id,
-                userId: user.id,
-                datetime: Date.now(),
-                name: emoji.name
-            });
-
-            report(__line, eventName, 'executor.tag', executor.tag, 'emoji.name', emoji.name, 'message.author.tag', user.tag);
-            require(eventToPath(event))(reaction, executor, details);
-        } catch (err) {
-            reportError(__line, eventName, err);
-        }
+    global.database.addEntry('EVENTS_' + String(this.event), {
+        reactionId: emoji.id || 0,
+        messageId: message.id,
+        userId: user.id,
+        datetime: Date.now(),
+        name: emoji.name
     });
-}
 
-{
-    const event = Events.MessageReactionRemoveAll;
-    let eventName;
+    report(__line, this.eventName, 'executor.tag', executor.tag, 'emoji.name', emoji.name, 'message.author.tag', user.tag);
+}).listen();
 
-    global.client.on(event, async (message, reactions) => {
-        eventName = String(event);
+registerEvent(Events.MessageReactionRemoveEmoji, (reaction) => reaction.message.guild.id, async function (reaction) {
+    // TODO
+}).listen();
 
-        try {
-            if (global.guild.id !== reactions.message.guild.id) return;
+registerEvent(Events.MessageUpdate, (oldMessage, newMessage) => newMessage.guild.id, async function (oldMessage, newMessage) {
+    const user = oldMessage?.author || newMessage?.author;
 
-            // TODO
-
-            require(eventToPath(event))(message, reactions);
-        } catch (err) {
-            reportError(__line, eventName, err);
-        }
+    global.database.addEntry('EVENTS_' + String(this.event), {
+        userId: user.id,
+        messageId: newMessage.id,
+        newContent: newMessage.content,
+        oldContent: oldMessage.content,
+        datetime: Date.now(),
     });
-}
 
-{
-    const event = Events.MessageReactionRemoveEmoji;
-    let eventName;
-
-    global.client.on(event, async (reaction) => {
-        eventName = String(event);
-
-        try {
-            if (global.guild.id !== reaction.message.guild.id) return;
-
-            // TODO
-
-            require(eventToPath(event))(reactions);
-        } catch (err) {
-            reportError(__line, eventName, err);
-        }
-    });
-}
-
-{
-    const event = Events.MessageUpdate;
-    let eventName;
-
-    global.client.on(event, (oldMessage, newMessage) => {
-        eventName = String(event);
-
-        try {
-            if (global.guild.id !== invite.guild.id) return;
-
-            const user = oldMessage?.author || newMessage?.author;
-
-            global.database.addEntry('EVENTS_'+eventName, {
-                userId: user.id,
-                messageId: newMessage.id,
-                newContent: newMessage.content,
-                oldContent: oldMessage.content,
-                datetime: Date.now(),
-            });
-
-            report(__line, eventName, 'user.tag', user.tag, 'channel.name', newMessage.channel.name, 'content', oldMessage.content, '->', newMessage.content);
-            require(eventToPath(event))(oldMessage, newMessage);
-        } catch (err) {
-            reportError(__line, eventName, err);
-        }
-    });
-}
+    report(__line, this.eventName, 'user.tag', user.tag, 'channel.name', newMessage.channel.name, 'content', oldMessage.content, '->', newMessage.content);
+}).listen();
 
 // TODO: PresenceUpdate
 
@@ -1252,61 +826,33 @@ function eventToPath(event) {
 
 // TODO: StageInstanceUpdate
 
-{
-    const event = Events.ThreadCreate;
-    let eventName;
+registerEvent(Events.ThreadCreate, (thread, newlyCreated) => thread.guild.id, async function (thread, newlyCreated) {
+    const executor = (await global.guild.latestAuditLog()).executor;
 
-    global.client.on(event, async (thread, newlyCreated) => {
-        eventName = String(event);
-
-        try {
-            if (global.guild.id !== thread.guild.id) return;
-
-            const executor = (await global.guild.latestAuditLog()).executor;
-
-            global.database.addEntry('EVENTS_'+eventName, {
-                channelId: thread.id,
-                name: thread.name,
-                permissions: thread.permissionOverwrites.cache,
-                datetime: Date.now(),
-                executorId: executor.id,
-            });
-
-            report(__line, eventName, 'executor.tag', executor.tag, 'thread.name', thread.name);
-            require(eventToPath(event))(thread, newlyCreated);
-        } catch (err) {
-            reportError(__line, eventName, err);
-        }
+    global.database.addEntry('EVENTS_' + String(this.event), {
+        channelId: thread.id,
+        name: thread.name,
+        permissions: thread.permissionOverwrites.cache,
+        datetime: Date.now(),
+        executorId: executor.id,
     });
-}
 
-{
-    const event = Events.ThreadDelete;
-    let eventName;
+    report(__line, this.eventName, 'executor.tag', executor.tag, 'thread.name', thread.name);
+}).listen();
 
-    global.client.on(event, async (thread) => {
-        eventName = String(event);
+registerEvent(Events.ThreadDelete, (thread) => thread.guild.id, async function (thread) {
+    const executor = (await global.guild.latestAuditLog()).executor;
 
-        try {
-            if (global.guild.id !== thread.guild.id) return;
-
-            const executor = (await global.guild.latestAuditLog()).executor;
-
-            global.database.addEntry('EVENTS_'+eventName, {
-                channelId: thread.id,
-                name: thread.name,
-                permissions: thread.permissionOverwrites.cache,
-                datetime: Date.now(),
-                executorId: executor.id,
-            });
-
-            report(__line, eventName, 'executor.tag', executor.tag, 'thread.name', thread.name);
-            require(eventToPath(event))(thread);
-        } catch (err) {
-            reportError(__line, eventName, err);
-        }
+    global.database.addEntry('EVENTS_' + String(this.event), {
+        channelId: thread.id,
+        name: thread.name,
+        permissions: thread.permissionOverwrites.cache,
+        datetime: Date.now(),
+        executorId: executor.id,
     });
-}
+
+    report(__line, this.eventName, 'executor.tag', executor.tag, 'thread.name', thread.name);
+}).listen();
 
 // TODO: ThreadListSync
 
@@ -1314,33 +860,19 @@ function eventToPath(event) {
 
 // TODO: ThreadMemberUpdate
 
-{
-    const event = Events.ThreadUpdate;
-    let eventName;
+registerEvent(Events.ThreadUpdate, (oldThread, newThread) => newThread.guild.id, async function (oldThread, newThread) {
+    executor = (await global.guild.latestAuditLog()).executor;
 
-    global.client.on(event, async (oldThread, newThread) => {
-        eventName = String(event);
-
-        try {
-            if (global.guild.id !== newThread.guild.id) return;
-
-            const executor = (await global.guild.latestAuditLog()).executor;
-
-            global.database.addEntry('EVENTS_'+eventName, {
-                channelId: newThread.id,
-                oldName: oldThread.name,
-                newName: newThread.name,
-                datetime: Date.now(),
-                executorId: executor.id,
-            });
-
-            report(__line, eventName, 'executor.tag', executor.tag, 'thread.name', oldThread.name, '->', newThread.name);
-            require(eventToPath(event))(oldThread, newThread);
-        } catch (err) {
-            reportError(__line, eventName, err);
-        }
+    global.database.addEntry('EVENTS_' + String(this.event), {
+        channelId: newThread.id,
+        oldName: oldThread.name,
+        newName: newThread.name,
+        datetime: Date.now(),
+        executorId: executor.id,
     });
-}
+
+    report(__line, this.eventName, 'executor.tag', executor.tag, 'thread.name', oldThread.name, '->', newThread.name);
+}).listen();
 
 // TODO: TypingStart
 
@@ -1348,133 +880,113 @@ function eventToPath(event) {
 
 // TODO: VoiceServerUpdate
 
-{
-    const event = Events.VoiceStateUpdate;
-    let eventName;
+registerEvent(Events.VoiceStateUpdate, (oldState, newState) => newState.guild.id, async function (oldState, newState) {
+    if (!oldState.channelId && !newState.channelId) {
+        this.impossibleCaseReached('old and new states are null');
+        return;
+    };
 
-    let count = global.initCount;
-    let now;
+    let user, channel, executor;
+    let updates = [];
 
-    async function getExecutor(auditLogEventType) {
-        const latestAuditLog = await global.guild.latestAuditLog();
-        if (!latestAuditLog) return null;
-        const dt = now - latestAuditLog.createdTimestamp;
-        if (latestAuditLog.action === auditLogEventType && (dt < 1000 || latestAuditLog.extra.count - count === 1)) {
-            count = latestAuditLog.extra.count;
-            return latestAuditLog.executor;
+    this.now = Date.now();
+    const voiceStateUpdateObject = function(user, executor, eventType) {
+        return {
+            userId: user.id,
+            oldChannelId: oldState?.channelId,
+            newChannelId: newState?.channelId,
+            datetime: now,
+            executorId: executor.id,
+            oldServerDeaf: oldState?.serverDeaf,
+            newServerDeaf: newState?.serverDeaf,
+            oldServerMute: oldState?.serverMute,
+            newServerMute: newState?.serverMute,
+            oldClientMute: oldState?.selfMute,
+            newClientMute: newState?.selfMute,
+            oldClientDeaf: oldState?.selfDeaf,
+            newClientDeaf: newState?.selfMute,
+            oldStream: oldState?.streaming,
+            newStream: newState?.streaming,
+            oldCam: oldState?.selfVideo,
+            newCam: newState?.selfVideo,
+            eventType: eventType
         }
-        return null;
-    }
+    };
 
-    global.client.on(event, async (oldState, newState) => {
-        eventName = String(event);
-        
-        try {
-            if (global.guild.id !== newState.guild.id) return;
+    if (oldState.channelId) {
+        user = oldState.member.user;
+        channel = oldState.channel;
 
-            const impossibleCaseReached = function (msg) {
-                reportWarn(__line, eventName, 'impossible case reached:', msg);
-                require(eventToPath(event))(oldState, newState);
-            }
-
-            if (!oldState.channelId && !newState.channelId) {
-                impossibleCaseReached('old and new states are null');
-                return;
-            };
-
-            let user, channel, executor;
-            let updates = [];
-
-
-            let now = Date.now();
-            let args
-            const voiceStateUpdateObject = function(user, executor, eventType) {
-                return {
-                    userId: user.id,
-                    oldChannelId: oldState?.channelId,
-                    newChannelId: newState?.channelId,
-                    datetime: now,
-                    executorId: executor.id,
-                    oldServerDeaf: oldState?.serverDeaf,
-                    newServerDeaf: newState?.serverDeaf,
-                    oldServerMute: oldState?.serverMute,
-                    newServerMute: newState?.serverMute,
-                    oldClientMute: oldState?.selfMute,
-                    newClientMute: newState?.selfMute,
-                    oldClientDeaf: oldState?.selfDeaf,
-                    newClientDeaf: newState?.selfMute,
-                    oldStream: oldState?.streaming,
-                    newStream: newState?.streaming,
-                    oldCam: oldState?.selfVideo,
-                    newCam: newState?.selfVideo,
-                    eventType: eventType
-                }
-            };
-
-            if (oldState.channelId) {
-                user = oldState.member.user;
-                channel = oldState.channel;
-
-                if (newState.channelId) {
-                    if (oldState.channelId !== newState.channelId) {
-                        eventName += '.move';
-
-                        executor = await getExecutor(AuditLogEvent.MemberMove);
-                        global.database.addEntry('EVENTS_'+event, voiceStateUpdateObject(user, executor || user, 2));
-                    }
-                    else {
-                        eventName += '.update';
-
-                        if (oldState.serverDeaf !== newState.serverDeaf) {
-                            executor = await getExecutor(AuditLogEvent.MemberUpdate);
-                            updates.push('user.serverDeaf', oldState.serverDeaf, '->', newState.serverDeaf);
-                        }
-                        if (oldState.serverMute !== newState.serverMute) {
-                            executor = await getExecutor(AuditLogEvent.MemberUpdate);
-                            updates.push('user.serverMute', oldState.serverMute, '->', newState.serverMute);
-                        }
-                        if (oldState.selfMute !== newState.selfMute) updates.push('user.selfMute', oldState.selfMute, '->', newState.selfMute);
-                        if (oldState.selfDeaf !== newState.selfDeaf) updates.push('user.selfDeaf', oldState.selfDeaf, '->', newState.selfDeaf);
-                        if (oldState.streaming !== newState.streaming) updates.push('user.streaming', oldState.streaming, '->', newState.streaming);
-                        if (oldState.selfVideo !== newState.selfVideo) updates.push('user.selfVideo', oldState.selfVideo, '->', newState.selfVideo);
-
-                        if (updates.length === 0) {
-                            impossibleCaseReached('old and new states are equal with no update');
-                            return;
-                        }
-
-                        global.database.addEntry('EVENTS_'+event, voiceStateUpdateObject(user, executor || user, 4));
-                    }
-                }
-                else {
-                    eventName += '.leave';
-
-                    executor = await getExecutor(AuditLogEvent.MemberDisconnect);
-                    global.database.addEntry('EVENTS_'+event, voiceStateUpdateObject(user, executor || user, 3));
-                }
-            }
-            else {
-                eventName += '.join';
-      
-                user = newState.member.user;
-                channel = newState.channel;
+        if (newState.channelId) {
+            if (oldState.channelId !== newState.channelId) {
+                this.eventName += '.move';
 
                 executor = await getExecutor(AuditLogEvent.MemberMove);
-                global.database.addEntry('EVENTS_'+event, voiceStateUpdateObject(user, executor || user, 1));
+                global.database.addEntry('EVENTS_'+event, voiceStateUpdateObject(user, executor || user, 2));
             }
+            else {
+                this.eventName += '.update';
 
-            args = [__line, eventName, 'user.tag', user.tag, 'channel.name', channel.name];
-            if (executor) args.push('executor.tag', executor.tag);
-            report(__line, eventName, 'user.tag', user.tag, 'channel.name', channel.name);
-            
- 
+                if (oldState.serverDeaf !== newState.serverDeaf) {
+                    executor = await getExecutor(AuditLogEvent.MemberUpdate);
+                    updates.push('user.serverDeaf', oldState.serverDeaf, '->', newState.serverDeaf);
+                }
+                if (oldState.serverMute !== newState.serverMute) {
+                    executor = await getExecutor(AuditLogEvent.MemberUpdate);
+                    updates.push('user.serverMute', oldState.serverMute, '->', newState.serverMute);
+                }
+                if (oldState.selfMute !== newState.selfMute) updates.push('user.selfMute', oldState.selfMute, '->', newState.selfMute);
+                if (oldState.selfDeaf !== newState.selfDeaf) updates.push('user.selfDeaf', oldState.selfDeaf, '->', newState.selfDeaf);
+                if (oldState.streaming !== newState.streaming) updates.push('user.streaming', oldState.streaming, '->', newState.streaming);
+                if (oldState.selfVideo !== newState.selfVideo) updates.push('user.selfVideo', oldState.selfVideo, '->', newState.selfVideo);
 
-            require(eventToPath(event))(oldState, newState);
-        } catch (err) {
-            reportError(__line, eventName, err);
+                if (updates.length === 0) {
+                    this.impossibleCaseReached('old and new states are equal with no update');
+                    return;
+                }
+
+                global.database.addEntry('EVENTS_'+event, voiceStateUpdateObject(user, executor || user, 4));
+            }
         }
-    }); 
-}
+        else {
+            this.eventName += '.leave';
+
+            executor = await getExecutor(AuditLogEvent.MemberDisconnect);
+            global.database.addEntry('EVENTS_'+event, voiceStateUpdateObject(user, executor || user, 3));
+        }
+    }
+    else {
+        this.eventName += '.join';
+
+        user = newState.member.user;
+        channel = newState.channel;
+
+        executor = await getExecutor(AuditLogEvent.MemberMove);
+        global.database.addEntry('EVENTS_'+event, voiceStateUpdateObject(user, executor || user, 1));
+    }
+
+    const args = [__line, this.eventName, 'user.tag', user.tag, 'channel.name', channel.name];
+    if (executor) args.push('executor.tag', executor.tag);
+    report(__line, this.eventName, 'user.tag', user.tag, 'channel.name', channel.name);
+})
+.set('count', global.initCount)
+.set('now', undefined)
+.set('getExecutor', async function getExecutor(auditLogEventType) {
+    const latestAuditLog = await global.guild.latestAuditLog();
+    if (!latestAuditLog) return null;
+    const dt = this.now - latestAuditLog.createdTimestamp;
+    if (latestAuditLog.action === auditLogEventType && (dt < 1000 || latestAuditLog.extra.count - this.count === 1)) {
+        this.count = latestAuditLog.extra.count;
+        return latestAuditLog.executor;
+    }
+    return null;
+})
+.set('impossibleCaseReached', function (msg) {
+    reportWarn(__line, this.eventName, 'impossible case reached:', msg);
+    const module = require(eventToPath(event));
+    module.event = event;
+    module.callback(oldState, newState);
+}).listen();
 
 // TODO: Warn
 
