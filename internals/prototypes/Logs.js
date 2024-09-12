@@ -1,5 +1,7 @@
 'use strict';
 
+const path = require('path');
+
 const colors = {
     Reset: "\x1b[0m",
     Bright: "\x1b[1m",
@@ -34,26 +36,80 @@ function getFormattedTime() {
     return new Intl.DateTimeFormat('fr-FR', options).format(date);
 }
 
-function logFactory(logger, type, typeColor) {
-    return function (filename, formatArgs = (...args1) => args1.join(' '), shouldLog = (context, ...args2) => true) {
-        return function (line, context, ...args) {
-            if (!shouldLog(context, ...args)) return;
-            logger(typeColor, `${getFormattedTime()} [${type}]${colors.Reset}`, `${filename} - Line ${line} (${colors['FgGreen']}${context}${colors['Reset']}):`, formatArgs(...args));
+console.logFormat = function (logContext) {
+    const { typeColor, type, filename, line, callContext } = logContext;
+    return `${typeColor}${getFormattedTime()} [${type}]${colors.Reset} ${filename} - Line ${line} (${colors['FgGreen']}${callContext}${colors['Reset']}):`;
+};
+
+function logFactory(logger, type, typeColor, defaultFormatArgs = (logContext, ...args) => args.join(' '), defaultShouldLog = (logContext, ...args) => true) {
+    return function (filename, formatArgs = defaultFormatArgs, shouldLog = defaultShouldLog) {
+        return function (line, callContext, ...args) {
+            const logContext = { typeColor, type, filename, line, callContext };
+            if (!shouldLog(logContext, ...args)) return;
+            logger(console.logFormat(logContext), formatArgs(logContext, ...args));
         }
     };
 }
 
+function formatArgsForError(logContext, ...args) {
+    if (!args.length) return '';
+    const err = args.pop();
+    if (!(err instanceof Error)) return `${args.join(' ')}${args.length > 0 ? ' ' : ''}${err}`;
+
+    const defaultReturn = `${args.join(' ')}${args.length > 0 ? ' ' : ''}(${err.name}) ${err.message}`;
+    const stack = err.stack;
+    const stackLines = stack.split('\n');
+    let errorLocation = stackLines.find(line => line.includes('.js:'));
+    if (!errorLocation) return defaultReturn;
+    errorLocation = errorLocation.trim();
+    const spaceCount = errorLocation.split(' ').length - 1;
+
+    if (spaceCount === 2) {
+        const match = errorLocation.match(/at (.+) \(([^)]+):(\d+):(\d+)\)/);
+        if (!match) return defaultReturn;
+        const functionName = match[1];
+        const fileName = path.relative(projectRoot, match[2]);
+        const lineNumber = match[3];
+        const rowNumber = match[4];
+        return `${args.join(' ')}${args.length > 0 ? ' ' : ''}(${err.name}) ${err.message} (${fileName}:${functionName}:${lineNumber}:${rowNumber})`;
+    } else {
+        const match = errorLocation.match(/at ([^)]+):(\d+):(\d+)/);
+        if (!match) return defaultReturn;
+        const fileName = path.relative(projectRoot, match[1]);
+        const lineNumber = match[2];
+        const rowNumber = match[3];
+        return `${args.join(' ')}${args.length > 0 ? ' ' : ''}(${err.name}) ${err.message} (${fileName}:${lineNumber}:${rowNumber})`;
+    }
+}
+
 console.createReport = logFactory(console.info, 'INFO', colors.FgCyan);
 console.createReportWarn = logFactory(console.warn, 'WARN', colors.FgYellow);
-console.createReportError = logFactory(console.error, 'ERROR', colors.FgRed);
+console.createReportError = logFactory(console.error, 'ERROR', colors.FgRed, formatArgsForError);
 console.createReports = function (filename) {
     return {
         report: console.createReport(filename),
         reportWarn: console.createReportWarn(filename),
         reportError: console.createReportError(filename)
     };
-}
+};
 
 global.colors = colors;
+
+console.fitOnTerm = function (text, mustEndWith = '') {
+    const lines = text.split('\n');
+    const processedLines = lines.map(line => {
+        let result = '';
+        let curTrueLength = 0;
+        let i = 0;
+        const mustEndWithTrueLength = mustEndWith.trueLength();
+        while (i < line.length && curTrueLength < process.stdout.columns - mustEndWithTrueLength - 3) {
+            result += line[i];
+            i++;
+            curTrueLength = result.trueLength();
+        }
+        return i === line.length ? result : `${result}...${mustEndWith}`;
+    });
+    return processedLines.join('\n');
+};
 
 module.exports = {};

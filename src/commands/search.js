@@ -94,10 +94,11 @@ function report_matches(matches, replyObject) {
 }
 
 function link_matches(matches, replyObject) {
-    const n = Math.min(10, matches.length);
-    replyObject.content += `\nFirst ${n} matches:`;
+    const limit = 10;
+    const n = Math.min(limit, matches.length);
+    if (matches.length > limit) replyObject.content += `\nFirst ${n} matches:`;
     for (const result of matches.slice(0, n)) {
-        const date = new Date(result.createdTimestamp + global.utcdiff);
+        const date = new Date(result.createdTimestamp + global.utc_diff);
         const dateString = `${date.getUTCFullYear()}/${date.getUTCMonth()}/${date.getUTCDate()} ${String(date.getUTCHours()).padStart(2, '0')}:${String(date.getUTCMinutes()).padStart(2, '0')}:${String(date.getUTCSeconds()).padStart(2, '0')}`;
         replyObject.content += `\n- [${result.channel.name} > ${result.author.username} > ${dateString}](<https://discord.com/channels/${global.guild.id}/${result.channel.id}/${result.id}>)`;
     }
