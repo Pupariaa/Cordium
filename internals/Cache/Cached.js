@@ -13,31 +13,81 @@ class MessageDatabase {
     });
   }
 
+  /*
+    TODO:
+      - parties table
+      - attachments table
+      - members table
+      - calls table
+      - components table
+      - embeds table
+      - interactions table
+      - mentions table
+    
+    infos:
+      - flags:
+          Crossposted
+          IsCrosspost
+          SuppressEmbeds
+          SourceMessageDeleted
+          Urgent
+          HasThread
+          Ephemeral
+          Loading
+          FailedToMentionSomeRolesInThread
+          
+          ShouldShowLinkNotDiscordWarning
+
+          SuppressNotifications
+          IsVoiceMessage
+      - dynamics:
+          content
+          editedAt
+          flags
+          hasThread
+          mentionsId
+          pinned
+
+  */
+
   // Private method to create the messages table
   _createTable() {
     const createTableSQL = `
       CREATE TABLE IF NOT EXISTS messages (
         id TEXT PRIMARY KEY,
-        channelId TEXT,
-        guildId TEXT,
-        createdTimestamp INTEGER,
-        type INTEGER,
-        system BOOLEAN,
-        content TEXT,
-        authorId TEXT,
-        authorBot BOOLEAN,
-        authorUsername TEXT,
-        authorDiscriminator TEXT,
-        authorAvatar TEXT,
-        pinned BOOLEAN,
-        tts BOOLEAN,
-        nonce TEXT,
-        editedTimestamp INTEGER,
-        webhookId TEXT,
-        applicationId TEXT,
-        activity TEXT,
-        flags INTEGER,
-        reference TEXT
+
+        messageActivityType INTEGER CHECK(messageActivityType >= 0 AND messageActivityType <= 3),
+        partyId TEXT,
+        
+        authorId TEXT NOT NULL,
+
+        callId TEXT, 
+
+        channelId TEXT NOT NULL,
+
+        content TEXT NOT NULL,
+
+        createdTimestamp INTEGER NOT NULL,
+
+        crosspostable BOOLEAN NOT NULL,
+
+        editedAt INTEGER,
+
+        flags INTEGER NOT NULL,
+
+        activityApplicationId TEXT,
+
+        hasThread BOOLEAN NOT NULL,
+
+        interactionId TEXT,
+
+        mentionsId TEXT,
+
+        pinned BOOLEAN NOT NULL,
+
+        pollId TEXT,
+
+
       )`;
 
     this.db.run(createTableSQL, (err) => {
