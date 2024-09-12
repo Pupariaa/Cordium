@@ -1,5 +1,8 @@
 'use strict';
 
+global.projectRoot = __dirname;
+global.utilsPath = __dirname + '/internals/prototypes/Utils';
+
 const fs = require('fs');
 const path = require('path');
 
@@ -23,7 +26,15 @@ new CQD();
 
 // Global error handling
 process.on('uncaughtException', (err) => {
-    reportError(__line, 'uncaughtException', 'Uncaught exception occurred:', err);
+    const stackLines = err.stack.split('\n');
+
+    // Find the line that contains the file and line number
+    const errorLocation = stackLines.find(line => line.includes('.js:'));
+
+    // Extract just the line number using a regex
+    const lineNumber = errorLocation ? errorLocation.match(/:(\d+):/)[1] : __line;
+
+    reportError(lineNumber, 'uncaughtException', 'Uncaught exception occurred:', err);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
@@ -47,7 +58,7 @@ global.client.on(eventClientReady, async () => {
             process.exit(1);
         }
         global.initCount = (await global.guild.latestAuditLog())?.extra?.count || 0;
-        global.utcdiff = parseInt(process.env.UTCdiff * 60 * 60 * 1000);
+        global.utc_diff = parseInt(process.env.utc_diff * 60 * 60 * 1000);
 
         // Events
         require('./internals/Events');
@@ -63,16 +74,13 @@ global.client.on(eventClientReady, async () => {
 
             const command = interaction.client.commands.get(interaction.commandName);
             if (!command) {
-                await interaction.reply('Not a command');
-                reportError(__line, eventInteractionCreate, `No command matching ${interaction.commandName} was found`);
+                await interaction.reply({ content: 'Not a command', ephemeral: true });
                 return;
             }
 
             try {
                 await command.execute(interaction);
-                report(__line, eventInteractionCreate, `Executed command ${interaction.commandName} successfully`);
             } catch (err) {
-                reportError(__line, eventInteractionCreate, `Error executing command ${interaction.commandName}:`, err);
                 const responseMessage = { content: 'There was an error while executing this command!', ephemeral: true };
                 if (interaction.replied || interaction.deferred) {
                     await interaction.followUp(responseMessage);
