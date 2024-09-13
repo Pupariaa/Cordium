@@ -1,22 +1,10 @@
-const { Sequelize, DataTypes, Op } = require('sequelize'); // Assurez-vous que Sequelize et Op sont importés
+const { Sequelize, DataTypes, Op } = require('sequelize');
+const { Events } = require('discord.js');
 
 const { __cfn, __cf } = eval(require(`current_filename`));
 const { report, reportWarn, reportError } = console.createReports(__cfn);
 
 class Database {
-    /**
-     * The constructor for the Database class.
-     *
-     * Checks for all database environment variables. If any of them are missing, it logs a warning
-     * and sets `this.connected` to false.
-     *
-     * Otherwise, creates a new Sequelize instance with the provided database environment variables.
-     * Also defines all the models used in the database.
-     *
-     * Finally, attempts to authenticate the database connection and logs the result.
-     *
-     * @return {void}
-     */
     constructor() {
         const functionName = 'constructor';
         this.connected = true;
@@ -43,15 +31,14 @@ class Database {
                 global.databse = false
                 reportError(__line, functionName, 'Unable to connect to the database:', err);
             });
+
+        this.models = {};
+        Object.keys(Events).forEach(event => {
+            const modelName = `EVENTS_${event}`;
+            this.models[modelName] = this[modelName];
+        });
     }
 
-    /**
-     * Defines all the models used in the database.
-     *
-     * This function is called by the constructor and defines all the models used in the database.
-     *
-     * @return {void}
-     */
     defineModels() {
 
         this.DATA_channels = this.sequelize.define('DATA_channels', {
@@ -509,56 +496,7 @@ class Database {
         });
 
     }
-    get(name) {
-        this.models = {
-            'EVENTS_userUpdate': this.EVENTS_userUpdate,
-            'EVENTS_voiceServerUpdate': this.EVENTS_voiceServerUpdate,
-            'EVENTS_voiceStateUpdate': this.EVENTS_voiceStateUpdate,
-            'EVENTS_channelUpdate': this.EVENTS_channelUpdate,
-            'EVENTS_channelDelete': this.EVENTS_channelDelete,
-            'EVENTS_channelPinsUpdate': this.EVENTS_channelPinsUpdate,
-            'EVENTS_roleUpdate': this.EVENTS_roleUpdate,
-            'EVENTS_roleDelete': this.EVENTS_roleDelete,
-            'EVENTS_roleCreate': this.EVENTS_roleCreate,
-            'EVENTS_roleUpdate': this.EVENTS_roleUpdate,
-            'EVENTS_threadUpdate': this.EVENTS_threadUpdate,
-            'EVENTS_threadDelete': this.EVENTS_threadDelete,
-            'EVENTS_threadCreate': this.EVENTS_threadCreate,
-            'EVENTS_threadListSync': this.EVENTS_threadListSync,
-            'EVENTS_threadMembersUpdate': this.EVENTS_threadMemberUpdate,
-            'EVENTS_typingStart': this.EVENTS_typingStart,
-            'EVENTS_typingStop': this.EVENTS_typingStop,
-            'EVENTS_presenceUpdate': this.EVENTS_presenceUpdate,
-            'EVENTS_messageCreate': this.EVENTS_messageCreate,
-            'EVENTS_messageUpdate': this.EVENTS_messageUpdate,
-            'EVENTS_messageDelete': this.EVENTS_messageDelete,
-            'EVENTS_messageDeleteBulk': this.EVENTS_messageDeleteBulk,
-            'EVENTS_messageReactionAdd': this.EVENTS_messageReactionAdd,
-            'EVENTS_messageReactionRemove': this.EVENTS_messageReactionRemove,
-            'EVENTS_messageReactionRemoveAll': this.EVENTS_messageReactionRemoveAll,
-            'EVENTS_messageReactionRemoveEmoji': this.EVENTS_messageReactionRemoveEmoji,
-            'EVENTS_interactionCreate': this.EVENTS_interactionCreate,
-            'EVENTS_inviteCreate': this.EVENTS_inviteCreate,
-            'EVENTS_inviteDelete': this.EVENTS_inviteDelete,
-            'EVENTS_guildMemberAdd': this.EVENTS_guildMemberAdd,
-            'EVENTS_guildMemberRemove': this.EVENTS_guildMemberRemove,
-            'EVENTS_guildMemberUpdate': this.EVENTS_guildMemberUpdate,
-            'EVENTS_guildMembersChunk': this.EVENTS_guildMembersChunk,
-            'EVENTS_guildMemberAvailable': this.EVENTS_guildMemberAvailable,
-            'EVENTS_guildEmojiUpdate': this.EVENTS_guildEmojiUpdate,
-            'EVENTS_guildEmojiDelete': this.EVENTS_guildEmojiDelete,
-            'EVENTS_guildEmojiCreate': this.EVENTS_guildEmojiCreate,
-        }
-        return this.models[name];
-    }
 
-
-    /**
-     * Finds all voice state updates made by a user.
-     * @param {string} userId The ID of the user.
-     * @returns {Promise<Array<import('sequelize').Instance<VoiceStateUpdate>>>} The found voice state updates.
-     * @throws {Error} If the database query fails.
-     */
     async getVoiceStateUpdatesByUserId(userId) {
         try {
             const updates = await this.EVENTS_voiceStateUpdate.findAll({
@@ -571,15 +509,7 @@ class Database {
             throw error;
         }
     }
-    /**
-     * Retrieves all messages sent by the given user in the given channels in the given date range.
-     * 
-     * @param {string} userId - The user ID to query messages for.
-     * @param {number} startDate - The start of the date range to query messages for.
-     * @param {number} endDate - The end of the date range to query messages for.
-     * @param {string[]} channelIds - The channels to query messages for.
-     * @returns {Promise<Message[]>} - The messages sent by the user in the given channels in the given date range.
-     */
+
     async getMessagesBetweenDates(userId, startDate, endDate, channelIds) {
 
         try {
@@ -603,18 +533,10 @@ class Database {
     }
 
 
-    /**
-     * Adds a single entry to a model. If the operation fails, it logs an error.
-     * @param {Model} model - The model to add the entry to.
-     * @param {Object} data - The data to add to the model.
-     * @param {string} description - A description of the type of event being added.
-     */
-    async addEntry(model, data, description) {
+    async addEntry(event, data) {
         const functionName = 'addEntry';
-        if (!this.get(model)) return reportError(__line, functionName, 'cannot get model:', model);
-
         try {
-            if (this.connected) await this.get(model).create(data);
+            if (this.connected) await this[`EVENTS_${event}`].create(data);
         } catch (err) {
             reportError(__line, functionName, `Error adding ${description} entry:`, err);
         }
