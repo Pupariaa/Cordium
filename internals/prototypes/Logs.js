@@ -1,7 +1,5 @@
 'use strict';
 
-const path = require('path');
-
 const colors = {
     Reset: "\x1b[0m",
     Bright: "\x1b[1m",
@@ -55,31 +53,7 @@ function formatArgsForError(logContext, ...args) {
     if (!args.length) return '';
     const err = args.pop();
     if (!(err instanceof Error)) return `${args.join(' ')}${args.length > 0 ? ' ' : ''}${err}`;
-
-    const defaultReturn = `${args.join(' ')}${args.length > 0 ? ' ' : ''}(${err.name}) ${err.message}`;
-    const stack = err.stack;
-    const stackLines = stack.split('\n');
-    let errorLocation = stackLines.find(line => line.includes('.js:'));
-    if (!errorLocation) return defaultReturn;
-    errorLocation = errorLocation.trim();
-    const spaceCount = errorLocation.split(' ').length - 1;
-
-    if (spaceCount === 2) {
-        const match = errorLocation.match(/at (.+) \(([^)]+):(\d+):(\d+)\)/);
-        if (!match) return defaultReturn;
-        const functionName = match[1];
-        const fileName = path.relative(projectRoot, match[2]);
-        const lineNumber = match[3];
-        const rowNumber = match[4];
-        return `${args.join(' ')}${args.length > 0 ? ' ' : ''}(${err.name}) ${err.message} (${fileName}:${functionName}:${lineNumber}:${rowNumber})`;
-    } else {
-        const match = errorLocation.match(/at ([^)]+):(\d+):(\d+)/);
-        if (!match) return defaultReturn;
-        const fileName = path.relative(projectRoot, match[1]);
-        const lineNumber = match[2];
-        const rowNumber = match[3];
-        return `${args.join(' ')}${args.length > 0 ? ' ' : ''}(${err.name}) ${err.message} (${fileName}:${lineNumber}:${rowNumber})`;
-    }
+    return formatErr(err);
 }
 
 console.createReport = logFactory(console.info, 'INFO', colors.FgCyan);
@@ -111,5 +85,7 @@ console.fitOnTerm = function (text, mustEndWith = '') {
     });
     return processedLines.join('\n');
 };
+
+const { formatErr } = require(global.utilsPath);
 
 module.exports = {};
