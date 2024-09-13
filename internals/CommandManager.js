@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { REST } = require('@discordjs/rest');
-// const { Routes } = require('discord-api-types/v10');
+const { Routes } = require('discord-api-types/v10');
 const { Collection } = require('discord.js');
 
 const { __cfn, __cf } = eval(require(`current_filename`));
@@ -9,10 +9,8 @@ const { report, reportWarn, reportError } = console.createReports(__cfn);
 
 class CommandHandler {
     constructor() {
-        const functionName = 'constructor';
-        report(__line, functionName, 'Initializing CommandHandler...');
-        this.commandsPath = './src/commands';
-        this.rest = new REST({ version: '10' }).setToken(process.env.client_token);
+        this.rest = new REST({ version: '10' }).setToken(global.clientToken);
+        if (!global.client.commands) global.client.commands = new Collection();
     }
 
     /**
@@ -23,17 +21,11 @@ class CommandHandler {
         try {
             report(__line, functionName, 'Loading commands...');
 
-            // Initialize client.commands if it doesn't exist
-            if (!global.client.commands) {
-                global.client.commands = new Collection();
-                report(__line, functionName, 'client.commands collection initialized');
-            }
-
             // Read command files from the handlers directory
-            const commandFiles = fs.readdirSync(this.commandsPath);
+            const commandFiles = fs.readdirSync(global.commandsFolder);
             for (const file of commandFiles) {
                 try {
-                    const command = require(path.join('..',this.commandsPath, file));
+                    const command = require(path.join('..', global.commandsFolder, file));
                     if ('data' in command && 'execute' in command) {
                         global.client.commands.set(command.data.name, command);
                         report(__line, functionName, `Command loaded: ${command.data.name}`);
@@ -64,7 +56,7 @@ class CommandHandler {
         try {
             report(__line, functionName, 'Deployinging commands to Discord API...');
             await this.rest.put(
-                Routes.applicationGuildCommands(process.env.client_id, process.env.discord_guild_id),
+                Routes.applicationGuildCommands(global.clientId, global.discordGuildId),
                 { body: commands }
             );
 

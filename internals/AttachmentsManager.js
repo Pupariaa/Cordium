@@ -10,10 +10,12 @@ const { downloadFile } = require(global.utilsPath);
 
 class AttachmentsManager {
     constructor() {
-        this.filesPath = `${global.projectRoot}/src/files`;
+        const functionName = 'constructor';
         this.indexFilename = 'attachmentsIndex.json';
+        this.filesPath = `${global.projectRoot}/src/files`;
         this.downloadsPath = path.join(this.filesPath, 'downloads');
         this.indexPath = path.join(this.filesPath, this.indexFilename);
+        report(__line, functionName, `${this.indexFilename} path set to:`, this.indexPath);
     }
 
     loadIndex() {

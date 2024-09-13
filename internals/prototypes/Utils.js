@@ -1,7 +1,4 @@
 'use strict';
-const { __cfn, __cf } = eval(require(`current_filename`));
-const { report, reportWarn, reportError } = console.createReports(__cfn);
-
 const { exec } = require('child_process');
 const path = require('path');
 
@@ -12,7 +9,6 @@ function downloadFile(url, filePath) {
     return new Promise((resolve, reject) => {
         exec(command, (err, stdout, stderr) => {
             if (err) {
-                reportError(__line, functionName, `Error during download of ${global.colors.FgYellow}${url}${global.colors.Reset}:`, err);
                 reject(err);
             } else {
                 resolve(filePath);
@@ -37,7 +33,7 @@ function parseErr(err) {
         lineNumber = match[3];
         rowNumber = match[4];
     } else {
-        const match = errorLocation.match(/(?:at )?\(([^)]+?):(\d+)(?::(\d+))?\)/);
+        const match = errorLocation.match(/(?:at )?\(?([^)]+?):(\d+)(?::(\d+))?\)?/);
         if (!match) return null;
         fileName = path.relative(global.projectRoot, match[1]);
         lineNumber = match[2];
@@ -60,9 +56,24 @@ function validPort(port) {
     return Number.isInteger(port) && port >= 1 && port <= 65535;
 }
 
+function capitalize(word) {
+    return word[0].toUpperCase() + word.slice(1);
+}
+
+function decapitalize(word) {
+    return word[0].toLowerCase() + word.slice(1);
+}
+
+function toCamelCase(varname) {
+    return decapitalize(varname).replace(/_(.)/g, (_, chr) => chr.toUpperCase());
+}
+
 module.exports = {
     downloadFile,
     formatErr,
     getOrNull,
     validPort,
+    capitalize,
+    decapitalize,
+    toCamelCase
 };

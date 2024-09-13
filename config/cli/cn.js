@@ -554,7 +554,7 @@ function createTables() {
 }
 
 function generateInviteLink() {
-    const clientId = process.env.client_id;
+    const clientId = global.clientId;
 
     if (!clientId) {
         console.error('Client ID is missing in environment variables. Please initialize the bot configuration using cn init');

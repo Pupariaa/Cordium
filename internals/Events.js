@@ -2,8 +2,8 @@
 const path = require('path');
 const { AuditLogEvent, Events } = require('discord.js');
 
-
 const { __cfn } = eval(require(`current_filename`));
+const { getOrNull } = require(global.utilsPath);
 
 function formatArgs(logContext, ...args) {
     let i = 0;
@@ -31,122 +31,9 @@ const report = console.createReport(__cfn, formatArgs, shouldLog);
 const reportWarn = console.createReportWarn(__cfn);
 const reportError = console.createReportError(__cfn);
 
-/*
-Events Enum
-https://discord.js.org/docs/packages/discord.js/14.16.1/Events:Enum
-Events callback arguments
-https://discord.js.org/docs/packages/discord.js/14.16.1/ClientEvents:Interface
-*/
-
-/*
-Audit Log Events Enum
-
-https://github.com/discordjs/discord-api-types/blob/main/payloads/v10/auditLog.ts#L137
-
-export enum AuditLogEvent {
-	GuildUpdate = 1,
-
-	ChannelCreate = 10,
-	ChannelUpdate,
-	ChannelDelete,
-	ChannelOverwriteCreate,
-	ChannelOverwriteUpdate,
-	ChannelOverwriteDelete,
-
-	MemberKick = 20,
-	MemberPrune,
-	MemberBanAdd,
-	MemberBanRemove,
-	MemberUpdate,
-	MemberRoleUpdate,
-	MemberMove,
-	MemberDisconnect,
-	BotAdd,
-
-	RoleCreate = 30,
-	RoleUpdate,
-	RoleDelete,
-
-	InviteCreate = 40,
-	InviteUpdate,
-	InviteDelete,
-
-	WebhookCreate = 50,
-	WebhookUpdate,
-	WebhookDelete,
-
-	EmojiCreate = 60,
-	EmojiUpdate,
-	EmojiDelete,
-
-	MessageDelete = 72,
-	MessageBulkDelete,
-	MessagePin,
-	MessageUnpin,
-
-	IntegrationCreate = 80,
-	IntegrationUpdate,
-	IntegrationDelete,
-	StageInstanceCreate,
-	StageInstanceUpdate,
-	StageInstanceDelete,
-
-	StickerCreate = 90,
-	StickerUpdate,
-	StickerDelete,
-
-	GuildScheduledEventCreate = 100,
-	GuildScheduledEventUpdate,
-	GuildScheduledEventDelete,
-
-	ThreadCreate = 110,
-	ThreadUpdate,
-	ThreadDelete,
-
-	ApplicationCommandPermissionUpdate = 121,
-
-	AutoModerationRuleCreate = 140,
-	AutoModerationRuleUpdate,
-	AutoModerationRuleDelete,
-	AutoModerationBlockMessage,
-	AutoModerationFlagToChannel,
-	AutoModerationUserCommunicationDisabled,
-
-	CreatorMonetizationRequestCreated = 150,
-	CreatorMonetizationTermsAccepted,
-
-	OnboardingPromptCreate = 163,
-	OnboardingPromptUpdate,
-	OnboardingPromptDelete,
-	OnboardingCreate,
-	OnboardingUpdate,
-
-	HomeSettingsCreate = 190,
-	HomeSettingsUpdate,
+function shouldListen(event) {
+    return global.listenEvents && global.configListenEvents[String(event).split('.')[0]];
 }
-*/
-
-// const eventsFile = path.join(__dirname, 'events.json');
-
-// function logEvent(eventType, eventData) {
-//     let events = [];
-//     if (fs.existsSync(eventsFile)) {
-//         const data = fs.readFileSync(eventsFile, 'utf8');
-//         events = JSON.parse(data);
-//     }
-//     const dateParis = new Date().toLocaleString('en-US', { timeZone: 'Europe/Paris' });
-//     const dateObject = new Date(dateParis);
-//     const epochParis = dateObject.getTime();
-//     const epochSecondsParis = Math.floor(epochParis / 1000);
-//     const newEvent = {
-//         type: eventType,
-//         datetime: epochSecondsParis,
-//         ...eventData,
-//     };
-
-//     events.push(newEvent);
-//     fs.writeFileSync(eventsFile, JSON.stringify(events, null, 2), 'utf8');
-// }
 
 // TODO: ApplicationCommandPermissionsUpdate
 
@@ -289,6 +176,8 @@ function registerEvent(event, guildId, trigger) {
         return eventScope;
     };
     const listen = function () {
+        if (!shouldListen(eventScope.event)) return;
+        const functionName = 'listen';
         global.client.on(eventScope.event, async function (...args) {
             eventScope.eventName = String(eventScope.event);
             try {
@@ -301,6 +190,7 @@ function registerEvent(event, guildId, trigger) {
                 reportError(__line, eventScope.eventName, err);
             }
         });
+        report(__line, functionName, 'listening to event', eventScope.eventName);
     };
     set(eventScope, 'event', event);
     set(eventScope, 'eventName', undefined, true);
@@ -408,17 +298,17 @@ registerEvent(Events.GuildBanRemove, (ban) => ban.guild.id, async function (ban)
 
 // TODO: GuildDelete
 
-registerEvent(Events.GuildEmojisUpdate, (oldEmojis, newEmojis) => newEmojis.guild.id, async function (oldEmojis, newEmojis) {
+registerEvent(Events.GuildEmojiUpdate, (oldEmoji, newEmoji) => newEmoji.guild.id, async function (oldEmoji, newEmoji) {
     const executor = (await global.guild.latestAuditLog()).executor;
 
     global.eventsDatabase.addEntry(this.event, {
-        emojiId: emoji.id,
-        emojiPath: emoji.url,
+        emojiId: newEmoji.id,
+        emojiPath: newEmoji.url,
         datetime: Date.now(),
         executorId: executor.id,
     });
 
-    report(__line, this.eventName, 'executor.tag', executor.tag, 'emoji.name', emoji.name, 'emoji.url', emoji.url);
+    report(__line, this.eventName, 'executor.tag', executor.tag, 'emoji.name', oldEmoji.name, '->', newEmoji.name, 'emoji.url', oldEmoji.url, '->', newEmoji.url);
 }).listen();
 
 registerEvent(Events.GuildEmojiDelete, (emoji) => emoji.guild.id, async function (emoji) {
@@ -966,7 +856,7 @@ registerEvent(Events.VoiceStateUpdate, (oldState, newState) => newState.guild.id
     if (executor) args.push('executor.tag', executor.tag);
     report(__line, this.eventName, 'user.tag', user.tag, 'channel.name', channel.name);
 })
-.set('count', global.initCount)
+.set('count', global.latestAuditLogCount || 0)
 .set('now', undefined)
 .set('getExecutor', async function getExecutor(auditLogEventType) {
     const latestAuditLog = await global.guild.latestAuditLog();

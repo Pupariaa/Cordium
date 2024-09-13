@@ -9,7 +9,7 @@ const { getOrNull } = require(global.utilsPath);
 class MessagesDatabase {
     messagesDbFilename = 'messages.db'
 
-    constructor(dbPath = path.join(global.projectRoot, this.messagesDbFilename)) {
+    constructor(dbPath = path.join(global.projectRoot, 'internals', this.messagesDbFilename)) {
         const functionName = 'constructor';
         this.dbPath = dbPath;
         this.db = null;

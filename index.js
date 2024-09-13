@@ -3,7 +3,19 @@ const fs = require('fs');
 const path = require('path');
 const { Client, Events } = require('discord.js');
 
+Object.keys(Events).forEach((key) => {
+    Events[key] = key;
+});
+
 global.projectRoot = __dirname;
+global.utilsPath = path.join(__dirname, 'internals', 'prototypes', 'Utils.js');
+const configEnvPath = path.join(__dirname, 'config', 'config.env');
+
+const defaultCommandsFolder = './src/commands';
+const defaultEventsFolder = './src/events';
+const defaultPort = 3000;
+
+const { validPort, capitalize, toCamelCase, getOrNull } = require(global.utilsPath);
 
 async function walkDir(dirPath, callback) {
     const files = await fs.readdirSync(dirPath);
@@ -18,19 +30,11 @@ async function walkDir(dirPath, callback) {
     }
 }
 
-function convertFilePath(filename) {
-    const basename = path.basename(filename, path.extname(filename));
-    return (basename.charAt(0).toLowerCase() + basename.slice(1)).replace(/_(.)/g, (_, chr) => chr.toUpperCase()) + 'Path';
-}
-
 (async function initGlobalPaths() {
     await walkDir(path.join(global.projectRoot, 'internals'), function (filePath) {
         if (path.extname(filePath) !== '.js') return;
-        const propertyName = convertFilePath(filePath);
-        if (propertyName in global) {
-            console.log(propertyName, 'already exists in global scope');
-            return;
-        }
+        const propertyName = toCamelCase(path.basename(filePath, path.extname(filePath))) + 'Path';
+        if (propertyName in global) return;
         Object.defineProperty(global, propertyName, {
             value: filePath,
             configurable: false,
@@ -43,8 +47,6 @@ function convertFilePath(filename) {
 require(global.logsPath);
 const { __cfn, __cf } = eval(require(`current_filename`));
 const { report, reportWarn, reportError } = console.createReports(__cfn);
-
-const { validPort } = require(global.utilsPath);
 
 try {
     process.on('uncaughtException', (err) => {
@@ -72,66 +74,76 @@ try {
 async function initGlobal() {
     const functionName = 'initGlobal';
     try {
-        const defaultEventsFolder = './src/events';
-        const defaultPort = 3000;
-
-        // Load environment variables
-        require('dotenv').config({ path: './config/config.env' });
-        const requiredVars = ['client_token', 'client_id', 'discord_guild_id'];
-        const missingVars = requiredVars.filter(v => !process.env[v]);
+        // Load configs
+        require('dotenv').config({ path: configEnvPath });
+        const missingVars = [];
+        for (const requiredVar of ['client_token', 'client_id', 'discord_guild_id']) {
+            if (!process.env[requiredVar]) {
+                missingVars.push(requiredVar);
+            } else if (missingVars.length === 0) {
+                Object.defineProperty(global, toCamelCase(requiredVar), {
+                    value: process.env[requiredVar],
+                    configurable: false,
+                    enumerable: true,
+                    writable: false
+                });
+            }
+        }
         if (missingVars.length > 0) {
             reportError(__line, functionName, 'Missing required environment variables:', ...missingVars);
             process.exit(1);
         }
+        global.listenEvents = process.env.listen_events ? process.env.listen_events.toLowerCase() === 'true' : true;
         global.reportEvents = process.env.report_events ? process.env.report_events.toLowerCase() === 'true' : true;
         global.eventsFolder = process.env.events_folder ? (fs.existsSync(process.env.events_folder) ? process.env.events_folder : defaultEventsFolder) : defaultEventsFolder;
+        global.commandsFolder = process.env.commands_folder ? (fs.existsSync(process.env.commands_folder) ? process.env.commands_folder : defaultCommandsFolder) : defaultCommandsFolder;
         global.apiEnable = process.env.api_enable ? process.env.api_enable.toLowerCase() === 'true' : false;
         global.apiPort = process.env.api_port ? (validPort(process.env.api_port) ? process.env.api_port : defaultPort) : defaultPort;
+        global.utcDiff = parseInt((process.env.utc_diff ? process.env.utc_diff : 0) * 60 * 60 * 1000);
 
-        // Load config files
         global.configChannels = JSON.parse(fs.readFileSync('./config/channels.json', 'utf-8'));
         if (Object.values(global.configChannels).every(channels => Object.keys(channels).length === 0)) {
             reportWarn(__line, functionName, 'No channels in config/channels.json.');
         }
-        global.configReportEvents = JSON.parse(fs.readFileSync('./config/reportEvents.json', 'utf-8'));
-        for (const eventName of Object.values(Events)) {
-            if (!Object.keys(global.configReportEvents).includes(eventName) && eventName !== Events.ClientReady) {
-                reportWarn(__line, functionName, `Missing ${eventName} in config/reportEvents.json`);
+        for (const filename of ['reportEvents', 'listenEvents']) {
+            const jsonPath = path.join('config', `${filename}.json`);
+            const json = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
+            Object.defineProperty(global, `config${capitalize(filename)}`, {
+                value: json,
+                configurable: false,
+                enumerable: true,
+                writable: false
+            });
+            for (const eventName of Object.keys(Events)) {
+                if (!Object.keys(json).includes(eventName) && eventName !== Events.ClientReady) {
+                    reportWarn(__line, functionName, `Missing ${eventName} in ${jsonPath}`);
+                }
             }
         }
+        report(__line, functionName, 'config files loaded');
 
-        // Load global modules
+        // Create global modules
+        global.client = new Client({ intents: 3276799, partials: ['MESSAGE', 'REACTION'] });
+
         const Channels = require(global.channelsPath);
         global.channels = new Channels();
+
+        const CommandManager = require(global.commandManagerPath);
+        global.commandManager = new CommandManager();
         
         const AttachmentsManager = require(global.attachmentsManagerPath);
         global.attachments = new AttachmentsManager();
-
-        // Login client
-        global.client = new Client({ intents: 3276799, partials: ['MESSAGE', 'REACTION'] });
-        await global.client.login(process.env.client_token);
         
-        // Get guild
-        global.guild = global.client.guilds.cache.get(process.env.discord_guild_id);
-        if (!global.guild) {
-            reportError(__line, functionName, 'Guild not found. Check the "discord_guild_id" in config.env');
-            process.exit(1);
-        }
-
-        // Initialize databases
         const EventsDatabase = require(global.eventsDatabasePath);
         global.eventsDatabase = new EventsDatabase();
-        await global.eventsDatabase.init();
-        global.databaseCache = {};
 
         const MessagesDatabase = require(global.messagesDatabasePath);
         global.messagesDatabase = new MessagesDatabase();
-        await global.messagesDatabase.init();
+        report(__line, functionName, 'global modules created');
 
-        // Miscellaneous
+        // Create caches
         global.client.invitesCache = new Map();
-        global.initCount = (await global.guild.latestAuditLog())?.extra?.count || 0;
-        global.utcDiff = parseInt((process.env.utc_diff ? process.env.utc_diff : 0) * 60 * 60 * 1000);
+        global.databaseCache = {};
 
         // TODO
         // require(global.getDatabasePath);
@@ -142,24 +154,27 @@ async function initGlobal() {
 
 await initGlobal();
 
-const event = Events.ClientReady;
-global.client.on(event, async () => {
+async function onReady() {
+    const functionName = 'onReady';
     try {
-        report(__line, event, `Client ready`);
+        report(__line, functionName, `Client ready`);
 
-        // Initialize commands
-        const CommandManager = require(global.commandManagerPath);
-        const commandManager = new CommandManager();
-        commandManager.loadCommands();
-        commandManager.deployCommands();
+        // Get guild
+        global.guild = global.client.guilds.cache.get(global.discordGuildId);
+        if (!global.guild) {
+            reportError(__line, functionName, `Guild of id ${global.discordGuildId} not found`);
+            process.exit(1);
+        }
+
+        // Init databases
+        await Promise.all([global.eventsDatabase.init(), global.messagesDatabase.init()]);
+
+        // Deploy commands
+        global.commandManager.loadCommands();
+        global.commandManager.deployCommands();
 
         // Dispatch events
         require(global.eventsPath);
-
-        // Initialize invites cache
-        const invites = await global.guild.invites.fetch();
-        invites.forEach(invite => global.client.invitesCache.set(invite.code, invite.uses));
-        report(__line, event, 'Invites cache initialized');
 
         // Interaction handler
         global.client.on(Events.InteractionCreate, async (interaction) => {
@@ -183,11 +198,23 @@ global.client.on(event, async () => {
             }
         });
 
-        // Start API
+        // Init invites cache
+        const invites = await global.guild.invites.fetch();
+        invites.forEach(invite => global.client.invitesCache.set(invite.code, invite.uses));
+
+        // Load API
         require(global.apiPath);
+
+        // Miscellaneous
+        global.latestAuditLogCount = getOrNull(await global.guild.latestAuditLog(), 'extra.count');
     } catch (err) {
-        reportError(__line, event, err);
+        reportError(__line, functionName, err);
     }
-});
+}
+
+// Login client
+const event = Events.ClientReady;
+global.client.on(event, onReady);
+await global.client.login(global.clientToken);
 
 });
