@@ -16,12 +16,7 @@ const defaultEventsFolder = "./src/events";
 const defaultEndpointsFolder = "./src/api/endpoints";
 const defaultPort = 3000;
 
-const {
-    validPort,
-    capitalize,
-    toCamelCase,
-    getOrNull,
-} = require(global.utilsPath);
+const { validPort, capitalize, toCamelCase, getOrNull, } = require(global.utilsPath);
 
 async function walkDir(dirPath, callback) {
     const files = await fs.readdirSync(dirPath);
@@ -41,8 +36,7 @@ async function walkDir(dirPath, callback) {
         path.join(global.projectRoot, "internals"),
         function (filePath) {
             if (path.extname(filePath) !== ".js") return;
-            const propertyName =
-                toCamelCase(path.basename(filePath, path.extname(filePath))) + "Path";
+            const propertyName = toCamelCase(path.basename(filePath, path.extname(filePath))) + "Path";
             if (propertyName in global) return;
             Object.defineProperty(global, propertyName, {
                 value: filePath,
@@ -89,11 +83,7 @@ async function walkDir(dirPath, callback) {
             // Load configs
             require("dotenv").config({ path: configEnvPath });
             const missingVars = [];
-            for (const requiredVar of [
-                "client_token",
-                "client_id",
-                "discord_guild_id",
-            ]) {
+            for (const requiredVar of ["client_token", "client_id", "discord_guild_id",]) {
                 if (!process.env[requiredVar]) {
                     missingVars.push(requiredVar);
                 } else if (missingVars.length === 0) {
@@ -106,69 +96,21 @@ async function walkDir(dirPath, callback) {
                 }
             }
             if (missingVars.length > 0) {
-                reportError(
-                    __line,
-                    functionName,
-                    "Missing required environment variables:",
-                    ...missingVars
-                );
+                reportError(__line, functionName, "Missing required environment variables:", ...missingVars);
                 process.exit(1);
             }
-            global.listenEvents = process.env.listen_events
-                ? process.env.listen_events.toLowerCase() === "true"
-                : true;
-            global.reportEvents = process.env.report_events
-                ? process.env.report_events.toLowerCase() === "true"
-                : true;
-            global.eventsFolder = path.join(
-                global.projectRoot,
-                process.env.events_folder
-                    ? fs.existsSync(process.env.events_folder)
-                        ? process.env.events_folder
-                        : defaultEventsFolder
-                    : defaultEventsFolder
-            );
-            global.commandsFolder = path.join(
-                global.projectRoot,
-                process.env.commands_folder
-                    ? fs.existsSync(process.env.commands_folder)
-                        ? process.env.commands_folder
-                        : defaultCommandsFolder
-                    : defaultCommandsFolder
-            );
-            global.endpointsFolder = path.join(
-                global.projectRoot,
-                process.env.endpoints_folder
-                    ? fs.existsSync(process.env.endpoints_folder)
-                        ? process.env.endpoints_folder
-                        : defaultEndpointsFolder
-                    : defaultEndpointsFolder
-            );
-            global.apiEnable = process.env.api_enable
-                ? process.env.api_enable.toLowerCase() === "true"
-                : false;
-            global.apiPort = process.env.api_port
-                ? validPort(process.env.api_port)
-                    ? process.env.api_port
-                    : defaultPort
-                : defaultPort;
-            global.utcDiff = parseInt(
-                (process.env.utc_diff ? process.env.utc_diff : 0) * 60 * 60 * 1000
-            );
+            global.listenEvents = process.env.listen_events ? process.env.listen_events.toLowerCase() === "true" : true;
+            global.reportEvents = process.env.report_events ? process.env.report_events.toLowerCase() === "true" : true;
+            global.eventsFolder = path.join(global.projectRoot, process.env.events_folder ? fs.existsSync(process.env.events_folder) ? process.env.events_folder : defaultEventsFolder : defaultEventsFolder);
+            global.commandsFolder = path.join(global.projectRoot, process.env.commands_folder ? fs.existsSync(process.env.commands_folder) ? process.env.commands_folder : defaultCommandsFolder : defaultCommandsFolder);
+            global.endpointsFolder = path.join(global.projectRoot, process.env.endpoints_folder ? fs.existsSync(process.env.endpoints_folder) ? process.env.endpoints_folder : defaultEndpointsFolder : defaultEndpointsFolder);
+            global.apiEnable = process.env.api_enable ? process.env.api_enable.toLowerCase() === "true" : false;
+            global.apiPort = process.env.api_port ? validPort(process.env.api_port) ? process.env.api_port : defaultPort : defaultPort;
+            global.utcDiff = parseInt((process.env.utc_diff ? process.env.utc_diff : 0) * 60 * 60 * 1000);
 
-            global.configChannels = JSON.parse(
-                fs.readFileSync("./config/channels.json", "utf-8")
-            );
-            if (
-                Object.values(global.configChannels).every(
-                    (channels) => Object.keys(channels).length === 0
-                )
-            ) {
-                reportWarn(
-                    __line,
-                    functionName,
-                    "No channels in config/channels.json."
-                );
+            global.configChannels = JSON.parse(fs.readFileSync("./config/channels.json", "utf-8"));
+            if (Object.values(global.configChannels).every((channels) => Object.keys(channels).length === 0)) {
+                reportWarn(__line, functionName, "No channels in config/channels.json.");
             }
             for (const basename of ["reportEvents", "listenEvents"]) {
                 const filename = `${basename}.json`;
@@ -181,25 +123,15 @@ async function walkDir(dirPath, callback) {
                     writable: false,
                 });
                 for (const eventName of Object.keys(Events)) {
-                    if (
-                        !Object.keys(json).includes(eventName) &&
-                        eventName !== Events.ClientReady
-                    ) {
-                        reportWarn(
-                            __line,
-                            functionName,
-                            `Missing ${eventName} in ${filename}`
-                        );
+                    if (!Object.keys(json).includes(eventName) && eventName !== Events.ClientReady) {
+                        reportWarn(__line, functionName, `Missing ${eventName} in ${filename}`);
                     }
                 }
             }
             report(__line, functionName, "config files loaded");
 
             // Create global modules
-            global.client = new Client({
-                intents: 3276799,
-                partials: ["MESSAGE", "REACTION"],
-            });
+            global.client = new Client({ intents: 3276799, partials: ["MESSAGE", "REACTION"], });
 
             const Channels = require(global.channelsPath);
             global.channels = new Channels();
@@ -238,31 +170,19 @@ async function walkDir(dirPath, callback) {
             // Get guild
             global.guild = global.client.guilds.cache.get(global.discordGuildId);
             if (!global.guild) {
-                reportError(
-                    __line,
-                    functionName,
-                    `Guild of id ${global.discordGuildId} not found`
-                );
+                reportError(__line, functionName, `Guild of id ${global.discordGuildId} not found`);
                 process.exit(1);
             }
 
             // Init databases
-            await Promise.all([
-                global.eventsDatabase.init(),
-                global.messagesDatabase.init(),
-            ]);
+            await Promise.all([global.eventsDatabase.init(), global.messagesDatabase.init(),]);
 
             // Init invites cache
             const invites = await global.guild.invites.fetch();
-            invites.forEach((invite) =>
-                global.client.invitesCache.set(invite.code, invite.uses)
-            );
+            invites.forEach((invite) => global.client.invitesCache.set(invite.code, invite.uses));
 
             // Miscellaneous
-            global.latestAuditLogCount = getOrNull(
-                await global.guild.latestAuditLog(),
-                "extra.count"
-            );
+            global.latestAuditLogCount = getOrNull(await global.guild.latestAuditLog(), "extra.count");
 
             // Dispatch events
             require(global.eventsPath);
