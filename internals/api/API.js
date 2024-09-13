@@ -6,7 +6,6 @@ const path = require('path');
 const app = express();
 const endpointsPath = path.join(__dirname, '../../src/api/endpoints');
 const endpoints = require(endpointsPath);
-const port = process.env.api_port;
 
 const { __cfn, __cf } = eval(require(`current_filename`));
 const { report, reportWarn, reportError } = console.createReports(__cfn);
@@ -74,13 +73,13 @@ const rh = async (req, res) => {
     }
 };
 
-if (port && process.env.api_enable && global.eventsDatabaseOnline) {
+if (global.apiPort && global.apiEnable && global.eventsDatabaseOnline) {
     app.get('/api/private/*', rh);
     app.get('/api/public/*', rh);
 
     const srv = http.createServer(app);
-    srv.listen(port, () => {
-        report(__line, __cfn, `API is Running on port ${port}`);
+    srv.listen(global.apiPort, () => {
+        report(__line, __cfn, `API is Running on port ${global.apiPort}`);
     });
 } else {
     if (!global.eventsDatabaseOnline && process.env.db_host) {

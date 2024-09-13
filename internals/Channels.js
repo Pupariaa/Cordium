@@ -33,45 +33,6 @@ class Channels {
     constructor() {
     }
 
-    async send(channel, data) {
-        const functionName = 'send';
-        try {
-            return await channel.send(data);
-        } catch (err) {
-            reportError(__line, functionName, `Error sending message to channel ${channel.name}:`, err);
-        }
-        return null;
-    }
-
-    async rename(channel, newName) {
-        // const functionName = 'rename';
-        // const channelName = channel.name;
-        try {
-            await channel.setName(newName);
-            // report(__line, functionName, `Channel "${channelName}" renamed to "${newName}"`);
-            return channel;
-        } catch (err) {
-            reportError(__line, functionName, `Error renaming channel ${channel.name}:`, err);
-        }
-        return null;
-    }
-
-    // async getCreator(channel) {
-    //     const functionName = 'getCreator';
-    //     try {
-    //         let auditLogs = await global.guild.fetchAllAuditLogs();
-    //         if (!auditLogs) return null;
-    //         for (const entry of auditLogs) {
-    //             if (entry.action === AuditLogEvent.ChannelCreate && entry.target.id === channel.id) {
-    //                 return entry.executor;
-    //             }
-    //         }
-    //     } catch (err) {
-    //         reportError(__line, functionName, `Error fetching audit logs:`, err);
-    //     }
-    //     return null;
-    // }
-
     getById = function(channelId) {
         return _getById(channelId);
     }
@@ -124,4 +85,4 @@ class Channels {
     }
 }
 
-global.channels = new Channels();
+module.exports = Channels;

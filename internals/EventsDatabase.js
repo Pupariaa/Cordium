@@ -6,14 +6,15 @@ const { report, reportWarn, reportError } = console.createReports(__cfn);
 
 class EventsDatabase {
     constructor() {
-        const functionName = 'constructor';
-        this.connected = true;
         this.charset = "utf8mb4";
         this.collate = "utf8mb4_unicode_ci";
-        global.eventsDatabaseOnline = true
+        global.eventsDatabaseOnline = false;
+    }
+
+    init() {
+        const functionName = 'init';
         if (!process.env.db_name || !process.env.db_host || !process.env.db_user || !process.env.db_pass || !process.env.db_port) {
             reportWarn(__line, functionName, 'Database connection parameters are missing. Cannot connect. Nothing will be recorded');
-            this.connected = false;
             return;
         }
 
@@ -25,18 +26,24 @@ class EventsDatabase {
         });
 
         this.defineModels();
-        this.sequelize.authenticate()
-            .then(() => report(__line, functionName, 'Database connection successful'))
-            .catch(err => {
-                global.eventsDatabaseOnline = false
-                reportError(__line, functionName, 'Unable to connect to the database:', err);
-            });
-
         this.models = {};
         Object.keys(Events).forEach(event => {
             const modelName = `EVENTS_${event}`;
             this.models[modelName] = this[modelName];
         });
+        
+        return new Promise((resolve, reject) =>
+            this.sequelize.authenticate()
+            .then(() => {
+                global.eventsDatabaseOnline = true;
+                report(__line, functionName, 'Database connection successful')
+                resolve();
+            })
+            .catch(err => {
+                reportError(__line, functionName, 'Unable to connect to the database:', err);
+                reject(err);
+            })
+        );
     }
 
     defineModels() {
@@ -535,7 +542,7 @@ class EventsDatabase {
     async addEntry(event, data) {
         const functionName = 'addEntry';
         try {
-            if (this.connected) await this[`EVENTS_${event}`].create(data);
+            if (global.eventsDatabaseOnline) await this[`EVENTS_${event}`].create(data);
         } catch (err) {
             reportError(__line, functionName, `Error adding ${description} entry:`, err);
         }

@@ -63,10 +63,10 @@ class CommandHandler {
 
         try {
             report(__line, functionName, 'Deployinging commands to Discord API...');
-            // const data = await this.rest.put(
-            //     Routes.applicationGuildCommands(process.env.client_id, process.env.discord_guild_id),
-            //     { body: commands }
-            // );
+            await this.rest.put(
+                Routes.applicationGuildCommands(process.env.client_id, process.env.discord_guild_id),
+                { body: commands }
+            );
 
             report(__line, functionName, 'Commands deployed successfully');
         } catch (err) {

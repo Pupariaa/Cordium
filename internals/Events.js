@@ -276,7 +276,7 @@ function eventToPath(event) {
             break;
     }
     
-    return path.join('../', process.env.events_folder, category, String(event) + '.js');
+    return path.join('../', global.eventsFolder, category, String(event) + '.js');
 }
 
 function registerEvent(event, guildId, trigger) {
@@ -718,12 +718,6 @@ registerEvent(Events.MessageCreate, (message) => message.guild.id, async functio
     const channel = message.channel;
     const content = message.content;
 
-    const attachments = await global.attachment.handleAttachments(message);
-    let filenames;
-    if (attachments) {
-        filenames = attachments.map(attachment => attachment.filename);
-    }
-
     // TODO: rename userId to executorId in DB
     // global.eventsDatabase.addEntry(this.event, {
     //     id: message.id,
@@ -986,8 +980,8 @@ registerEvent(Events.VoiceStateUpdate, (oldState, newState) => newState.guild.id
 })
 .set('impossibleCaseReached', function (msg) {
     reportWarn(__line, this.eventName, 'impossible case reached:', msg);
-    const module = require(eventToPath(event));
-    module.event = event;
+    const module = require(eventToPath(this.event));
+    module.event = this.event;
     module.callback(oldState, newState);
 }).listen();
 

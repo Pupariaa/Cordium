@@ -18,7 +18,7 @@ module.exports = {
       return validationError;
     }
 
-    const pairs = await global.database_cache.get_voice_member(requestData.userid)
+    const pairs = await global.databaseCache.get_voice_member(requestData.userid)
     return pairs
 
   },

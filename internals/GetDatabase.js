@@ -315,10 +315,10 @@ async function getMessageDetails(messageId) {
     }
 };
 
-global.database_cache.get_voice_member = async function (userid) {
+global.databaseCache.get_voice_member = async function (userid) {
     return await getVoiceConnectionStatusWithEvents(await global.eventsDatabase.getVoiceStateUpdatesByUserId(userid));
 }
 
-global.database_cache.get_message = async function (messageId) {
+global.databaseCache.get_message = async function (messageId) {
     return await getMessageDetails(messageId)
 }

@@ -56,9 +56,13 @@ function getOrNull(obj, path) {
     return path.split('.').reduce((acc, key) => acc?.[key] ?? null, obj);
 }
 
+function validPort(port) {
+    return Number.isInteger(port) && port >= 1 && port <= 65535;
+}
+
 module.exports = {
     downloadFile,
-    parseErr,
     formatErr,
     getOrNull,
+    validPort,
 };

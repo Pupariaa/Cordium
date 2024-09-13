@@ -1,3 +1,4 @@
+const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
 const { TextChannel } = require('discord.js');
 const { __cfn, __cf } = eval(require(`current_filename`));
@@ -6,7 +7,9 @@ const { report, reportWarn, reportError } = console.createReports(__cfn);
 const { getOrNull } = require(global.utilsPath);
 
 class MessagesDatabase {
-    constructor(dbPath = './internals/MessagesDatabase.db') {
+    messagesDbFilename = 'messages.db'
+
+    constructor(dbPath = path.join(global.projectRoot, this.messagesDbFilename)) {
         const functionName = 'constructor';
         this.dbPath = dbPath;
         this.db = null;
@@ -56,7 +59,7 @@ class MessagesDatabase {
         };
         this.messageSQLFields = Object.keys(this.messagesTableColumns).filter(key => key !== 'id').join(', ');
         this.messageSQLValues = Object.keys(this.messagesTableColumns).filter(key => key !== 'id').map(() => '?').join(', ');
-        report(__line, functionName, 'MessagesDatabase path set to:', dbPath);
+        report(__line, functionName, `${this.messagesDbFilename} path set to:`, dbPath);
     }
 
     #connectToDatabase() {
@@ -218,6 +221,11 @@ class MessagesDatabase {
             insertsSQL.push(`TODO`);
             params.push(`TODO`);
         }
+        global.attachments.saveAttachments(message);
+        for (const attachment of message.attachments.values()) {
+            insertsSQL.push(`TODO`);
+            params.push(`TODO`);
+        }
         */
         return Promise.all(insertsSQL.map((insertSQL, index) =>
             new Promise((resolve, reject) =>
@@ -248,7 +256,7 @@ class MessagesDatabase {
 
     update(newMessage) {
         const functionName = 'update';
-        const insertOrReplaceSQL = `INSERT OR REPLACE INTO messages (${this.messageSQLFields}) VALUES (${this.messageSQLValues})`;
+        const insertOrReplaceSQL = `INSERT OR REPLACE INTO messages (${this.messageSQLFields}) VALUES (${this.messageSQLValues}) WHERE messageId = ${newMessage.id}`;
         const params = this.#extractFields(newMessage);
         return new Promise((resolve, reject) =>
             this.db.run(insertOrReplaceSQL, params, (err) => {
