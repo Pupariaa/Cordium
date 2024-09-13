@@ -2,7 +2,7 @@
 const fs = require('fs');
 const Discord = require('discord.js');
 const CommandManager = require('./CommandManager');
-require('puparia.getlines.js');
+
 const { __cfn, __cf } = eval(require(`current_filename`));
 const { report, reportWarn, reportError } = console.createReports(__cfn);
 
@@ -27,15 +27,16 @@ class CQD {
             checkEnvVariables();
 
             global.client = new Discord.Client({ intents: 3276799, partials: ['MESSAGE', 'REACTION'] });
+            
             global.configChannels = JSON.parse(fs.readFileSync('./config/channels.json', 'utf-8'));
             global.configReportEvents = JSON.parse(fs.readFileSync('./config/reportEvents.json', 'utf-8'));
             global.reportEvents = process.env.report_events.toLowerCase() === 'true';
             require('./Channels');
 
-            const Database = require('../internals/Database');
-            global.database_cache = [];
+            const EventsDatabase = require('./EventsDatabase');
+            global.database_cache = {};
             
-            global.database = new Database();
+            global.eventsDatabase = new EventsDatabase();
             require('../internals/GetDatabase')
 
             const AttachmentManager = require('./AttachmentManager');

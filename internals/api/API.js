@@ -74,7 +74,7 @@ const rh = async (req, res) => {
     }
 };
 
-if (port && process.env.api_enable && global.database) {
+if (port && process.env.api_enable && global.eventsDatabaseOnline) {
     app.get('/api/private/*', rh);
     app.get('/api/public/*', rh);
 
@@ -83,9 +83,9 @@ if (port && process.env.api_enable && global.database) {
         report(__line, __cfn, `API is Running on port ${port}`);
     });
 } else {
-    if (!global.database && process.env.db_host) {
+    if (!global.eventsDatabaseOnline && process.env.db_host) {
         reportError(__line, __cfn, 'The API could not start because the database was not resolved. Do cn bdd-test for more details');
-    } else if (!global.database && !process.env.db_host){
+    } else if (!global.eventsDatabaseOnline && !process.env.db_host){
         reportWarn(__line, __cfn, 'The API could not start because the database was not configured. Do cn -bdd -host "hostname" --dbname "<database name>" --dbuser "<database username>" --dbpass "<database password>" --dbport <database port> --create');
     } else {
         reportWarn(__line, __cfn, 'API is not setup properly, check environment variables');

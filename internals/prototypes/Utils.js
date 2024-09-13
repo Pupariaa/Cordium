@@ -30,14 +30,14 @@ function parseErr(err) {
     const spaceCount = errorLocation.split(' ').length - 1;
     let functionName, fileName, lineNumber, rowNumber;
     if (spaceCount === 2) {
-        const match = errorLocation.match(/(?:at )?(.+) \(([^)]+):(\d+)(?::(\d+))?\)/);
+        const match = errorLocation.match(/(?:at )?(.+) \(([^)]+?):(\d+)(?::(\d+))?\)/);
         if (!match) return null;
         functionName = match[1];
         fileName = path.relative(global.projectRoot, match[2]);
         lineNumber = match[3];
         rowNumber = match[4];
     } else {
-        const match = errorLocation.match(/(?:at )?([^)]+):(\d+)(?::(\d+))?/);
+        const match = errorLocation.match(/(?:at )?\(([^)]+?):(\d+)(?::(\d+))?\)/);
         if (!match) return null;
         fileName = path.relative(global.projectRoot, match[1]);
         lineNumber = match[2];
@@ -47,7 +47,7 @@ function parseErr(err) {
 }
 
 function formatErr(err) {
-    let r = `(${err.name}) ${err.message}`;
+    let r = `(${err.name}) ${err.message.includes('Require stack') ? err.message.split('\n')[0] : err.message}`;
     const parsedErr = parseErr(err);
     return !parsedErr || parsedErr.every(e => !e) ? r : `${r} (${parsedErr.filter(e => e).join(':')})`;
 }

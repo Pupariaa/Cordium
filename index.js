@@ -3,7 +3,6 @@ const fs = require('fs');
 const path = require('path');
 const { Events } = require('discord.js');
 
-require('puparia.getlines.js');
 require('dotenv').config({ path: './config/config.env' });
 const { __cfn, __cf } = eval(require(`current_filename`));
 
@@ -12,12 +11,16 @@ global.utilsPath = __dirname + '/internals/prototypes/Utils';
 
 const prototypesDir = './internals/prototypes';
 require(`${prototypesDir}/Logs`);
+const clientPrototypesDir = './src/prototypes';
 
 const { report, reportWarn, reportError } = console.createReports(__cfn);
 
 fs.readdirSync(prototypesDir)
     .filter(filename => filename !== 'Logs.js')
     .forEach(filename => require('./' + path.join(prototypesDir, filename)));
+
+fs.readdirSync(clientPrototypesDir)
+    .forEach(filename => require('./' + path.join(clientPrototypesDir, filename)));
 
 const CQD = require('./internals/CQD');
 new CQD();

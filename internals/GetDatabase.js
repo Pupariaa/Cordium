@@ -76,7 +76,7 @@ async function getVoiceConnectionStatusWithEvents(voiceUpdates) {
 
   
           if (channelIds.length > 0) {
-            const messages = await global.database.getMessagesBetweenDates(
+            const messages = await global.eventsDatabase.getMessagesBetweenDates(
               userId,
               connectEvents[userId].connectedTimestamp,
               connectEvents[userId].disconnectTimestamp || Date.now(),
@@ -112,7 +112,7 @@ async function getVoiceConnectionStatusWithEvents(voiceUpdates) {
       const { connectedChannelId } = session;
       const channelIds = [connectedChannelId];
       if (channelIds.length > 0) {
-        const messages = await global.database.getMessagesBetweenDates(
+        const messages = await global.eventsDatabase.getMessagesBetweenDates(
           session.userId,
           session.connectAt,
           Date.now(),
@@ -214,7 +214,7 @@ function addEventChanges(eventsList, event) {
 
 async function getMessageDetails(messageId) {
     try {
-        const message = await global.database.EVENTS_messageCreate.findOne({
+        const message = await global.eventsDatabase.EVENTS_messageCreate.findOne({
             where: { messageId },
         });
 
@@ -245,7 +245,7 @@ async function getMessageDetails(messageId) {
             deletedAt: null,
             deletedTimestamp: null
         };
-        const messageDeleted = await global.database.EVENTS_messageDelete.findOne({
+        const messageDeleted = await global.eventsDatabase.EVENTS_messageDelete.findOne({
             where: { messageId },
         });
         if (messageDeleted) {
@@ -264,7 +264,7 @@ async function getMessageDetails(messageId) {
             }
         }
         
-        const replies = await global.database.EVENTS_messageCreate.findAll({
+        const replies = await global.eventsDatabase.EVENTS_messageCreate.findAll({
             where: { replyToMessageId: messageId },
         });
         messageDetails.replies = replies.map((reply) => ({
@@ -286,11 +286,11 @@ async function getMessageDetails(messageId) {
             content: reply.content,
             attachments: reply.attachments || [],
         }));
-        const reactions = await global.database.EVENTS_messageReactionAdd.findAll({
+        const reactions = await global.eventsDatabase.EVENTS_messageReactionAdd.findAll({
             where: { messageId },
         });
         for (const reaction of reactions) {
-            const reactionRemoved = await global.database.EVENTS_messageReactionRemove.findOne({
+            const reactionRemoved = await global.eventsDatabase.EVENTS_messageReactionRemove.findOne({
                 where: {
                     reactionId: reaction.reactionId,
                     messageId: reaction.messageId,
@@ -315,15 +315,8 @@ async function getMessageDetails(messageId) {
     }
 };
 
-
-
-
-
-
-
-
 global.database_cache.get_voice_member = async function (userid) {
-    return await getVoiceConnectionStatusWithEvents(await global.database.getVoiceStateUpdatesByUserId(userid));
+    return await getVoiceConnectionStatusWithEvents(await global.eventsDatabase.getVoiceStateUpdatesByUserId(userid));
 }
 
 global.database_cache.get_message = async function (messageId) {

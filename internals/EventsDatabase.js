@@ -4,13 +4,13 @@ const { Events } = require('discord.js');
 const { __cfn, __cf } = eval(require(`current_filename`));
 const { report, reportWarn, reportError } = console.createReports(__cfn);
 
-class Database {
+class EventsDatabase {
     constructor() {
         const functionName = 'constructor';
         this.connected = true;
         this.charset = "utf8mb4";
         this.collate = "utf8mb4_unicode_ci";
-        global.database = true
+        global.eventsDatabaseOnline = true
         if (!process.env.db_name || !process.env.db_host || !process.env.db_user || !process.env.db_pass || !process.env.db_port) {
             reportWarn(__line, functionName, 'Database connection parameters are missing. Cannot connect. Nothing will be recorded');
             this.connected = false;
@@ -28,7 +28,7 @@ class Database {
         this.sequelize.authenticate()
             .then(() => report(__line, functionName, 'Database connection successful'))
             .catch(err => {
-                global.databse = false
+                global.eventsDatabaseOnline = false
                 reportError(__line, functionName, 'Unable to connect to the database:', err);
             });
 
@@ -532,7 +532,6 @@ class Database {
         }
     }
 
-
     async addEntry(event, data) {
         const functionName = 'addEntry';
         try {
@@ -543,4 +542,4 @@ class Database {
     }
 }
 
-module.exports = Database;
+module.exports = EventsDatabase;

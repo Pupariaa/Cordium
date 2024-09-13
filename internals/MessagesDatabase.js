@@ -29,6 +29,31 @@ class MessagesDatabase {
             tts: 'BOOLEAN NOT NULL',
             webhookId: 'TEXT'
         };
+        this.partiesTableColumns = {
+            id: 'INTEGER PRIMARY KEY AUTOINCREMENT',
+            messageId: 'INTEGER NOT NULL',
+            partyId: 'TEXT NOT NULL',
+            type: 'TEXT NOT NULL CHECK(type >= 0 AND type <= 3)'
+        };
+        this.attachmentsTableColumns = {
+            id: 'INTEGER PRIMARY KEY AUTOINCREMENT',
+            messageId: 'INTEGER NOT NULL',
+            contentType: 'TEXT NOT NULL',
+            description: 'TEXT',
+            duration: 'INTEGER',
+            ephemeral: 'BOOLEAN NOT NULL',
+            flags: 'INTEGER NOT NULL',
+            height: 'INTEGER',
+            attachmentId: 'TEXT NOT NULL',
+            name: 'TEXT NOT NULL',
+            proxyUrl: 'TEXT NOT NULL',
+            size: 'INTEGER NOT NULL',
+            spoiler: 'BOOLEAN NOT NULL',
+            title: 'TEXT',
+            url: 'TEXT NOT NULL',
+            waveform: 'TEXT',
+            width: 'INTEGER'
+        };
         this.messageSQLFields = Object.keys(this.messagesTableColumns).filter(key => key !== 'id').join(', ');
         this.messageSQLValues = Object.keys(this.messagesTableColumns).filter(key => key !== 'id').map(() => '?').join(', ');
         report(__line, functionName, 'MessagesDatabase path set to:', dbPath);
@@ -110,7 +135,7 @@ class MessagesDatabase {
             mentionsId
             pinned
         - notes:
-            reference is guildId,channelId,messageId, any of them can be undefined
+            reference is guildId,channelId,messageId, any of them can be null
   
     */
 
@@ -150,17 +175,13 @@ class MessagesDatabase {
 
     set(message) {
         const functionName = 'set';
-        const insertsSQL = [
-            `INSERT INTO messages (${this.messageSQLFields}) VALUES (${this.messageSQLValues})`
-        ];
-        const params = [
-            this.#extractFields(message),
-        ];
-        /*
+        const insertsSQL = [`INSERT INTO messages (${this.messageSQLFields}) VALUES (${this.messageSQLValues})`];
+        const params = [this.#extractFields(message)];
         if (message.activity) {
             insertsSQL.push(`TODO`);
             params.push(`TODO`);
         }
+        /*
         for (const attachment of message.attachments.values()) {
             insertsSQL.push(`TODO`);
             params.push(`TODO`);
@@ -212,7 +233,6 @@ class MessagesDatabase {
         ));
     }
 
-
     get(id) {
         return new Promise((resolve, reject) =>
             this.db.get(`SELECT * FROM messages WHERE messageId = ?`, [id], (err, row) => {
@@ -236,14 +256,11 @@ class MessagesDatabase {
                     reportError(__line, functionName, 'Error updating message:', err);
                     reject(err);
                 } else {
-                    console.log('caca');
                     resolve();
                 }
             })
         );
     }
-    
-      
 
     close() {
         const functionName = 'close';
