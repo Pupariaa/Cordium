@@ -88,7 +88,7 @@ function log_matches(matches, replyObject) {
 
 function report_matches(matches, replyObject) {
     replyObject.files = [
-        new AttachmentBuilder(Buffer.from(JSON.stringify(matches, null, 4)), {name: 'matches.json'})
+        new AttachmentBuilder(Buffer.from(JSON.stringify(matches, null, 4)), { name: 'matches.json' })
     ];
 }
 
@@ -107,7 +107,7 @@ const reporters = [log_matches, link_matches, report_matches];
 
 function generateChannelNamesChoices() {
     const r = [];
-    for (const [ channelName, channelAlias ] of Object.entries(global.channels.text.channels)) {
+    for (const [channelName, channelAlias] of Object.entries(global.channels.text.channels)) {
         if (channelAlias.tags.includes('boulot')) {
             r.push({ name: channelName, value: JSON.stringify([channelName]) });
         }
@@ -157,7 +157,7 @@ async function search(regex, types = null, channelsName = null) {
     if (!types) {
         types = [...gets];
     }
-    
+
     if (!channelsName) {
         channelsName = getBoulotChannelsName();
     }
@@ -176,60 +176,60 @@ async function search(regex, types = null, channelsName = null) {
 
 module.exports = {
     data: new SlashCommandBuilder()
-    .setName(cmdName)
-    .setDescription(cmdDescription)
-    .addStringOption(option =>
-        option.setName('regex')
-            .setDescription('the regex to search for')
-            .setRequired(true)
-    )
-    .addStringOption(option =>
-        option.setName('type')
-            .setDescription('what to search through (all by default)')
-            .setRequired(false)
-            .addChoices(
-                { name: 'content', value: JSON.stringify([0]) },
-                { name: 'embeds url', value: JSON.stringify([1]) },
-                { name: 'embeds title', value: JSON.stringify([2]) },
-                { name: 'embeds description', value: JSON.stringify([3]) },
-                { name: 'images url', value: JSON.stringify([4]) },
-                { name: 'images filename', value: JSON.stringify([5]) },
-                { name: 'images description (alt text)', value: JSON.stringify([6]) }
-            )
-    )
-    .addStringOption(option =>
-        option.setName('channel_name')
-            .setDescription('the channel to search in (all by default)')
-            .setRequired(false)
-            .addChoices(generateChannelNamesChoices())
-    )
-    .addStringOption(option =>
-        option.setName('flags')
-            .setDescription('flags of the regex')
-            .setRequired(false)
-            .addChoices(
-                { name: "global - Don't return after first match", value: 'g' },
-                { name: "multiline - ^ and $ match start/end of line", value: 'm' },
-                { name: "insensitive - Case insensitive match", value: 'i' },
-                { name: "extended - Ignore whitespace", value: 'x' },
-                { name: "single line - Don't matches newline", value: 's' },
-                { name: "unicode - Match with full unicode", value: 'u' },
-                { name: "Ungreedy - Make quantifiers lazy", value: 'U' },
-                { name: "Anchored - Anchor to start of pattern, or at the end of the most recent match", value: 'A' },
-                { name: "Jchanged - Allow duplicate subpattern names", value: 'J' },
-                { name: "Dollar end only - matches only end of pattern", value: 'D' }
-            )
-    )
-    .addStringOption(option =>
-        option.setName('output_format')
-            .setDescription('matches output format (all by default)')
-            .setRequired(false)
-            .addChoices(
-                { name: 'Console log', value: JSON.stringify([0]) },
-                { name: 'Messages link (hard limit of 10)', value: JSON.stringify([1]) },
-                { name: 'Json report file', value: JSON.stringify([2]) }
-            )
-    ),
+        .setName(cmdName)
+        .setDescription(cmdDescription)
+        .addStringOption(option =>
+            option.setName('regex')
+                .setDescription('the regex to search for')
+                .setRequired(true)
+        )
+        .addStringOption(option =>
+            option.setName('type')
+                .setDescription('what to search through (all by default)')
+                .setRequired(false)
+                .addChoices(
+                    { name: 'content', value: JSON.stringify([0]) },
+                    { name: 'embeds url', value: JSON.stringify([1]) },
+                    { name: 'embeds title', value: JSON.stringify([2]) },
+                    { name: 'embeds description', value: JSON.stringify([3]) },
+                    { name: 'images url', value: JSON.stringify([4]) },
+                    { name: 'images filename', value: JSON.stringify([5]) },
+                    { name: 'images description (alt text)', value: JSON.stringify([6]) }
+                )
+        )
+        .addStringOption(option =>
+            option.setName('channel_name')
+                .setDescription('the channel to search in (all by default)')
+                .setRequired(false)
+                .addChoices(generateChannelNamesChoices())
+        )
+        .addStringOption(option =>
+            option.setName('flags')
+                .setDescription('flags of the regex')
+                .setRequired(false)
+                .addChoices(
+                    { name: "global - Don't return after first match", value: 'g' },
+                    { name: "multiline - ^ and $ match start/end of line", value: 'm' },
+                    { name: "insensitive - Case insensitive match", value: 'i' },
+                    { name: "extended - Ignore whitespace", value: 'x' },
+                    { name: "single line - Don't matches newline", value: 's' },
+                    { name: "unicode - Match with full unicode", value: 'u' },
+                    { name: "Ungreedy - Make quantifiers lazy", value: 'U' },
+                    { name: "Anchored - Anchor to start of pattern, or at the end of the most recent match", value: 'A' },
+                    { name: "Jchanged - Allow duplicate subpattern names", value: 'J' },
+                    { name: "Dollar end only - matches only end of pattern", value: 'D' }
+                )
+        )
+        .addStringOption(option =>
+            option.setName('output_format')
+                .setDescription('matches output format (all by default)')
+                .setRequired(false)
+                .addChoices(
+                    { name: 'Console log', value: JSON.stringify([0]) },
+                    { name: 'Messages link (hard limit of 10)', value: JSON.stringify([1]) },
+                    { name: 'Json report file', value: JSON.stringify([2]) }
+                )
+        ),
 
     /**
      * Executes the 'search' command.

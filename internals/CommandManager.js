@@ -25,7 +25,7 @@ class CommandHandler {
             const commandFiles = fs.readdirSync(global.commandsFolder);
             for (const file of commandFiles) {
                 try {
-                    const command = require(path.join('..', global.commandsFolder, file));
+                    const command = require(path.join(global.commandsFolder, file));
                     if ('data' in command && 'execute' in command) {
                         global.client.commands.set(command.data.name, command);
                         report(__line, functionName, `Command loaded: ${command.data.name}`);
@@ -54,7 +54,6 @@ class CommandHandler {
         global.client.commands.forEach(cmd => commands.push(cmd.data.toJSON()));
 
         try {
-            report(__line, functionName, 'Deployinging commands to Discord API...');
             await this.rest.put(
                 Routes.applicationGuildCommands(global.clientId, global.discordGuildId),
                 { body: commands }

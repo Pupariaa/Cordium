@@ -39,7 +39,7 @@ function parseErr(err) {
         lineNumber = match[2];
         rowNumber = match[3];
     }
-    return [ functionName, fileName, lineNumber, rowNumber ];
+    return [functionName, fileName, lineNumber, rowNumber];
 }
 
 function formatErr(err) {

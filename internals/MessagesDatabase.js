@@ -151,8 +151,8 @@ class MessagesDatabase {
                 .join(', ')}
             )`
         ];
-        return Promise.all(createsSQL.map(createSQL => 
-            new Promise((resolve, reject) => 
+        return Promise.all(createsSQL.map(createSQL =>
+            new Promise((resolve, reject) =>
                 this.db.run(createSQL, (err) => {
                     if (err) {
                         reportError(__line, functionName, 'Error creating table:', err);

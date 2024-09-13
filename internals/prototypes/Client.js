@@ -124,17 +124,9 @@ Client.prototype.rateLimitCheck = function () {
  * @returns {number} The number of members in the guild.
  */
 Client.prototype.getMemberCount = function (includeBots = false) {
-    this.on('guildCreate', () => {
-        updateMemberCount(includeBots);
-    });
-
-    this.on('guildMemberAdd', () => {
-        updateMemberCount(includeBots);
-    });
-
-    this.on('guildMemberRemove', () => {
-        updateMemberCount(includeBots);
-    });
+    this.on('guildCreate', () => updateMemberCount(includeBots));
+    this.on('guildMemberAdd', () => updateMemberCount(includeBots));
+    this.on('guildMemberRemove', () => updateMemberCount(includeBots));
 
     /**
      * Updates the member count of the client by filtering the guild members by bots

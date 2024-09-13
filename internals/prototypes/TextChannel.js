@@ -6,7 +6,7 @@ const { report, reportWarn, reportError } = console.createReports(__cfn);
 TextChannel.prototype.fetchAllMessages = async function (
     applyToAll = TextChannel.prototype.fetchAllMessages.sort,
     applyToEvery = (message, r) => r.unshift(message)) {
-    
+
     const functionName = 'fetchAllMessages';
     let lastId = null;
     const r = [];

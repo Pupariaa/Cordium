@@ -18,7 +18,7 @@ function _getByName(channels, channelName) {
 
 function _getByTags(channels, ...tags) {
     const r = [];
-    for (const [ channelName, channelAlias ] of Object.entries(channels)) {
+    for (const [channelName, channelAlias] of Object.entries(channels)) {
         for (const tag of tags) {
             if (channelAlias.tags.includes(tag)) {
                 r.push(_getByName(channelName));
@@ -33,53 +33,53 @@ class Channels {
     constructor() {
     }
 
-    getById = function(channelId) {
+    getById = function (channelId) {
         return _getById(channelId);
     }
 
-    getByName = function(channelName) {
+    getByName = function (channelName) {
         return this.text.getByName(channelName) || this.voice.getByName(channelName) || this.forum.getByName(channelName);
     }
 
-    getByTags = function(...tags) {
+    getByTags = function (...tags) {
         return [...this.text.getByTags(...tags), ...this.voice.getByTags(...tags), ...this.forum.getByTags(...tags)];
     }
 
     text = {
         channels: global.configChannels.text,
-        getById: function(channelId) {
+        getById: function (channelId) {
             return _getById(channelId);
         },
-        getByName: function(channelName) {
+        getByName: function (channelName) {
             return _getByName(this.channels, channelName);
         },
-        getByTags: function(...tags) {
+        getByTags: function (...tags) {
             return _getByTags(this.channels, ...tags);
         }
     }
 
     voice = {
         channels: global.configChannels.voice,
-        getById: function(channelId) {
+        getById: function (channelId) {
             return _getById(channelId);
         },
-        getByName: function(channelName) {
+        getByName: function (channelName) {
             return _getByName(this.channels, channelName);
         },
-        getByTags: function(...tags) {
+        getByTags: function (...tags) {
             return _getByTags(this.channels, ...tags);
         }
     }
 
     forum = {
         channels: global.configChannels.forum,
-        getById: function(channelId) {
+        getById: function (channelId) {
             return _getById(channelId);
         },
-        getByName: function(channelName) {
+        getByName: function (channelName) {
             return _getByName(this.channels, channelName);
         },
-        getByTags: function(...tags) {
+        getByTags: function (...tags) {
             return _getByTags(this.channels, ...tags);
         }
     }

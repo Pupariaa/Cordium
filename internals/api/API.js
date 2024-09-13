@@ -4,8 +4,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const app = express();
-const endpointsPath = path.join(__dirname, '../../src/api/endpoints');
-const endpoints = require(endpointsPath);
+const endpoints = require(global.endpointsFolder);
 
 const { __cfn, __cf } = eval(require(`current_filename`));
 const { report, reportWarn, reportError } = console.createReports(__cfn);
@@ -84,7 +83,7 @@ if (global.apiPort && global.apiEnable && global.eventsDatabaseOnline) {
 } else {
     if (!global.eventsDatabaseOnline && process.env.db_host) {
         reportError(__line, __cfn, 'The API could not start because the database was not resolved. Do cn bdd-test for more details');
-    } else if (!global.eventsDatabaseOnline && !process.env.db_host){
+    } else if (!global.eventsDatabaseOnline && !process.env.db_host) {
         reportWarn(__line, __cfn, 'The API could not start because the database was not configured. Do cn -bdd -host "hostname" --dbname "<database name>" --dbuser "<database username>" --dbpass "<database password>" --dbport <database port> --create');
     } else {
         reportWarn(__line, __cfn, 'API is not setup properly, check environment variables');

@@ -19,7 +19,7 @@ module.exports = {
     async execute(interaction) {
         const functionName = 'execute';
         try {
-            await interaction.reply(`pong (${Math.round((Date.now() - interaction.createdTimestamp)/1000)}ms)`);
+            await interaction.reply(`pong (${Math.round((Date.now() - interaction.createdTimestamp) / 1000)}ms)`);
         } catch (err) {
             reportError(__line, functionName, err);
         }

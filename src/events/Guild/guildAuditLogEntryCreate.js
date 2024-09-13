@@ -4,6 +4,6 @@ const { __cf } = eval(require(`current_filename`));
 const { report, reportWarn, reportError } = console.createReports(__cf);
 
 module.exports = {
-    callback: async function(auditLogEntry, guild) {
+    callback: async function (auditLogEntry, guild) {
     }
 }

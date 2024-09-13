@@ -31,18 +31,18 @@ class EventsDatabase {
             const modelName = `EVENTS_${event}`;
             this.models[modelName] = this[modelName];
         });
-        
+
         return new Promise((resolve, reject) =>
             this.sequelize.authenticate()
-            .then(() => {
-                global.eventsDatabaseOnline = true;
-                report(__line, functionName, 'Database connection successful')
-                resolve();
-            })
-            .catch(err => {
-                reportError(__line, functionName, 'Unable to connect to the database:', err);
-                reject(err);
-            })
+                .then(() => {
+                    global.eventsDatabaseOnline = true;
+                    report(__line, functionName, 'Database connection successful')
+                    resolve();
+                })
+                .catch(err => {
+                    reportError(__line, functionName, 'Unable to connect to the database:', err);
+                    reject(err);
+                })
         );
     }
 
