@@ -8,3 +8,4 @@ est.json
 src/files/downloads/6545071f-5aa5-4716-b416-9bfc22165b69.png
 src/files/index.json
 /src/files
+**/*.db
