@@ -314,7 +314,7 @@ function registerEvent(event, guildId, trigger) {
 registerEvent(Events.ChannelCreate, (channel) => channel.guild.id, async function (channel) {
     const executor = (await global.guild.latestAuditLog()).executor;
 
-    global.database.addEntry('EVENTS_' + String(this.event), {
+    global.database.addEntry(this.event, {
         channelId: channel.id,
         name: channel.name,
         permissions: channel.permissionOverwrites.cache,
@@ -322,13 +322,13 @@ registerEvent(Events.ChannelCreate, (channel) => channel.guild.id, async functio
         executorId: executor.id,
     });
 
-    report(__line, this.eventName, 'executor.tag', executor.tag, 'channel.type', global.guild.channelTypeStr(channel.type), 'channel.name', channel.name);
+    report(__line, this.eventName, 'channel.name', channel.name, 'executor.tag', executor.tag, 'channel.type', global.guild.channelTypeStr(channel.type));
 }).listen();
 
 registerEvent(Events.ChannelDelete, (channel) => channel.guild.id, async function (channel) {
     const executor = (await global.guild.latestAuditLog()).executor;
 
-    global.database.addEntry('EVENTS_' + String(this.event), {
+    global.database.addEntry(this.event, {
         channelId: channel.id,
         name: channel.name,
         permissions: channel.permissionOverwrites.cache,
@@ -337,7 +337,7 @@ registerEvent(Events.ChannelDelete, (channel) => channel.guild.id, async functio
         executorId: executor.id,
     });
 
-    report(__line, this.eventName, 'executor.tag', executor.tag, 'channel.type', global.guild.channelTypeStr(channel.type), 'channel.name', channel.name);
+    report(__line, this.eventName, 'channel.name', channel.name, 'executor.tag', executor.tag, 'channel.type', global.guild.channelTypeStr(channel.type));
 }).listen();
 
 registerEvent(Events.ChannelPinsUpdate, (channel) => channel.guild.id, async function (channel, date) {
@@ -347,7 +347,7 @@ registerEvent(Events.ChannelPinsUpdate, (channel) => channel.guild.id, async fun
 registerEvent(Events.ChannelUpdate, (oldChannel, newChannel) => newChannel.guild.id, async function (oldChannel, newChannel) {
     const executor = (await global.guild.latestAuditLog()).executor;
 
-    global.database.addEntry('EVENTS_'+String(this.event), {
+    global.database.addEntry(this.event, {
         channelId: newChannel.id,
         oldName: oldChannel.name,
         newName: newChannel.name,
@@ -357,7 +357,7 @@ registerEvent(Events.ChannelUpdate, (oldChannel, newChannel) => newChannel.guild
         executorId: executor.id,
     });
 
-    report(__line, this.eventName, 'executor.tag', executor.tag, 'channel.type', global.guild.channelTypeStr(newChannel.type), 'channel.name', oldChannel.name, '->', newChannel.name);
+    report(__line, this.eventName, 'channel.name', oldChannel.name, '->', newChannel.name, 'executor.tag', executor.tag, 'channel.type', global.guild.channelTypeStr(newChannel.type));
 }).listen();
 
 // DONE: ClientReady
@@ -380,7 +380,7 @@ registerEvent(Events.GuildBanAdd, (ban) => ban.guild.id, async function (ban) {
     const user = ban.user;
     const executor = (await global.guild.latestAuditLog()).executor;
 
-    global.database.addEntry('EVENTS_'+String(this.event), {
+    global.database.addEntry(this.event, {
         userid: user.id,
         reason: ban.reason,
         datetime: Date.now(),
@@ -394,7 +394,7 @@ registerEvent(Events.GuildBanRemove, (ban) => ban.guild.id, async function (ban)
     const user = ban.user;
     const executor = (await global.guild.latestAuditLog()).executor;
 
-    global.database.addEntry('EVENTS_'+String(this.event), {
+    global.database.addEntry(this.event, {
         userid: user.id,
         datetime: Date.now(),
         isDelete: true,
@@ -411,7 +411,7 @@ registerEvent(Events.GuildBanRemove, (ban) => ban.guild.id, async function (ban)
 registerEvent(Events.GuildEmojisUpdate, (oldEmojis, newEmojis) => newEmojis.guild.id, async function (oldEmojis, newEmojis) {
     const executor = (await global.guild.latestAuditLog()).executor;
 
-    global.database.addEntry('EVENTS_' + String(this.event), {
+    global.database.addEntry(this.event, {
         emojiId: emoji.id,
         emojiPath: emoji.url,
         datetime: Date.now(),
@@ -425,7 +425,7 @@ registerEvent(Events.GuildEmojiDelete, (emoji) => emoji.guild.id, async function
     const executor = (await global.guild.latestAuditLog()).executor;
             
     // TODO: add "addEmojiDelete" to DB
-    global.database.addEntry('EVENTS_' + String(this.event), {
+    global.database.addEntry(this.event, {
         emojiId: emoji.id,
         datetime: Date.now(),
         isDelete: true,
@@ -438,7 +438,7 @@ registerEvent(Events.GuildEmojiDelete, (emoji) => emoji.guild.id, async function
 registerEvent(Events.GuildEmojiUpdate, (oldEmoji, newEmoji) => newEmoji.guild.id, async function (oldEmoji, newEmoji) {
     const executor = (await global.guild.latestAuditLog()).executor;
             
-    global.database.addEntry('EVENTS_' + String(event), {
+    global.database.addEntry(this.event, {
         emojiId: newEmoji.id,
         oldEmojiPath: oldEmoji.url,
         newEmojiPath: newEmoji.url,
@@ -454,7 +454,7 @@ registerEvent(Events.GuildEmojiUpdate, (oldEmoji, newEmoji) => newEmoji.guild.id
 registerEvent(Events.GuildMemberAdd, (member) => member.guild.id, async function (member) {
     const user = member.user;
 
-    global.database.addEntry('EVENTS_' + String(this.event), {
+    global.database.addEntry(this.event, {
         userid: user.id,
         joinedAt: Date.now(),
         nickname: member.nickname || '',
@@ -476,7 +476,7 @@ registerEvent(Events.GuildMemberRemove, (member) => member.guild.id, async funct
     if (latestAuditLog?.action === AuditLogEvent.GuildBanAdd && latestAuditLog?.target.id === user.id) return;
 
     // TODO: rename leftedAt to leftAt in DB
-    global.database.addEntry('EVENTS_' + String(this.event), {
+    global.database.addEntry(this.event, {
         userid: user.id,
         leftAt: Date.now(),
     });
@@ -493,7 +493,7 @@ registerEvent(Events.GuildMemberUpdate, (oldMember, newMember) => newMember.guil
 registerEvent(Events.GuildRoleCreate, (role) => role.guild.id, async function (role) {
     const executor = (await global.guild.latestAuditLog()).executor;
 
-    global.database.addEntry('EVENTS_' + String(this.event), {
+    global.database.addEntry(this.event, {
         roleId: role.id,
         name: role.name,
         color: role.hexColor,
@@ -508,7 +508,7 @@ registerEvent(Events.GuildRoleCreate, (role) => role.guild.id, async function (r
 registerEvent(Events.GuildRoleDelete, (role) => role.guild.id, async function (role) {
     const executor = (await global.guild.latestAuditLog()).executor;
 
-    global.database.addEntry('EVENTS_' + String(this.event), {
+    global.database.addEntry(this.event, {
         roleId: role.id,
         name: role.name,
         datetime: Date.now(),
@@ -522,7 +522,7 @@ registerEvent(Events.GuildRoleDelete, (role) => role.guild.id, async function (r
 registerEvent(Events.GuildRoleUpdate, (oldRole, newRole) => newRole.guild.id, async function (oldRole, newRole) {
     const executor = (await global.guild.latestAuditLog()).executor;
 
-    global.database.addEntry('EVENTS_' + String(this.event), {
+    global.database.addEntry(this.event, {
         roleId: newRole.id,
         name: newRole.name,
         datetime: Date.now(),
@@ -545,7 +545,7 @@ registerEvent(Events.GuildRoleUpdate, (oldRole, newRole) => newRole.guild.id, as
 registerEvent(Events.GuildStickerCreate, (oldSticker, newSticker) => newSticker.guild.id, async function (oldSticker, newSticker) {
     const executor = (await global.guild.latestAuditLog()).executor;
 
-    global.database.addEntry('EVENTS_' + String(this.event), {
+    global.database.addEntry(this.event, {
         emojiId: sticker.id,
         emojiPath: sticker.url,
         datetime: Date.now(),
@@ -559,7 +559,7 @@ registerEvent(Events.GuildStickerDelete, (sticker) => sticker.guild.id, async fu
     const executor = (await global.guild.latestAuditLog()).executor;
 
     // TODO: isDelete?
-    global.database.addEntry('EVENTS_' + String(this.event), {
+    global.database.addEntry(this.event, {
         emojiId: sticker.id,
         datetime: Date.now(),
         // isDelete: true,
@@ -573,7 +573,7 @@ registerEvent(Events.GuildStickerUpdate, (oldSticker, newSticker) => newSticker.
     const executor = (await global.guild.latestAuditLog()).executor;
 
     // TODO: isDelete? add addStickerUpdate to the DB
-    global.database.addEntry('EVENTS_' + String(this.event), {
+    global.database.addEntry(this.event, {
         emojiId: sticker.id,
         datetime: Date.now(),
         // isDelete: true,
@@ -590,7 +590,7 @@ registerEvent(Events.GuildStickerUpdate, (oldSticker, newSticker) => newSticker.
 registerEvent(Events.InteractionCreate, (interaction) => interaction.guildId, async function (interaction) {
     const executor = interaction.user;
 
-    global.database.addEntry('EVENTS_'+String(this.event), {
+    global.database.addEntry(this.event, {
         type: interaction.type,
         datetime: Date.now(),
         commandName: interaction.commandName,
@@ -674,7 +674,7 @@ registerEvent(Events.InviteCreate, (invite) => invite.guild.id, async function (
     const executor = invite.inviter || (await global.guild.latestAuditLog()).executor;
         
     // TODO: remove userid from DB
-    global.database.addEntry('EVENTS_' + String(this.event), {
+    global.database.addEntry(this.event, {
         // userid: user.id,
         code: invite.code,
         channelid: invite.channel.id,
@@ -690,7 +690,7 @@ registerEvent(Events.InviteCreate, (invite) => invite.guild.id, async function (
 registerEvent(Events.InviteDelete, (invite) => invite.guild.id, async function (invite) {
     const executor = invite.inviter || (await global.guild.latestAuditLog()).executor;
             
-    global.database.addEntry('EVENTS_' + String(this.event), {
+    global.database.addEntry(this.event, {
         code: invite.code,
         channelid: invite.channel.id,
         executorId: executor.id,
@@ -703,7 +703,7 @@ registerEvent(Events.InviteDelete, (invite) => invite.guild.id, async function (
 registerEvent(Events.MessageBulkDelete, (messages, channel) => channel.guild.id, async function (messages, channel) {
     const executor = (await global.guild.latestAuditLog()).executor;
 
-    global.database.addEntry('EVENTS_' + String(this.event), {
+    global.database.addEntry(this.event, {
         channelId: channel.id,
         deletedMessages: messages.size,
         datetime: Date.now(),
@@ -725,17 +725,19 @@ registerEvent(Events.MessageCreate, (message) => message.guild.id, async functio
     }
 
     // TODO: rename userId to executorId in DB
-    global.database.addEntry('EVENTS_' + String(this.event), {
-        userId: executor.id,
-        messageId: message.id,
-        channelId: channel.id,
-        content: content,
-        datetime: Date.now(),
-        attachments: filenames ? JSON.stringify(filenames) : null,
-        isDelete: 0,
-        isReply: message.reference ? 1 : 0,
-        replyToMessageId: message.reference ? message.reference.messageId : null,
-    });
+    // global.database.addEntry(this.event, {
+    //     id: message.id,
+    //     userId: executor.id,
+    //     channelId: channel.id,
+    //     content: content,
+    //     datetime: Date.now(),
+    //     attachments: filenames ? JSON.stringify(filenames) : null,
+    //     isDelete: 0,
+    //     isReply: message.reference ? 1 : 0,
+    //     replyToMessageId: message.reference ? message.reference.messageId : null,
+    // });
+
+    global.messagesDatabase.set(message);
 
     report(__line, this.eventName, 'channel.name', channel.name, 'executor.tag', executor.tag, 'content', content);
 }).listen();
@@ -743,7 +745,7 @@ registerEvent(Events.MessageCreate, (message) => message.guild.id, async functio
 registerEvent(Events.MessageDelete, (message) => message.guild.id, async function (message) {
     const executor = (await global.guild.latestAuditLog()).executor;
             
-    global.database.addEntry('EVENTS_' + String(this.event), {
+    global.database.addEntry(this.event, {
         messageId: message.id,
         datetime: Date.now(),
         executorId: executor.id,
@@ -761,7 +763,7 @@ registerEvent(Events.MessageReactionAdd, (reaction, executor, details) => reacti
     const message = reaction.message;
     const user = message.author;
 
-    global.database.addEntry('EVENTS_' + String(this.event), {
+    global.database.addEntry(this.event, {
         reactionId: emoji.id || 0,
         messageId: message.id,
         userId: user.id,
@@ -777,7 +779,7 @@ registerEvent(Events.MessageReactionRemove, (reaction, executor, details) => rea
     const message = reaction.message;
     const user = message.author;
 
-    global.database.addEntry('EVENTS_' + String(this.event), {
+    global.database.addEntry(this.event, {
         reactionId: emoji.id || 0,
         messageId: message.id,
         userId: user.id,
@@ -795,15 +797,16 @@ registerEvent(Events.MessageReactionRemoveEmoji, (reaction) => reaction.message.
 registerEvent(Events.MessageUpdate, (oldMessage, newMessage) => newMessage.guild.id, async function (oldMessage, newMessage) {
     const user = oldMessage?.author || newMessage?.author;
 
-    global.database.addEntry('EVENTS_' + String(this.event), {
-        userId: user.id,
-        messageId: newMessage.id,
-        newContent: newMessage.content,
-        oldContent: oldMessage.content,
-        datetime: Date.now(),
-    });
+    // global.database.addEntry(this.event, {
+    //     userId: user.id,
+    //     messageId: newMessage.id,
+    //     newContent: newMessage.content,
+    //     oldContent: oldMessage.content,
+    //     datetime: Date.now(),
+    // });
+    global.messagesDatabase.update(newMessage);
 
-    report(__line, this.eventName, 'user.tag', user.tag, 'channel.name', newMessage.channel.name, 'content', oldMessage.content, '->', newMessage.content);
+    report(__line, this.eventName, 'channel.name', newMessage.channel.name, 'user.tag', user.tag, 'content', oldMessage.content, '->', newMessage.content);
 }).listen();
 
 // TODO: PresenceUpdate
@@ -829,7 +832,7 @@ registerEvent(Events.MessageUpdate, (oldMessage, newMessage) => newMessage.guild
 registerEvent(Events.ThreadCreate, (thread, newlyCreated) => thread.guild.id, async function (thread, newlyCreated) {
     const executor = (await global.guild.latestAuditLog()).executor;
 
-    global.database.addEntry('EVENTS_' + String(this.event), {
+    global.database.addEntry(this.event, {
         channelId: thread.id,
         name: thread.name,
         permissions: thread.permissionOverwrites.cache,
@@ -843,7 +846,7 @@ registerEvent(Events.ThreadCreate, (thread, newlyCreated) => thread.guild.id, as
 registerEvent(Events.ThreadDelete, (thread) => thread.guild.id, async function (thread) {
     const executor = (await global.guild.latestAuditLog()).executor;
 
-    global.database.addEntry('EVENTS_' + String(this.event), {
+    global.database.addEntry(this.event, {
         channelId: thread.id,
         name: thread.name,
         permissions: thread.permissionOverwrites.cache,
@@ -863,7 +866,7 @@ registerEvent(Events.ThreadDelete, (thread) => thread.guild.id, async function (
 registerEvent(Events.ThreadUpdate, (oldThread, newThread) => newThread.guild.id, async function (oldThread, newThread) {
     executor = (await global.guild.latestAuditLog()).executor;
 
-    global.database.addEntry('EVENTS_' + String(this.event), {
+    global.database.addEntry(this.event, {
         channelId: newThread.id,
         oldName: oldThread.name,
         newName: newThread.name,
@@ -922,7 +925,7 @@ registerEvent(Events.VoiceStateUpdate, (oldState, newState) => newState.guild.id
                 this.eventName += '.move';
 
                 executor = await getExecutor(AuditLogEvent.MemberMove);
-                global.database.addEntry('EVENTS_'+event, voiceStateUpdateObject(user, executor || user, 2));
+                global.database.addEntry(this.event, voiceStateUpdateObject(user, executor || user, 2));
             }
             else {
                 this.eventName += '.update';
@@ -945,14 +948,14 @@ registerEvent(Events.VoiceStateUpdate, (oldState, newState) => newState.guild.id
                     return;
                 }
 
-                global.database.addEntry('EVENTS_'+event, voiceStateUpdateObject(user, executor || user, 4));
+                global.database.addEntry(this.event, voiceStateUpdateObject(user, executor || user, 4));
             }
         }
         else {
             this.eventName += '.leave';
 
             executor = await getExecutor(AuditLogEvent.MemberDisconnect);
-            global.database.addEntry('EVENTS_'+event, voiceStateUpdateObject(user, executor || user, 3));
+            global.database.addEntry(this.event, voiceStateUpdateObject(user, executor || user, 3));
         }
     }
     else {
@@ -962,7 +965,7 @@ registerEvent(Events.VoiceStateUpdate, (oldState, newState) => newState.guild.id
         channel = newState.channel;
 
         executor = await getExecutor(AuditLogEvent.MemberMove);
-        global.database.addEntry('EVENTS_'+event, voiceStateUpdateObject(user, executor || user, 1));
+        global.database.addEntry(this.event, voiceStateUpdateObject(user, executor || user, 1));
     }
 
     const args = [__line, this.eventName, 'user.tag', user.tag, 'channel.name', channel.name];

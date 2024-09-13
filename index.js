@@ -1,44 +1,33 @@
 'use strict';
+const fs = require('fs');
+const path = require('path');
+const { Events } = require('discord.js');
+
+require('puparia.getlines.js');
+require('dotenv').config({ path: './config/config.env' });
+const { __cfn, __cf } = eval(require(`current_filename`));
 
 global.projectRoot = __dirname;
 global.utilsPath = __dirname + '/internals/prototypes/Utils';
 
-const fs = require('fs');
-const path = require('path');
-
 const prototypesDir = './internals/prototypes';
-
 require(`${prototypesDir}/Logs`);
-const { __cfn, __cf } = eval(require(`current_filename`));
+
+const { report, reportWarn, reportError } = console.createReports(__cfn);
 
 fs.readdirSync(prototypesDir)
     .filter(filename => filename !== 'Logs.js')
     .forEach(filename => require('./' + path.join(prototypesDir, filename)));
 
-const { report, reportWarn, reportError } = console.createReports(__cfn);
-
-require('puparia.getlines.js');
-require('dotenv').config({ path: './config/config.env' });
-const { Events } = require('discord.js');
 const CQD = require('./internals/CQD');
-
 new CQD();
 
-// Global error handling
 process.on('uncaughtException', (err) => {
-    const stackLines = err.stack.split('\n');
-
-    // Find the line that contains the file and line number
-    const errorLocation = stackLines.find(line => line.includes('.js:'));
-
-    // Extract just the line number using a regex
-    const lineNumber = errorLocation ? errorLocation.match(/:(\d+):/)[1] : __line;
-
-    reportError(lineNumber, 'uncaughtException', 'Uncaught exception occurred:', err);
+    reportError(__line, 'uncaughtException', err);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-    reportError(__line, 'unhandledRejection', 'Unhandled rejection at', promise, 'reason:', reason instanceof Error ? reason.message : reason);
+    reportError(__line, 'unhandledRejection', promise, reason);
 });
 
 const eventClientReady = Events.ClientReady;
@@ -49,7 +38,6 @@ global.client.on(eventClientReady, async () => {
         require('./internals/api/API');
         // Initialize invite cache
         global.client.invitesCache = new Map();
-        report('yusgvzfh')
 
         // Get guild
         global.guild = global.client.guilds.cache.get(process.env.discord_guild_id);
@@ -60,9 +48,15 @@ global.client.on(eventClientReady, async () => {
         global.initCount = (await global.guild.latestAuditLog())?.extra?.count || 0;
         global.utc_diff = parseInt(process.env.utc_diff * 60 * 60 * 1000);
 
+        // Initialize database
+        const MessagesDatabase = require('./internals/MessagesDatabase');
+        global.messagesDatabase = new MessagesDatabase();
+        await global.messagesDatabase.init();
+
         // Events
         require('./internals/Events');
-        
+
+        // Initialize invites cache
         const invites = await global.guild.invites.fetch();
         invites.forEach(invite => global.client.invitesCache.set(invite.code, invite.uses));
         report(__line, eventClientReady, 'Invites cache initialized');
