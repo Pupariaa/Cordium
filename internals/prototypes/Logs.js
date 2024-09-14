@@ -75,24 +75,24 @@ function formatErr(err) {
     return !parsedErr || parsedErr.every(e => !e) ? r : `${r} (${parsedErr.filter(e => e).join(':')})`;
 }
 
-function formatArgsForError(logContext, ...args) {
-    if (!args.length) return '';
-    const err = args.pop();
-    return `${args.join(' ')}${args.length > 0 ? ' ' : ''}${err instanceof Error ? formatErr(err) : err}`;
+function getFormatArgsForError(formatErrFunction) {
+    return function (logContext, ...args) {
+        if (!args.length) return '';
+        const err = args.pop();
+        return `${args.join(' ')}${args.length > 0 ? ' ' : ''}${err instanceof Error ? formatErrFunction(err) : err}`;
+    }
 }
 
 console.createReport = logFactory(console.info, 'INFO', colors.FgCyan);
 console.createReportWarn = logFactory(console.warn, 'WARN', colors.FgYellow);
 console.createReportError = logFactory(console.error, 'ERROR', colors.FgRed,
-    (process.env.format_errors ? process.env.format_errors.toLowerCase() === "true" : true)
-        ? formatArgsForError
-        : (logContext, ...args) => {
-            if (!args.length) return '';
-            const err = args.pop();
-            const common = `${args.join(' ')}${args.length > 0 ? ' ' : ''}`;
-            if (!(err instanceof Error)) return `${common}${err}`;
-            return `${common}${err.stack}`;
-        });
+    getFormatArgsForError(
+        (process.env.format_errors ? process.env.format_errors.toLowerCase() === "true" : true)
+            ? formatErr
+            : (err) => err.stack
+    )
+);
+
 console.createReports = function (filename) {
     return {
         report: console.createReport(filename),
