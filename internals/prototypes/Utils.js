@@ -1,4 +1,6 @@
 'use strict';
+const fs = require('fs');
+const path = require('path');
 const { exec } = require('child_process');
 
 function downloadFile(url, filePath) {
@@ -41,6 +43,11 @@ function toCamelCase(varname) {
     return decapitalize(varname).replace(/_(.)/g, (_, chr) => chr.toUpperCase());
 }
 
+function loadEnvPath(key, defaultValue) {
+    const envValue = process.env[key];
+    return path.join(global.projectRoot, envValue ? (fs.existsSync(envValue) ? envValue : defaultValue) : defaultValue);
+}
+
 module.exports = {
     downloadFile,
     getOrNull,
@@ -48,5 +55,6 @@ module.exports = {
     capitalize,
     decapitalize,
     toCamelCase,
-    validChannelId
+    validChannelId,
+    loadEnvPath
 };

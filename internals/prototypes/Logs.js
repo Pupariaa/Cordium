@@ -53,26 +53,22 @@ function logFactory(logger, type, typeColor, defaultFormatArgs = defaultFormatAr
     };
 }
 
+const parseErrStackRegex = new RegExp(' +at ([_$a-zA-Z\\xA0-\\uFFFF][_$a-zA-Z0-9\\xA0-\\uFFFF]*) \\(([^)]+?).js:(\\d+)(?::(\\d+))?\\)', '')
+
 function parseErr(err) {
-    const stack = err.stack;
-    const stackLines = stack.split('\n');
-    let errorLocation = stackLines.find(line => line.includes('.js:'));
-    if (!errorLocation) return null;
-    errorLocation = errorLocation.trim();
-    let functionName, filename, lineNumber, rowNumber;
-    const match = errorLocation.match(/(?:at )?(.*?) ?\(([^)]+?):(\d+)(?::(\d+))?\)/);
+    const match = parseErrStackRegex.exec(err.stack);
     if (!match) return null;
-    functionName = match[1];
-    filename = path.relative(global.projectRoot, match[2]);
-    lineNumber = match[3];
-    rowNumber = match[4];
+    const functionName = match[1];
+    const filename = path.relative(global.projectRoot, match[2]);
+    const lineNumber = match[3];
+    const rowNumber = match[4];
     return [functionName, filename, lineNumber, rowNumber];
 }
 
 function formatErr(err) {
-    let r = `(${err.name}) ${err.message.includes('Require stack') ? err.message.split('\n')[0] : err.message}`;
+    let errorNameAndMessage = `(${err.name}) ${err.message.includes('Require stack') ? err.message.split('\n')[0] : err.message}`;
     const parsedErr = parseErr(err);
-    return !parsedErr || parsedErr.every(e => !e) ? r : `${r} (${parsedErr.filter(e => e).join(':')})`;
+    return !parsedErr || parsedErr.every(e => !e) ? errorNameAndMessage : `${errorNameAndMessage}(${parsedErr.filter(e => e).join(':')})`;
 }
 
 function getFormatArgsForError(formatErrFunction) {
