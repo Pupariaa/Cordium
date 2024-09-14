@@ -9,11 +9,11 @@ const { getOrNull } = require(global.utilsPath);
 
 class MessagesDatabase {
     messagesDbFilename = 'messages.db'
-    mostRecentMessagesIdFilename = 'mostRecentMessagesId.json'
+    lastMessagesIdFilename = 'lastMessagesId.json'
 
     constructor(
         dbPath = path.join(global.projectRoot, 'internals', 'cache', this.messagesDbFilename),
-        cachePath = path.join(global.projectRoot, 'internals', 'cache', this.mostRecentMessagesIdFilename)
+        cachePath = path.join(global.projectRoot, 'internals', 'cache', this.lastMessagesIdFilename)
     ) {
         const functionName = 'constructor';
         this.cachePath = cachePath;
@@ -22,7 +22,7 @@ class MessagesDatabase {
         this.messageSQLFields = Object.keys(this.messagesTableColumns).filter(key => key !== 'id').join(', ');
         this.messageSQLValues = Object.keys(this.messagesTableColumns).filter(key => key !== 'id').map(() => '?').join(', ');
         report(__line, functionName, `${this.messagesDbFilename} path set to:`, dbPath);
-        report(__line, functionName, `${this.mostRecentMessagesIdFilename} path set to:`, cachePath);
+        report(__line, functionName, `${this.lastMessagesIdFilename} path set to:`, cachePath);
         global.sigintSubscribers.push(this.close.bind(this));
     }
 
@@ -71,6 +71,11 @@ class MessagesDatabase {
             waveform: 'TEXT',
             width: 'INTEGER'
         };
+        // this.membersTableColumns = {
+        //     id: 'INTEGER PRIMARY KEY AUTOINCREMENT',
+        //     messageId: 'INTEGER NOT NULL',
+        //     memberId: 'TEXT NOT NULL'
+        // };
     }
 
     #connectToDatabase() {
@@ -97,12 +102,12 @@ class MessagesDatabase {
             const promises = [];
             let applyToAll, getFetchOptions, getDefaultLastId;
             if (fs.existsSync(this.cachePath)) {
-                this.mostRecentMessagesId = JSON.parse(fs.readFileSync(this.cachePath), "utf-8");
+                this.lastMessagesId = JSON.parse(fs.readFileSync(this.cachePath), "utf-8");
                 applyToAll = global.channels.fetchAllMessages.scanDown;
                 getFetchOptions = (lastId) => ({ after: lastId });
-                getDefaultLastId = (channel) => this.mostRecentMessagesId[channel.id];
+                getDefaultLastId = (channel) => this.lastMessagesId[channel.id];
             } else {
-                this.mostRecentMessagesId = {};
+                this.lastMessagesId = {};
                 applyToAll = global.channels.fetchAllMessages.scanUp;
                 getFetchOptions = (lastId) => ({ before: lastId });
                 getDefaultLastId = (channel) => null;
@@ -111,7 +116,7 @@ class MessagesDatabase {
             const applyToEvery = (message, r) => {
                 promises.push(this.set(message));
                 if (!(message.channel.id in mostRecentTimestamps) || message.createdTimestamp > mostRecentTimestamps[message.channel.id]) {
-                    this.mostRecentMessagesId[message.channel.id] = message.id;
+                    this.lastMessagesId[message.channel.id] = message.id;
                     mostRecentTimestamps[message.channel.id] = message.createdTimestamp;
                 }
             };
@@ -207,6 +212,7 @@ class MessagesDatabase {
 
     set(message) {
         const functionName = 'set';
+        this.lastMessagesId[message.channel.id] = message.id;
         const insertsSQL = [`INSERT INTO messages (${this.messageSQLFields}) VALUES (${this.messageSQLValues})`];
         const params = [this.#extractFields(message)];
         /*
@@ -315,7 +321,7 @@ class MessagesDatabase {
 
     close() {
         const functionName = 'close';
-        fs.writeFileSync(this.cachePath, JSON.stringify(this.mostRecentMessagesId, null, 4), 'utf8');
+        fs.writeFileSync(this.cachePath, JSON.stringify(this.lastMessagesId, null, 4), 'utf8');
         return new Promise((resolve, reject) =>
             this.db.close((err) => {
                 if (err) {
