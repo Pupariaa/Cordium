@@ -18,6 +18,7 @@ class AttachmentsManager {
         this.indexPath = indexPath;
         this.downloadsPath = path.join(this.filesPath, 'downloads');
         global.sigintSubscribers.push(this.saveIndex.bind(this));
+        if (!fs.existsSync(this.filesPath)) fs.mkdirSync(this.filesPath);
         report(__line, functionName, `${this.indexFilename} path set to:`, indexPath);
     }
 

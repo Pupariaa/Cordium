@@ -73,8 +73,9 @@ class MessagesDatabase {
         };
         // this.membersTableColumns = {
         //     id: 'INTEGER PRIMARY KEY AUTOINCREMENT',
-        //     messageId: 'INTEGER NOT NULL',
-        //     memberId: 'TEXT NOT NULL'
+        //     avatar: 'TEXT',
+        //     bannable: 'BOOLEAN NOT NULL',
+
         // };
     }
 
@@ -321,7 +322,7 @@ class MessagesDatabase {
 
     close() {
         const functionName = 'close';
-        fs.writeFileSync(this.cachePath, JSON.stringify(this.lastMessagesId, null, 4), 'utf8');
+        if (this.lastMessagesId) fs.writeFileSync(this.cachePath, JSON.stringify(this.lastMessagesId, null, 4), 'utf8');
         return new Promise((resolve, reject) =>
             this.db.close((err) => {
                 if (err) {
