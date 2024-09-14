@@ -9,3 +9,4 @@ est.json
 src/files/attachmentsIndex.json
 src/files/downloads
 **/*.db
+src/commands/search.js
