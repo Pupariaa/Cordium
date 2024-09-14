@@ -71,12 +71,7 @@ class MessagesDatabase {
             waveform: 'TEXT',
             width: 'INTEGER'
         };
-        // this.membersTableColumns = {
-        //     id: 'INTEGER PRIMARY KEY AUTOINCREMENT',
-        //     avatar: 'TEXT',
-        //     bannable: 'BOOLEAN NOT NULL',
 
-        // };
     }
 
     #connectToDatabase() {
@@ -138,7 +133,6 @@ class MessagesDatabase {
       TODO:
         - parties table
         - attachments table
-        - members table
         - calls table
         - components table
         - embeds table
