@@ -2,14 +2,8 @@ node_modules
 package-lock.json
 
 config/config.env
-config/channels.json
-config/reportEvents.json
-config/listenEvents.json
+config/*.json
 
 internals/cache
-
-src/sandbox/index.js
-src/files/attachmentsIndex.json
-src/files/downloads
-
-**/*.db
+src/files
+src/sandbox
