@@ -68,6 +68,7 @@ async function walkDir(dirPath, callback) {
                 .forEach((filename) => require("./" + path.join(prototypesDir, filename)));
 
             const clientPrototypesDir = "./src/prototypes";
+            if (!fs.existsSync(clientPrototypesDir)) return;
             fs.readdirSync(clientPrototypesDir)
                 .forEach((filename) => require("./" + path.join(clientPrototypesDir, filename)));
         } catch (err) {
