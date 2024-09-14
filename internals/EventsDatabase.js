@@ -46,6 +46,15 @@ class EventsDatabase {
         );
     }
 
+    #defineEventModel(event, columns, tableMetadata) {
+        Object.defineProperty(this, `EVENTS_${event}`, {
+            value: this.sequelize.define(`EVENTS_${event}`, columns, tableMetadata),
+            enumerable: true,
+            configurable: false,
+            writable: false
+        });
+    }
+
     defineModels() {
 
         this.DATA_channels = this.sequelize.define('DATA_channels', {
@@ -62,7 +71,7 @@ class EventsDatabase {
             charset: this.charset,
             collate: this.collate
         });
-        this.EVENTS_channelCreate = this.sequelize.define('EVENTS_channelCreate', {
+        this.#defineEventModel(Events.ChannelCreate, {
             id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
             channelId: { type: DataTypes.BIGINT, allowNull: true },
             name: { type: DataTypes.STRING(64), allowNull: true },
@@ -542,9 +551,9 @@ class EventsDatabase {
     async addEntry(event, data) {
         const functionName = 'addEntry';
         try {
-            if (global.eventsDatabaseOnline) await this[`EVENTS_${event}`].create(data);
+            // if (global.eventsDatabaseOnline) await this[`EVENTS_${event}`].create(data);
         } catch (err) {
-            reportError(__line, functionName, `Error adding ${description} entry:`, err);
+            reportError(__line, functionName, `Error adding ${data} entry:`, err);
         }
     }
 }

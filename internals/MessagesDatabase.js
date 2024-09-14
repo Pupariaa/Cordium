@@ -1,6 +1,7 @@
+const fs = require('fs');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
-const { TextChannel } = require('discord.js');
+const { TextChannel, VoiceChannel, ForumChannel } = require('discord.js');
 const { __cfn, __cf } = eval(require(`current_filename`));
 const { report, reportWarn, reportError } = console.createReports(__cfn);
 
@@ -8,11 +9,24 @@ const { getOrNull } = require(global.utilsPath);
 
 class MessagesDatabase {
     messagesDbFilename = 'messages.db'
+    mostRecentMessagesIdFilename = 'mostRecentMessagesId.json'
 
-    constructor(dbPath = path.join(global.projectRoot, 'internals', this.messagesDbFilename)) {
+    constructor(
+        dbPath = path.join(global.projectRoot, 'internals', 'cache', this.messagesDbFilename),
+        cachePath = path.join(global.projectRoot, 'internals', 'cache', this.mostRecentMessagesIdFilename)
+    ) {
         const functionName = 'constructor';
+        this.cachePath = cachePath;
         this.dbPath = dbPath;
-        this.db = null;
+        this.#defineTablesColumns();
+        this.messageSQLFields = Object.keys(this.messagesTableColumns).filter(key => key !== 'id').join(', ');
+        this.messageSQLValues = Object.keys(this.messagesTableColumns).filter(key => key !== 'id').map(() => '?').join(', ');
+        report(__line, functionName, `${this.messagesDbFilename} path set to:`, dbPath);
+        report(__line, functionName, `${this.mostRecentMessagesIdFilename} path set to:`, cachePath);
+        global.sigintSubscribers.push(this.close.bind(this));
+    }
+
+    #defineTablesColumns() {
         this.messagesTableColumns = {
             id: 'INTEGER PRIMARY KEY AUTOINCREMENT',
             messageId: 'INTEGER NOT NULL',
@@ -57,9 +71,6 @@ class MessagesDatabase {
             waveform: 'TEXT',
             width: 'INTEGER'
         };
-        this.messageSQLFields = Object.keys(this.messagesTableColumns).filter(key => key !== 'id').join(', ');
-        this.messageSQLValues = Object.keys(this.messagesTableColumns).filter(key => key !== 'id').map(() => '?').join(', ');
-        report(__line, functionName, `${this.messagesDbFilename} path set to:`, dbPath);
     }
 
     #connectToDatabase() {
@@ -70,7 +81,7 @@ class MessagesDatabase {
                     reportError(__line, functionName, 'Error initializing database:', err);
                     reject(err);
                 } else {
-                    report(__line, functionName, 'Connected to the SQLite database.');
+                    report(__line, functionName, 'Connected to the SQLite database');
                     resolve();
                 }
             });
@@ -84,14 +95,32 @@ class MessagesDatabase {
             report(__line, functionName, 'Initializing messagesDatabase...');
             await this.#createTables();
             const promises = [];
-            global.guild.channels.cache.each(async (channel) => {
-                if (!(channel instanceof TextChannel)) return;
+            let applyToAll, getFetchOptions, getDefaultLastId;
+            if (fs.existsSync(this.cachePath)) {
+                this.mostRecentMessagesId = JSON.parse(fs.readFileSync(this.cachePath), "utf-8");
+                applyToAll = global.channels.fetchAllMessages.scanDown;
+                getFetchOptions = (lastId) => ({ after: lastId });
+                getDefaultLastId = (channel) => this.mostRecentMessagesId[channel.id];
+            } else {
+                this.mostRecentMessagesId = {};
+                applyToAll = global.channels.fetchAllMessages.scanUp;
+                getFetchOptions = (lastId) => ({ before: lastId });
+                getDefaultLastId = (channel) => null;
+            }
+            let mostRecentTimestamps = {};
+            const applyToEvery = (message, r) => {
+                promises.push(this.set(message));
+                if (!(message.channel.id in mostRecentTimestamps) || message.createdTimestamp > mostRecentTimestamps[message.channel.id]) {
+                    this.mostRecentMessagesId[message.channel.id] = message.id;
+                    mostRecentTimestamps[message.channel.id] = message.createdTimestamp;
+                }
+            };
+            global.guild.channels.cache.each((channel) => {
+                if (!channel.isTextBased()) return;
                 report(__line, functionName, 'Fetching messages from channel:', channel.name);
-                channel.fetchAllMessages(
-                    channel.fetchAllMessages.scan,
-                    (message) => promises.push(this.set(message))
-                );
+                channel.fetchAllMessages(applyToAll, applyToEvery, getFetchOptions, getDefaultLastId(channel));
             });
+
             await Promise.all(promises);
             report(__line, functionName, 'messagesDatabase initialized');
         } catch (error) {
@@ -180,11 +209,11 @@ class MessagesDatabase {
         const functionName = 'set';
         const insertsSQL = [`INSERT INTO messages (${this.messageSQLFields}) VALUES (${this.messageSQLValues})`];
         const params = [this.#extractFields(message)];
+        /*
         if (message.activity) {
             insertsSQL.push(`TODO`);
             params.push(`TODO`);
         }
-        /*
         for (const attachment of message.attachments.values()) {
             insertsSQL.push(`TODO`);
             params.push(`TODO`);
@@ -221,7 +250,7 @@ class MessagesDatabase {
             insertsSQL.push(`TODO`);
             params.push(`TODO`);
         }
-        global.attachments.saveAttachments(message);
+        global.attachmentsManager.saveAttachments(message);
         for (const attachment of message.attachments.values()) {
             insertsSQL.push(`TODO`);
             params.push(`TODO`);
@@ -254,9 +283,23 @@ class MessagesDatabase {
         );
     }
 
+    forEach(callback) {
+        // TODO
+        return new Promise((resolve, reject) =>
+            this.db.each(`SELECT messageId FROM messages`, (err, row) => {
+                if (err) {
+                    reportError(__line, functionName, 'Error getting messages:', err);
+                    reject(err);
+                } else {
+                    callback(row);
+                }
+            })
+        );
+    }
+
     update(newMessage) {
         const functionName = 'update';
-        const insertOrReplaceSQL = `INSERT OR REPLACE INTO messages (${this.messageSQLFields}) VALUES (${this.messageSQLValues}) WHERE messageId = ${newMessage.id}`;
+        const insertOrReplaceSQL = `UPDATE messages SET (${this.messageSQLFields}) = (${this.messageSQLValues}) WHERE messageId = ${newMessage.id}`;
         const params = this.#extractFields(newMessage);
         return new Promise((resolve, reject) =>
             this.db.run(insertOrReplaceSQL, params, (err) => {
@@ -272,6 +315,7 @@ class MessagesDatabase {
 
     close() {
         const functionName = 'close';
+        fs.writeFileSync(this.cachePath, JSON.stringify(this.mostRecentMessagesId, null, 4), 'utf8');
         return new Promise((resolve, reject) =>
             this.db.close((err) => {
                 if (err) {

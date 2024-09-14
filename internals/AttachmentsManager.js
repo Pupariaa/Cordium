@@ -9,19 +9,26 @@ const sanitizeFilename = require('sanitize-filename');
 const { downloadFile } = require(global.utilsPath);
 
 class AttachmentsManager {
-    constructor() {
+    filesPath = path.join(global.projectRoot, 'src', 'files');
+    indexFilename = 'attachmentsIndex.json';
+    constructor(
+        indexPath = path.join(global.projectRoot, 'src', 'files', this.indexFilename)
+    ) {
         const functionName = 'constructor';
-        this.indexFilename = 'attachmentsIndex.json';
-        this.filesPath = `${global.projectRoot}/src/files`;
+        this.indexPath = indexPath;
         this.downloadsPath = path.join(this.filesPath, 'downloads');
-        this.indexPath = path.join(this.filesPath, this.indexFilename);
-        report(__line, functionName, `${this.indexFilename} path set to:`, this.indexPath);
+        global.sigintSubscribers.push(this.saveIndex.bind(this));
+        report(__line, functionName, `${this.indexFilename} path set to:`, indexPath);
     }
 
     loadIndex() {
         const functionName = 'loadIndex';
         try {
-            this.index = JSON.parse(fs.readFileSync(this.indexPath, 'utf8'));
+            if (fs.existsSync(this.indexPath)) {
+                this.index = JSON.parse(fs.readFileSync(this.indexPath, 'utf8'));
+            } else {
+                this.index = {};
+            }
         } catch (err) {
             reportError(__line, functionName, `Error loading ${this.indexFilename}:`, err);
         }
@@ -58,12 +65,12 @@ class AttachmentsManager {
                 const originalFilename = this.#extractFilenameFromUrl(url);
                 const filename = `${message.channel.id}.${message.id}.${originalFilename}.${path.extname(originalFilename)}`;
                 downloadFile(url, path.join(this.downloadsPath, filename));
-                this.index.push({
+                this.index[message.id] = {
                     type: attachment.contentType ? attachment.contentType.split('/')[0] : 'file',
                     filename: filename,
                     url: url,
                     authorId: message.author.id
-                });
+                };
             }
         } catch (err) {
             reportError(__line, functionName, err);
@@ -73,10 +80,7 @@ class AttachmentsManager {
     getAttachments(messageId) {
         const functionName = 'getAttachments';
         try {
-            for (const entry of this.index) {
-                if (entry.messageId === messageId) return entry;
-            }
-            return null;
+            return this.index[messageId];
         } catch (err) {
             reportError(__line, functionName, err);
             return [];
