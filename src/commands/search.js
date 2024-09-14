@@ -107,10 +107,8 @@ const reporters = [log_matches, link_matches, report_matches];
 
 function generateChannelNamesChoices() {
     const r = [];
-    for (const [channelName, channelAlias] of Object.entries(global.channels.text.channels)) {
-        if (channelAlias.tags.includes('boulot')) {
-            r.push({ name: channelName, value: JSON.stringify([channelName]) });
-        }
+    for (const channelName of Object.keys(global.channels.text.aliases)) {
+        r.push({ name: channelName, value: JSON.stringify([channelName]) });
     }
     return r;
 }
@@ -121,13 +119,6 @@ function querySummary(regex, types, channelsName) {
     return `Regex: ${regex}\nTypes: ${selectedTypes}\nChannels: ${selectedChannels}`;
 }
 
-/**
- * Process a channel with a regex
- * @param {string} channelName - the name of the channel to search in
- * @param {function | string} types - the types of the search
- * @param {RegExp} regex - the regex to search for
- * @param {Object} matches - the matches of the search
- */
 async function process_messages(messages, types, regex, matches) {
     for (const msg of messages) {
         let found = false;
@@ -145,24 +136,17 @@ async function process_messages(messages, types, regex, matches) {
     }
 }
 
-/**
- * Search for a regex in all the text channels of the server, in all the messages
- * @param {RegExp} regex - the regex to run on the extracted texts
- * @param {function[]} types - functions to extract a text from a message (all of SearchType by default)
- * @param {string[]} channelsName - the names of the channels to search in (all in global.channels.text by default)
- * @returns {Promise<Message[]>} - the messages that contain at least a match from the texts extracted
- */
 async function search(regex, types = null, channelsName = null) {
+    const matches = [];
 
     if (!types) {
         types = [...gets];
     }
 
-    if (!channelsName) {
-        channelsName = getBoulotChannelsName();
+    if (!channelsName || channelsName.length === 0) {
+        return matches;
     }
 
-    const matches = [];
     const promises = channelsName.map(async channelName => {
         const channel = global.channels.getByName(channelName);
         const messages = await channel.fetchAllMessages();
@@ -240,7 +224,7 @@ module.exports = {
         try {
             const regex = new RegExp(interaction.options.getString('regex'), interaction.options.getString('flags') || '');
             const types = JSON.parse(interaction.options.getString('type'))?.map(type => gets[type]) || [...gets];
-            const channelsName = JSON.parse(interaction.options.getString('channel_name')) || [...Object.keys(global.channels.text.channels)];
+            const channelsName = JSON.parse(interaction.options.getString('channel_name')) || [...Object.keys(global.channels.text.aliases)];
             const matches = await search(
                 regex,
                 types,
