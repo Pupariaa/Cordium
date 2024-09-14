@@ -78,8 +78,7 @@ function formatErr(err) {
 function formatArgsForError(logContext, ...args) {
     if (!args.length) return '';
     const err = args.pop();
-    if (!(err instanceof Error)) return `${args.join(' ')}${args.length > 0 ? ' ' : ''}${err}`;
-    return formatErr(err);
+    return `${args.join(' ')}${args.length > 0 ? ' ' : ''}${err instanceof Error ? formatErr(err) : err}`;
 }
 
 console.createReport = logFactory(console.info, 'INFO', colors.FgCyan);
