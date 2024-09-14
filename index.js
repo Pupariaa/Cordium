@@ -3,14 +3,18 @@ const fs = require("fs");
 const path = require("path");
 const { Client, Events } = require("discord.js");
 
+// Fix discord.js inconsistencies
 Object.keys(Events).forEach((key) => {
     Events[key] = key;
 });
 
+// Must haves
 global.projectRoot = __dirname;
 global.utilsPath = path.join(__dirname, "internals", "prototypes", "Utils.js");
 const configEnvPath = path.join(__dirname, "config", "config.env");
+require("dotenv").config({ path: configEnvPath });
 
+// Defaults for some unspecified env variables
 const defaultCommandsFolder = "./src/commands";
 const defaultEventsFolder = "./src/events";
 const defaultEndpointsFolder = "./src/api/endpoints";
@@ -18,6 +22,7 @@ const defaultPort = 3000;
 
 const { validPort, capitalize, toCamelCase, getOrNull, } = require(global.utilsPath);
 
+// Because apparently javascript doesn't have a built-in way to do this
 async function walkDir(dirPath, callback) {
     const files = await fs.readdirSync(dirPath);
     for (const file of files) {
@@ -31,6 +36,7 @@ async function walkDir(dirPath, callback) {
     }
 }
 
+// Nice to have, avoids path.join with relative paths everywhere
 (async function initGlobalPaths() {
     await walkDir(
         path.join(global.projectRoot, "internals"),
@@ -47,41 +53,32 @@ async function walkDir(dirPath, callback) {
         }
     );
 })().then(async () => {
+
+    // Now the index.js can start
     require(global.logsPath);
     const { __cfn, __cf } = eval(require(`current_filename`));
     const { report, reportWarn, reportError } = console.createReports(__cfn);
 
-    try {
-        process.on("uncaughtException", (err) => {
-            reportError(__line, "uncaughtException", err);
-        });
-
-        process.on("unhandledRejection", (reason, promise) => {
-            reportError(__line, "unhandledRejection", promise, reason);
-        });
-
-        (function loadPrototypes() {
+    (function loadPrototypes() {
+        const functionName = "loadPrototypes";
+        try {
             const prototypesDir = "./internals/prototypes";
             fs.readdirSync(prototypesDir)
                 .filter((filename) => filename !== "Logs.js")
-                .forEach((filename) =>
-                    require("./" + path.join(prototypesDir, filename))
-                );
+                .forEach((filename) => require("./" + path.join(prototypesDir, filename)));
 
             const clientPrototypesDir = "./src/prototypes";
-            fs.readdirSync(clientPrototypesDir).forEach((filename) =>
-                require("./" + path.join(clientPrototypesDir, filename))
-            );
-        })();
-    } catch (err) {
-        reportError(__line, "initGlobal", err);
-    }
+            fs.readdirSync(clientPrototypesDir)
+                .forEach((filename) => require("./" + path.join(clientPrototypesDir, filename)));
+        } catch (err) {
+            reportError(__line, functionName, err);
+        }
+    })();
 
     async function initGlobal() {
         const functionName = "initGlobal";
         try {
             // Load configs
-            require("dotenv").config({ path: configEnvPath });
             const missingVars = [];
             for (const requiredVar of ["client_token", "client_id", "discord_guild_id",]) {
                 if (!process.env[requiredVar]) {
@@ -108,7 +105,7 @@ async function walkDir(dirPath, callback) {
             global.apiPort = process.env.api_port ? validPort(process.env.api_port) ? process.env.api_port : defaultPort : defaultPort;
             global.utcDiff = parseInt((process.env.utc_diff ? process.env.utc_diff : 0) * 60 * 60 * 1000);
 
-            global.configChannels = JSON.parse(fs.readFileSync("./config/channels.json", "utf-8"));
+            global.configChannels = JSON.parse(fs.readFileSync(path.join(global.projectRoot, 'config', 'channels.json'), "utf-8"));
             if (Object.values(global.configChannels).every((channels) => Object.keys(channels).length === 0)) {
                 reportWarn(__line, functionName, "No channels in config/channels.json.");
             }
@@ -130,6 +127,11 @@ async function walkDir(dirPath, callback) {
             }
             report(__line, functionName, "config files loaded");
 
+            // Empty collections
+            // global.client.invitesCache = new Map();
+            global.databaseCache = {};
+            global.sigintSubscribers = [];
+
             // Create global modules
             global.client = new Client({ intents: 3276799, partials: ["MESSAGE", "REACTION"], });
 
@@ -140,20 +142,17 @@ async function walkDir(dirPath, callback) {
             global.commandManager = new CommandManager();
 
             const AttachmentsManager = require(global.attachmentsManagerPath);
-            global.attachments = new AttachmentsManager();
+            global.attachmentsManager = new AttachmentsManager();
 
             const EventsDatabase = require(global.eventsDatabasePath);
             global.eventsDatabase = new EventsDatabase();
 
             const MessagesDatabase = require(global.messagesDatabasePath);
             global.messagesDatabase = new MessagesDatabase();
+
             report(__line, functionName, "global modules created");
 
-            // Create caches
-            global.client.invitesCache = new Map();
-            global.databaseCache = {};
-
-            // TODO
+            // TODO:
             // require(global.getDatabasePath);
         } catch (err) {
             reportError(__line, functionName, err);
@@ -177,14 +176,14 @@ async function walkDir(dirPath, callback) {
             // Init databases
             await Promise.all([global.eventsDatabase.init(), global.messagesDatabase.init(),]);
 
-            // Init invites cache
-            const invites = await global.guild.invites.fetch();
-            invites.forEach((invite) => global.client.invitesCache.set(invite.code, invite.uses));
-
-            // Miscellaneous
-            global.latestAuditLogCount = getOrNull(await global.guild.latestAuditLog(), "extra.count");
+            // Init caches
+            // const invites = await global.guild.invites.fetch();
+            // invites.forEach((invite) => global.client.invitesCache.set(invite.code, invite.uses));
+            global.channels.initCache();
+            global.attachmentsManager.loadIndex();
 
             // Dispatch events
+            global.latestAuditLogCount = getOrNull(await global.guild.latestAuditLog(), "extra.count"); // needed by VoiceStateUpdate
             require(global.eventsPath);
 
             // Load API
@@ -228,8 +227,33 @@ async function walkDir(dirPath, callback) {
         }
     }
 
+    (async function dispatchHandlers() {
+        const functionName = "dispatchHandlers";
+        try {
+
+            global.client.on(Events.ClientReady, onReady);
+
+            process.on('uncaughtException', (err) => {
+                reportError(__line, "uncaughtException", err);
+            });
+
+            process.on('unhandledRejection', (reason, promise) => {
+                reportError(__line, "unhandledRejection", promise, reason);
+            });
+
+            process.on('SIGINT', async () => {
+                try {
+                    await Promise.all(global.sigintSubscribers.map(async (subscriber) => await subscriber()));
+                } catch (err) {
+                    reportError(__line, functionName, err);
+                }
+                process.exit(0);
+            });
+        } catch (err) {
+            reportError(__line, functionName, err);
+        }
+    })();
+
     // Login client
-    const event = Events.ClientReady;
-    global.client.on(event, onReady);
     await global.client.login(global.clientToken);
 });

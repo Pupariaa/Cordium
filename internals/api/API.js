@@ -66,7 +66,6 @@ const rh = async (req, res) => {
             l = { client: cIp, error: `cannot get /${ePath}`, status_code: 400, request_data: rData };
         }
     } catch (err) {
-        console.log(err)
         reportError(__line, functionName, 'Unexpected error in routing:', err);
         res.status(500).json('Internal Server Error');
     }

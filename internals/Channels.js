@@ -1,27 +1,26 @@
 'use-strict';
 const { __cfn, __cf } = eval(require(`current_filename`));
 const { report, reportWarn, reportError } = console.createReports(__cfn);
+const { validChannelId, getOrNull } = require(global.utilsPath);
+
+const cache = {};
 
 function _getById(channelId) {
-    const functionName = 'getChannel';
-    try {
-        return channelId ? global.guild.channels.cache.get(channelId) : null;
-    } catch (err) {
-        reportError(__line, functionName, `Error fetching channel with ID ${channelId}:`, err);
-        return null;
-    }
+    return cache[channelId];
 }
 
-function _getByName(channels, channelName) {
-    return _getById(channels[channelName].id);
+function _getByName(category, channelName) {
+    const id = getOrNull(global.configChannels, category, channelName, 'id');
+    return id ? _getById(id) : null;
 }
 
-function _getByTags(channels, ...tags) {
+function _getByTags(category, ...tags) {
     const r = [];
-    for (const [channelName, channelAlias] of Object.entries(channels)) {
+    for (const [channelName, channelAlias] of Object.entries(global.configChannels[category])) {
         for (const tag of tags) {
             if (channelAlias.tags.includes(tag)) {
-                r.push(_getByName(channelName));
+                const channel = _getByName(category, channelName);
+                if (channel) r.push(channel);
                 break;
             }
         }
@@ -31,6 +30,48 @@ function _getByTags(channels, ...tags) {
 
 class Channels {
     constructor() {
+        this.categories = Array.from(Object.keys(global.configChannels));
+        for (const category of this.categories) {
+            cache[category] = {};
+            Object.defineProperty(this, category, {
+                configurable: false,
+                enumerable: true,
+                writable: false,
+                value: {
+                    aliases: global.configChannels[category],
+                    getById: function (channelId) {
+                        return _getById(channelId);
+                    },
+                    getByName: function (channelName) {
+                        return _getByName(category, channelName);
+                    },
+                    getByTags: function (...tags) {
+                        return _getByTags(category, ...tags);
+                    },
+                    each: function (callback) {
+                        Object.entries(this.channels).forEach((channel) => callback(_getById(channel[1].id)));
+                    }
+                }
+            });
+        }
+    }
+
+    initCache = function () {
+        const functionName = 'initCache';
+        this.categories.forEach((category) =>
+            Object.entries(global.configChannels[category]).forEach(([channelName, channelAlias]) => {
+                const channelId = channelAlias.id;
+                if (!validChannelId(channelId)) {
+                    reportWarn(__line, functionName, `Invalid channel ID ${channelId} for channel ${channelName}`);
+                    return;
+                }
+                try {
+                    cache[channelId] = global.guild.channels.cache.get(channelId);
+                } catch (err) {
+                    reportError(__line, functionName, `Error fetching channel with ID ${channelId}:`, err);
+                }
+            })
+        );
     }
 
     getById = function (channelId) {
@@ -45,42 +86,76 @@ class Channels {
         return [...this.text.getByTags(...tags), ...this.voice.getByTags(...tags), ...this.forum.getByTags(...tags)];
     }
 
-    text = {
-        channels: global.configChannels.text,
-        getById: function (channelId) {
-            return _getById(channelId);
-        },
-        getByName: function (channelName) {
-            return _getByName(this.channels, channelName);
-        },
-        getByTags: function (...tags) {
-            return _getByTags(this.channels, ...tags);
-        }
+    each = function (callback, categories = [...this.categories]) {
+        categories.forEach((category) => this[category].each(callback));
     }
 
-    voice = {
-        channels: global.configChannels.voice,
-        getById: function (channelId) {
-            return _getById(channelId);
-        },
-        getByName: function (channelName) {
-            return _getByName(this.channels, channelName);
-        },
-        getByTags: function (...tags) {
-            return _getByTags(this.channels, ...tags);
-        }
-    }
+    fetchAllMessages = {
+        // By default, will return all messages sorted from newest to oldest
+        call: async function (
+            channel,
+            applyToAll = global.channels.fetchAllMessages.sortUp,
+            applyToEvery = (message, r) => r.unshift(message),
+            getFetchOptions = (lastId) => ({ before: lastId }),
+            defaultLastId = null) {
 
-    forum = {
-        channels: global.configChannels.forum,
-        getById: function (channelId) {
-            return _getById(channelId);
+            const functionName = 'fetchAllMessages';
+            const optimalLimit = 100;
+            let lastId = defaultLastId;
+            const r = [];
+            try {
+                let fetchedMessages = [];
+                do {
+                    fetchedMessages.length = 0;
+                    const fetchOptions = getFetchOptions(lastId);
+                    fetchOptions.limit = optimalLimit;
+                    fetchedMessages = Array.from((await channel.messages.fetch(fetchOptions)).values());
+                    if (fetchedMessages.length === 0) break;
+                    lastId = applyToAll(fetchedMessages, r);
+                    for (let i = fetchedMessages.length - 1; i >= 0; i--) applyToEvery(fetchedMessages[i], r);
+                } while (fetchedMessages.length === optimalLimit);
+            } catch (err) {
+                reportError(__line, functionName, err);
+            }
+            return r;
         },
-        getByName: function (channelName) {
-            return _getByName(this.channels, channelName);
+
+        sort: function (messages, r, sortFunction, getLastId = function (messages) { return messages[0].id }) {
+            messages.sort(sortFunction);
+            return getLastId(messages);
         },
-        getByTags: function (...tags) {
-            return _getByTags(this.channels, ...tags);
+
+        // Sorts from newest to oldest
+        sortUp: function (messages, r) {
+            return global.channels.fetchAllMessages.sort(messages, r, (a, b) => a.createdTimestamp - b.createdTimestamp);
+        },
+
+        // Sorts from oldest to newest
+        sortDown: function (messages, r) {
+            return global.channels.fetchAllMessages.sort(messages, r, (a, b) => b.createdTimestamp - a.createdTimestamp);
+        },
+
+        scan: function (messages, r, compare) {
+            let lastId = messages[0].id;
+            let lastCreatedTimestamp = messages[0].createdTimestamp;
+            for (let i = messages.length - 1; i >= 1; i--) {
+                const message = messages[i];
+                if (compare(message.createdTimestamp, lastCreatedTimestamp)) {
+                    lastId = message.id;
+                    lastCreatedTimestamp = message.createdTimestamp;
+                }
+            }
+            return lastId;
+        },
+
+        // Use when sorting is not necessary from newest to oldest
+        scanUp: function (messages, r) {
+            return global.channels.fetchAllMessages.scan(messages, r, (t1, t2) => t1 < t2);
+        },
+
+        // Use when sorting is not necessary from oldest to newest
+        scanDown: function (messages, r) {
+            return global.channels.fetchAllMessages.scan(messages, r, (t1, t2) => t1 > t2);
         }
     }
 }

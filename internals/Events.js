@@ -9,21 +9,22 @@ function formatArgs(logContext, ...args) {
     let formattedArgs = "";
     const mustEndWith = `${global.colors.Reset}"`;
     while (i < args.length) {
-        const left = `\n ${colors["FgCyan"]}${args[i]}${colors["Reset"]}="${colors["FgYellow"]
-            }${args[i + 1]}`;
+        const common = `\n ${colors["FgCyan"]}${args[i]}${colors["Reset"]}=`;
         if (i + 2 < args.length && args[i + 2] === "->") {
-            formattedArgs += console.fitOnTerm(
-                `${left}${colors["Reset"]}"->"${colors["FgYellow"]}${args[i + 3]
-                }${mustEndWith}`,
-                mustEndWith
-            );
+            let arrow = '->';
+            let sep = '';
+            if (args[i + 1].includes('\n') || args[i + 3]?.includes('\n')) {
+                arrow = '\n->\n';
+                sep = '\n';
+            }
+            formattedArgs += `${common}${sep}"${colors["FgYellow"]}${args[i + 1]}${colors["Reset"]}"${arrow}"${colors["FgYellow"]}${args[i + 3]}${mustEndWith}`;
             i += 2;
         } else {
-            formattedArgs += `${left}${mustEndWith}`;
+            formattedArgs += `${common}"${colors["FgYellow"]}${args[i + 1]}${mustEndWith}`;
         }
         i += 2;
     }
-    return console.fitOnTerm(formattedArgs, mustEndWith);
+    return console.fitOnTerm(formattedArgs);
 }
 
 function shouldLog(logContext, ...args) {
@@ -224,8 +225,7 @@ registerEvent(Events.ChannelCreate, (channel) => channel.guild.id, async functio
     });
 
     reportEvent(__line, this.eventName, "channel.name", channel.name, "executor.tag", executor.tag, "channel.type", global.guild.channelTypeStr(channel.type));
-}
-).listen();
+}).listen();
 
 registerEvent(Events.ChannelDelete, (channel) => channel.guild.id, async function (channel) {
     const executor = (await global.guild.latestAuditLog()).executor;
@@ -240,13 +240,11 @@ registerEvent(Events.ChannelDelete, (channel) => channel.guild.id, async functio
     });
 
     reportEvent(__line, this.eventName, "channel.name", channel.name, "executor.tag", executor.tag, "channel.type", global.guild.channelTypeStr(channel.type));
-}
-).listen();
+}).listen();
 
 registerEvent(Events.ChannelPinsUpdate, (channel) => channel.guild.id, async function (channel, date) {
     // TODO
-}
-).listen();
+}).listen();
 
 registerEvent(Events.ChannelUpdate, (oldChannel, newChannel) => newChannel.guild.id, async function (oldChannel, newChannel) {
     const executor = (await global.guild.latestAuditLog()).executor;
@@ -262,8 +260,7 @@ registerEvent(Events.ChannelUpdate, (oldChannel, newChannel) => newChannel.guild
     });
 
     reportEvent(__line, this.eventName, "channel.name", oldChannel.name, "->", newChannel.name, "executor.tag", executor.tag, "channel.type", global.guild.channelTypeStr(newChannel.type));
-}
-).listen();
+}).listen();
 
 // DONE: ClientReady
 
@@ -293,8 +290,7 @@ registerEvent(Events.GuildBanAdd, (ban) => ban.guild.id, async function (ban) {
     });
 
     reportEvent(__line, this.eventName, "user.tag", user.tag, "executor.tag", executor.tag, "reason", ban.reason);
-}
-).listen();
+}).listen();
 
 registerEvent(Events.GuildBanRemove, (ban) => ban.guild.id, async function (ban) {
     const user = ban.user;
@@ -308,8 +304,7 @@ registerEvent(Events.GuildBanRemove, (ban) => ban.guild.id, async function (ban)
     });
 
     reportEvent(__line, this.eventName, "user.tag", user.tag, "executor.tag", executor.tag);
-}
-).listen();
+}).listen();
 
 // TODO: GuildCreate
 
@@ -326,8 +321,7 @@ registerEvent(Events.GuildEmojiUpdate, (oldEmoji, newEmoji) => newEmoji.guild.id
     });
 
     reportEvent(__line, this.eventName, "executor.tag", executor.tag, "emoji.name", oldEmoji.name, "->", newEmoji.name, "emoji.url", oldEmoji.url, "->", newEmoji.url);
-}
-).listen();
+}).listen();
 
 registerEvent(Events.GuildEmojiDelete, (emoji) => emoji.guild.id, async function (emoji) {
     const executor = (await global.guild.latestAuditLog()).executor;
@@ -341,8 +335,7 @@ registerEvent(Events.GuildEmojiDelete, (emoji) => emoji.guild.id, async function
     });
 
     reportEvent(__line, this.eventName, "executor.tag", executor.tag, "emoji.name", emoji.name, "emoji.url", emoji.url);
-}
-).listen();
+}).listen();
 
 registerEvent(Events.GuildEmojiUpdate, (oldEmoji, newEmoji) => newEmoji.guild.id, async function (oldEmoji, newEmoji) {
     const executor = (await global.guild.latestAuditLog()).executor;
@@ -356,8 +349,7 @@ registerEvent(Events.GuildEmojiUpdate, (oldEmoji, newEmoji) => newEmoji.guild.id
     });
 
     reportEvent(__line, this.eventName, "executor.tag", executor.tag, "emoji.name", oldEmoji.name, "->", newEmoji.name, "emoji.url", oldEmoji.url, "->", newEmoji.url);
-}
-).listen();
+}).listen();
 
 // TODO: GuildIntegrationsUpdate
 
@@ -371,15 +363,13 @@ registerEvent(Events.GuildMemberAdd, (member) => member.guild.id, async function
     });
 
     reportEvent(__line, this.eventName, "user.tag", user.tag);
-}
-).listen();
+}).listen();
 
 registerEvent(Events.GuildMemberAvailable, (oldMember, newMember) => newMember.guild.id, async function (oldMember, newMember) {
     // TODO
 
     reportEvent(__line, this.eventName, "member.user.tag", member.user.tag);
-}
-).listen();
+}).listen();
 
 registerEvent(Events.GuildMemberRemove, (member) => member.guild.id, async function (member) {
     const user = member.user;
@@ -395,15 +385,13 @@ registerEvent(Events.GuildMemberRemove, (member) => member.guild.id, async funct
     });
 
     reportEvent(__line, this.eventName, "user.tag", user.tag);
-}
-).listen();
+}).listen();
 
 // TODO: GuildMembersChunk
 
 registerEvent(Events.GuildMemberUpdate, (oldMember, newMember) => newMember.guild.id, async function (oldMember, newMember) {
     reportEvent(__line, this.eventName, "user.tag", oldMember.user.tag, "->", newMember.user.tag);
-}
-).listen();
+}).listen();
 
 registerEvent(Events.GuildRoleCreate, (role) => role.guild.id, async function (role) {
     const executor = (await global.guild.latestAuditLog()).executor;
@@ -418,8 +406,7 @@ registerEvent(Events.GuildRoleCreate, (role) => role.guild.id, async function (r
     });
 
     reportEvent(__line, this.eventName, "executor.tag", executor.tag, "role.name", role.name);
-}
-).listen();
+}).listen();
 
 registerEvent(Events.GuildRoleDelete, (role) => role.guild.id, async function (role) {
     const executor = (await global.guild.latestAuditLog()).executor;
@@ -433,8 +420,7 @@ registerEvent(Events.GuildRoleDelete, (role) => role.guild.id, async function (r
     });
 
     reportEvent(__line, this.eventName, "executor.tag", executor.tag, "role.name", role.name);
-}
-).listen();
+}).listen();
 
 registerEvent(Events.GuildRoleUpdate, (oldRole, newRole) => newRole.guild.id, async function (oldRole, newRole) {
     const executor = (await global.guild.latestAuditLog()).executor;
@@ -447,8 +433,7 @@ registerEvent(Events.GuildRoleUpdate, (oldRole, newRole) => newRole.guild.id, as
     });
 
     reportEvent(__line, this.eventName, "executor.tag", executor.tag, "role.name", oldRole.name, "->", newRole.name, "role.color", oldRole.hexColor, "->", newRole.hexColor);
-}
-).listen();
+}).listen();
 
 // TODO: GuildScheduledEventCreate
 
@@ -471,8 +456,7 @@ registerEvent(Events.GuildStickerCreate, (oldSticker, newSticker) => newSticker.
     });
 
     reportEvent(__line, this.eventName, "executor.tag", executor.tag, "sticker.name", sticker.name);
-}
-).listen();
+}).listen();
 
 registerEvent(Events.GuildStickerDelete, (sticker) => sticker.guild.id, async function (sticker) {
     const executor = (await global.guild.latestAuditLog()).executor;
@@ -486,8 +470,7 @@ registerEvent(Events.GuildStickerDelete, (sticker) => sticker.guild.id, async fu
     });
 
     reportEvent(__line, this.eventName, "executor.tag", executor.tag, "sticker.name", sticker.name);
-}
-).listen();
+}).listen();
 
 registerEvent(Events.GuildStickerUpdate, (oldSticker, newSticker) => newSticker.guild.id, async function (oldSticker, newSticker) {
     const executor = (await global.guild.latestAuditLog()).executor;
@@ -501,8 +484,7 @@ registerEvent(Events.GuildStickerUpdate, (oldSticker, newSticker) => newSticker.
     });
 
     reportEvent(__line, this.eventName, "executor.tag", executor.tag, "sticker.name", oldSticker.name, "->", newSticker.name);
-}
-).listen();
+}).listen();
 
 // TODO: GuildUnavailable
 
@@ -576,6 +558,7 @@ registerEvent(Events.InteractionCreate, (interaction) => interaction.guildId, as
             for (const option of interaction.options._hoistedOptions) {
                 switch (option.type) {
                     case 3:
+                    case 5:
                         cmd += ` ${option.name}: ${option.value}`;
                         break;
                     case 6:
@@ -611,8 +594,7 @@ registerEvent(Events.InviteCreate, (invite) => invite.guild.id, async function (
     });
 
     reportEvent(__line, this.eventName, "executor.tag", executor.tag, "url", invite.url);
-}
-).listen();
+}).listen();
 
 registerEvent(Events.InviteDelete, (invite) => invite.guild.id, async function (invite) {
     const executor =
@@ -626,8 +608,7 @@ registerEvent(Events.InviteDelete, (invite) => invite.guild.id, async function (
     });
 
     reportEvent(__line, this.eventName, "executor.tag", executor.tag, "url", invite.url);
-}
-).listen();
+}).listen();
 
 registerEvent(Events.MessageBulkDelete, (messages, channel) => channel.guild.id, async function (messages, channel) {
     const executor = (await global.guild.latestAuditLog()).executor;
@@ -640,8 +621,7 @@ registerEvent(Events.MessageBulkDelete, (messages, channel) => channel.guild.id,
     });
 
     reportEvent(__line, this.eventName, "executor.tag", executor.tag, "messages.size", messages.size);
-}
-).listen();
+}).listen();
 
 registerEvent(Events.MessageCreate, (message) => message.guild.id, async function (message) {
     const executor = message.author;
@@ -664,8 +644,7 @@ registerEvent(Events.MessageCreate, (message) => message.guild.id, async functio
     global.messagesDatabase.set(message);
 
     reportEvent(__line, this.eventName, "channel.name", channel.name, "executor.tag", executor.tag, "content", content);
-}
-).listen();
+}).listen();
 
 registerEvent(Events.MessageDelete, (message) => message.guild.id, async function (message) {
     const executor = (await global.guild.latestAuditLog()).executor;
@@ -677,8 +656,7 @@ registerEvent(Events.MessageDelete, (message) => message.guild.id, async functio
     });
 
     reportEvent(__line, this.eventName, "executor.tag", executor.tag, "channel.name", message.channel.name, "content", message.content);
-}
-).listen();
+}).listen();
 
 // TODO: MessagePollVoteAdd
 
@@ -698,8 +676,7 @@ registerEvent(Events.MessageReactionAdd, (reaction, executor, details) => reacti
     });
 
     reportEvent(__line, this.eventName, "executor.tag", executor.tag, "emoji.name", emoji.name, "message.author.tag", user.tag);
-}
-).listen();
+}).listen();
 
 registerEvent(Events.MessageReactionRemove, (reaction, executor, details) => reaction.message.guild.id, async function (reaction, executor, details) {
     const emoji = reaction.emoji;
@@ -715,13 +692,11 @@ registerEvent(Events.MessageReactionRemove, (reaction, executor, details) => rea
     });
 
     reportEvent(__line, this.eventName, "executor.tag", executor.tag, "emoji.name", emoji.name, "message.author.tag", user.tag);
-}
-).listen();
+}).listen();
 
 registerEvent(Events.MessageReactionRemoveEmoji, (reaction) => reaction.message.guild.id, async function (reaction) {
     // TODO
-}
-).listen();
+}).listen();
 
 registerEvent(Events.MessageUpdate, (oldMessage, newMessage) => newMessage.guild.id, async function (oldMessage, newMessage) {
     const user = oldMessage?.author || newMessage?.author;
@@ -736,8 +711,7 @@ registerEvent(Events.MessageUpdate, (oldMessage, newMessage) => newMessage.guild
     global.messagesDatabase.update(newMessage);
 
     reportEvent(__line, this.eventName, "channel.name", newMessage.channel.name, "user.tag", user.tag, "content", oldMessage.content, "->", newMessage.content);
-}
-).listen();
+}).listen();
 
 // TODO: PresenceUpdate
 
@@ -771,8 +745,7 @@ registerEvent(Events.ThreadCreate, (thread, newlyCreated) => thread.guild.id, as
     });
 
     reportEvent(__line, this.eventName, "executor.tag", executor.tag, "thread.name", thread.name);
-}
-).listen();
+}).listen();
 
 registerEvent(Events.ThreadDelete, (thread) => thread.guild.id, async function (thread) {
     const executor = (await global.guild.latestAuditLog()).executor;
@@ -786,8 +759,7 @@ registerEvent(Events.ThreadDelete, (thread) => thread.guild.id, async function (
     });
 
     reportEvent(__line, this.eventName, "executor.tag", executor.tag, "thread.name", thread.name);
-}
-).listen();
+}).listen();
 
 // TODO: ThreadListSync
 
@@ -802,8 +774,7 @@ registerEvent(Events.ThreadUpdate, (oldThread, newThread) => newThread.guild.id,
 
     reportEvent(__line, this.eventName, "executor.tag", executor.tag, "thread.name", oldThread.name, "->", newThread.name
     );
-}
-).listen();
+}).listen();
 
 // TODO: TypingStart
 

@@ -1,4 +1,5 @@
 'use strict';
+const path = require("path");
 
 const colors = {
     Reset: "\x1b[0m",
@@ -39,7 +40,10 @@ console.logFormat = function (logContext) {
     return `${typeColor}${getFormattedTime()} [${type}]${colors.Reset} ${filename} - Line ${line} (${colors['FgGreen']}${callContext}${colors['Reset']}):`;
 };
 
-function logFactory(logger, type, typeColor, defaultFormatArgs = (logContext, ...args) => args.join(' '), defaultShouldLog = (logContext, ...args) => true) {
+const defaultFormatArgsFunction = (logContext, ...args) => args.join(' ');
+const defaultShouldLogFunction = (logContext, ...args) => true;
+
+function logFactory(logger, type, typeColor, defaultFormatArgs = defaultFormatArgsFunction, defaultShouldLog = defaultShouldLogFunction) {
     return function (filename, formatArgs = defaultFormatArgs, shouldLog = defaultShouldLog) {
         return function (line, callContext, ...args) {
             const logContext = { typeColor, type, filename, line, callContext };
@@ -47,6 +51,28 @@ function logFactory(logger, type, typeColor, defaultFormatArgs = (logContext, ..
             logger(console.logFormat(logContext), formatArgs(logContext, ...args));
         }
     };
+}
+
+function parseErr(err) {
+    const stack = err.stack;
+    const stackLines = stack.split('\n');
+    let errorLocation = stackLines.find(line => line.includes('.js:'));
+    if (!errorLocation) return null;
+    errorLocation = errorLocation.trim();
+    let functionName, filename, lineNumber, rowNumber;
+    const match = errorLocation.match(/(?:at )?(.*?) ?\(([^)]+?):(\d+)(?::(\d+))?\)/);
+    if (!match) return null;
+    functionName = match[1];
+    filename = path.relative(global.projectRoot, match[2]);
+    lineNumber = match[3];
+    rowNumber = match[4];
+    return [functionName, filename, lineNumber, rowNumber];
+}
+
+function formatErr(err) {
+    let r = `(${err.name}) ${err.message.includes('Require stack') ? err.message.split('\n')[0] : err.message}`;
+    const parsedErr = parseErr(err);
+    return !parsedErr || parsedErr.every(e => !e) ? r : `${r} (${parsedErr.filter(e => e).join(':')})`;
 }
 
 function formatArgsForError(logContext, ...args) {
@@ -58,7 +84,16 @@ function formatArgsForError(logContext, ...args) {
 
 console.createReport = logFactory(console.info, 'INFO', colors.FgCyan);
 console.createReportWarn = logFactory(console.warn, 'WARN', colors.FgYellow);
-console.createReportError = logFactory(console.error, 'ERROR', colors.FgRed, formatArgsForError);
+console.createReportError = logFactory(console.error, 'ERROR', colors.FgRed,
+    (process.env.format_errors ? process.env.format_errors.toLowerCase() === "true" : true)
+        ? formatArgsForError
+        : (logContext, ...args) => {
+            if (!args.length) return '';
+            const err = args.pop();
+            const common = `${args.join(' ')}${args.length > 0 ? ' ' : ''}`;
+            if (!(err instanceof Error)) return `${common}${err}`;
+            return `${common}${err.stack}`;
+        });
 console.createReports = function (filename) {
     return {
         report: console.createReport(filename),
@@ -70,8 +105,7 @@ console.createReports = function (filename) {
 global.colors = colors;
 
 console.fitOnTerm = function (text, mustEndWith = '') {
-    const lines = text.split('\n');
-    const processedLines = lines.map(line => {
+    const processedLines = text.split('\n').map(line => {
         let result = '';
         let curTrueLength = 0;
         let i = 0;
@@ -85,7 +119,5 @@ console.fitOnTerm = function (text, mustEndWith = '') {
     });
     return processedLines.join('\n');
 };
-
-const { formatErr } = require(global.utilsPath);
 
 module.exports = {};
