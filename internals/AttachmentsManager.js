@@ -39,6 +39,7 @@ class AttachmentsManager {
         const functionName = 'saveIndex';
         try {
             fs.writeFileSync(this.indexPath, JSON.stringify(this.index, null, 4), 'utf8');
+            report(__line, functionName, `Saved ${this.indexFilename}`);
         } catch (err) {
             reportError(__line, functionName, `Error saving ${this.indexFilename}:`, err);
         }
