@@ -14,10 +14,12 @@ global.utilsPath = path.join(__dirname, "internals", "prototypes", "Utils.js");
 const configEnvPath = path.join(__dirname, "config", "config.env");
 require("dotenv").config({ path: configEnvPath });
 
-// Defaults for some unspecified env variables
+// Defaults for unspecified env variables
 const defaultCommandsFolder = "./src/commands";
 const defaultEventsFolder = "./src/events";
+const defaultFilesFolder = "./src/files";
 const defaultEndpointsFolder = "./src/api/endpoints";
+const defaultSandboxFolder = "./src/sandbox";
 const defaultPort = 3000;
 
 const { validPort, capitalize, toCamelCase, getOrNull, } = require(global.utilsPath);
@@ -68,7 +70,7 @@ async function walkDir(dirPath, callback) {
                 .forEach((filename) => require("./" + path.join(prototypesDir, filename)));
 
             const clientPrototypesDir = "./src/prototypes";
-            if (!fs.existsSync(clientPrototypesDir)) return;
+            if (!fs.existsSync(clientPrototypesDir)) fs.mkdirSync(clientPrototypesDir);
             fs.readdirSync(clientPrototypesDir)
                 .forEach((filename) => require("./" + path.join(clientPrototypesDir, filename)));
         } catch (err) {
@@ -101,6 +103,8 @@ async function walkDir(dirPath, callback) {
             global.reportEvents = process.env.report_events ? process.env.report_events.toLowerCase() === "true" : true;
             global.eventsFolder = path.join(global.projectRoot, process.env.events_folder ? fs.existsSync(process.env.events_folder) ? process.env.events_folder : defaultEventsFolder : defaultEventsFolder);
             global.commandsFolder = path.join(global.projectRoot, process.env.commands_folder ? fs.existsSync(process.env.commands_folder) ? process.env.commands_folder : defaultCommandsFolder : defaultCommandsFolder);
+            global.filesFolder = path.join(global.projectRoot, process.env.files_folder ? fs.existsSync(process.env.files_folder) ? process.env.files_folder : defaultFilesFolder : defaultFilesFolder);
+            global.sandboxFolder = path.join(global.projectRoot, process.env.sandbox_folder ? fs.existsSync(process.env.sandbox_folder) ? process.env.sandbox_folder : defaultSandboxFolder : defaultSandboxFolder);
             global.endpointsFolder = path.join(global.projectRoot, process.env.endpoints_folder ? fs.existsSync(process.env.endpoints_folder) ? process.env.endpoints_folder : defaultEndpointsFolder : defaultEndpointsFolder);
             global.apiEnable = process.env.api_enable ? process.env.api_enable.toLowerCase() === "true" : false;
             global.apiPort = process.env.api_port ? validPort(process.env.api_port) ? process.env.api_port : defaultPort : defaultPort;
@@ -127,6 +131,12 @@ async function walkDir(dirPath, callback) {
                 }
             }
             report(__line, functionName, "config files loaded");
+
+            // mkdir gitignored folders
+            global.cacheFolder = path.join(global.projectRoot, "internals", "cache");
+            if (!fs.existsSync(global.cacheFolder)) fs.mkdirSync(global.cacheFolder);
+            if (!fs.existsSync(global.filesFolder)) fs.mkdirSync(global.filesFolder);
+            if (!fs.existsSync(global.sandboxFolder)) fs.mkdirSync(global.sandboxFolder);
 
             // Empty collections
             // global.client.invitesCache = new Map();
