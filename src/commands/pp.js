@@ -29,18 +29,24 @@ module.exports = {
     async execute(interaction) {
         const functionName = 'execute';
         try {
-            const user = interaction.options.getUser('user');
+            let user = interaction.options.getUser('user');
             const getGuildPp = interaction.options.getBoolean('guild');
-            let ephemeral = false;
             let content = '';
-            if (user) content += `global profile picture: ${user.avatarURL()}\nthis server's profile picture: ${user.displayAvatarURL()}`;
-            if (getGuildPp) content += `\n${global.guild.name}'s icon: ${global.guild.iconURL()}`;
-            if (content.length === 0) {
-                ephemeral = true;
-                content = 'you must specify a user and/or this guild';
+
+            if (user || !getGuildPp) {
+                if (!user) user = interaction.user;
+                const member = await global.client.getMemberById(user.id);
+                const userAvatarUrl = user.avatarURL();
+                const memberAvatarUrl = member.displayAvatarURL();
+                const name = member.displayName;
+                content += `${name}'s user pp: ${userAvatarUrl}`;
+                if (memberAvatarUrl !== userAvatarUrl) content += `\n${name}'s server pp: ${memberAvatarUrl}`;
             }
+
+            if (getGuildPp) content += `\n${global.guild.name}'s icon: ${global.guild.iconURL()}`;
+
             await interaction.reply({
-                ephemeral: ephemeral,
+                ephemeral: false,
                 content: content
             });
         } catch (err) {
