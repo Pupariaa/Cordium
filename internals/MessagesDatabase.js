@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
-const { TextChannel, VoiceChannel, ForumChannel } = require('discord.js');
+const { Collection, Sticker, cleanContent } = require('discord.js');
 const { __cfn, __cf } = eval(require(`current_filename`));
 const { report, reportWarn, reportError } = console.createReports(__cfn);
 
@@ -30,6 +30,7 @@ class MessagesDatabase {
         this.messagesTableColumns = {
             id: 'INTEGER PRIMARY KEY AUTOINCREMENT',
             messageId: 'INTEGER NOT NULL',
+            type: 'INTEGER NOT NULL',
             authorId: 'TEXT NOT NULL',
             channelId: 'TEXT NOT NULL',
             content: 'TEXT NOT NULL',
@@ -199,7 +200,7 @@ class MessagesDatabase {
         const reference = `${getOrNull(message, 'reference.guildId')},${getOrNull(message, 'reference.channelId')},${getOrNull(message, 'reference.messageId')}`;
         const stickers = Object.values(message.stickers);
         return [
-            message.id, message.author.id, message.channelId, message.content, message.createdTimestamp, message.crosspostable,
+            message.id, message.type, message.author.id, message.channelId, message.content, message.createdTimestamp, message.crosspostable,
             message.editedAt, message.flags.bitfield, getOrNull(message, 'groupActivityApplication.id'), getOrNull(message, 'thread.id'), message.pinned,
             reference, stickers.length ? stickers[0].id : null, message.system, message.tts, message.webhookId
         ];
@@ -273,29 +274,30 @@ class MessagesDatabase {
 
     get(id) {
         return new Promise((resolve, reject) =>
-            this.db.get(`SELECT * FROM messages WHERE messageId = ?`, [id], (err, row) => {
+            this.db.get(`SELECT * FROM messages WHERE messageId = ?`, [id], (err, cachedMessage) => {
                 if (err) {
                     reportError(__line, functionName, 'Error getting message:', err);
                     reject(err);
                 } else {
-                    resolve(row);
+                    resolve(this.#cachedMessageToMessage(cachedMessage));
                 }
             })
         );
     }
 
     forEach(callback) {
-        // TODO
-        return new Promise((resolve, reject) =>
-            this.db.each(`SELECT messageId FROM messages`, (err, row) => {
+        const functionName = 'forEach';
+        return new Promise((resolve, reject) => {
+            this.db.all('SELECT * FROM messages', [], (err, cachedMessages) => {
                 if (err) {
-                    reportError(__line, functionName, 'Error getting messages:', err);
+                    reportError(__line, functionName, 'Error retrieving messages:', err);
                     reject(err);
                 } else {
-                    callback(row);
+                    cachedMessages.forEach((cachedMessage) => callback(this.#cachedMessageToMessage(cachedMessage)));
+                    resolve();
                 }
-            })
-        );
+            });
+        });
     }
 
     update(newMessage) {
@@ -314,9 +316,87 @@ class MessagesDatabase {
         );
     }
 
+    #cachedMessageToMessage(cachedMessage) {
+        // TODO: build back the discordjs Message object
+        const member = global.client.getMemberById(cachedMessage.authorId);
+        const author = member?.user || null;
+        const content = cachedMessage.content;
+        const channel = global.client.getChannelById(cachedMessage.channelId);
+        const references = cachedMessage.reference.split(',');
+        const reference_channelId = references[0] === 'null' ? null : references[0];
+        const reference_guildId = references[1] === 'null' ? null : references[1];
+        const reference_messageId = references[2] === 'null' ? null : references[2];
+        const stickersList = [];
+        if (cachedMessage.stickerId) stickersList.push(new Sticker(author, { id: cachedMessage.stickerId }));
+        const stickers = new Collection(stickersList);
+        return {
+            activity: null,
+            applicationId: author?.bot ? author.id : null,
+            attachments: null,
+            author: author,
+            bulkDeletable: null,
+            call: null,
+            channel: channel,
+            channelId: cachedMessage.channelId,
+            cleanContent: content != null ? cleanContent(content, channel) : null,
+            client: author,
+            components: null,
+            content: content,
+            createdAt: null,
+            createdTimestamp: cachedMessage.createdTimestamp,
+            crosspostable: cachedMessage.crosspostable,
+            deletable: null,
+            editable: null,
+            editedAt: cachedMessage.editedAt,
+            editedTimestamp: null,
+            embeds: null,
+            flags: cachedMessage.flags,
+            groupActivityApplication: cachedMessage.activityApplicationId, // TODO: get or build back the discordjs ClientApplication object
+            guild: global.guild,
+            guildId: global.guild.id,
+            hasThread: cachedMessage.threadId != null,
+            id: cachedMessage.messageId,
+            interaction: null,
+            interactionMetadata: null,
+            member: member,
+            mentions: null,
+            nonce: null,
+            partial: null,
+            pinnable: null,
+            pinned: cachedMessage.pinned,
+            poll: null,
+            position: null,
+            reactions: null,
+            reference: { channelId: reference_channelId, guildId: reference_guildId, messageId: reference_messageId },
+            resolved: null,
+            roleSubscriptionData: null,
+            stickers: stickers,
+            system: cachedMessage.system,
+            thread: cachedMessage.threadId, // TODO: get or build back the discordjs Thread object
+            tts: cachedMessage.tts,
+            type: cachedMessage.type,
+            url: `https://discord.com/channels/${global.guild.id}/${channel.id}/${cachedMessage.messageId}`,
+            webhookId: cachedMessage.webhookId
+        }
+    }
+
+    feedDiscordjs() {
+        const functionName = 'feedDiscordjs';
+        return this.forEach((message) => {
+            const channel = global.client.getChannelById(message.channel.id);
+            if (!channel) reportError(__line, functionName, `Channel ${message.channel.id} not found`);
+            if (message.content === 'qsdq') console.log(`caching ${message.id} (${message.content.abbreviate(10)})`);
+            channel.messages.cache.set(message.id, message);
+        });
+    }
+
     close() {
         const functionName = 'close';
-        if (this.lastMessagesId) fs.writeFileSync(this.cachePath, JSON.stringify(this.lastMessagesId, null, 4), 'utf8');
+        if (this.lastMessagesId) {
+            const stringifiedLastMessagesId = JSON.stringify(this.lastMessagesId, null, 4);
+            if (stringifiedLastMessagesId) fs.writeFileSync(this.cachePath, stringifiedLastMessagesId, 'utf8');
+        }
+        if (!this.db) return;
         return new Promise((resolve, reject) =>
             this.db.close((err) => {
                 if (err) {
