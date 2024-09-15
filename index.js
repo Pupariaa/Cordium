@@ -188,7 +188,12 @@ async function walkDir(dirPath, callback) {
             }
 
             // Init databases
-            await Promise.all([global.eventsDatabase.init(), global.messagesDatabase.init(),]);
+            await Promise.all([global.eventsDatabase.init(), global.messagesDatabase.init()]);
+
+            // Feed discord.js with old messages
+            report(__line, functionName, 'Feeding Discord.js old messages...');
+            await global.messagesDatabase.feedDiscordjs();
+            report(__line, functionName, 'Done feeding Discord.js old messages');
 
             // Init caches
             // const invites = await global.guild.invites.fetch();
