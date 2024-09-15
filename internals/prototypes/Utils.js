@@ -48,6 +48,34 @@ function loadEnvPath(key, defaultValue) {
     return path.join(global.projectRoot, envValue ? (fs.existsSync(envValue) ? envValue : defaultValue) : defaultValue);
 }
 
+function compareObjects(obj1, obj2) {
+    if (typeof obj1 !== typeof obj2) return true;
+    if (typeof obj1 !== 'object' || obj1 === null || obj2 === null) return obj1 !== obj2;
+    if (Array.isArray(obj1) !== Array.isArray(obj2)) return true;
+    if (Array.isArray(obj1)) {
+        if (obj1.length !== obj2.length) return true;
+        for (let i = 0; i < obj1.length; i++) {
+            if (compareObjects(obj1[i], obj2[i])) return true;
+        }
+        return false;
+    }
+    const keys1 = Object.keys(obj1);
+    const keys2 = Object.keys(obj2);
+    if (keys1.length !== keys2.length) return true;
+    for (let key of keys1) {
+        if (!obj2.hasOwnProperty(key) || compareObjects(obj1[key], obj2[key])) return true;
+    }
+    return false;
+}
+
+function compareOldAndNew(oldObj, newObj) {
+    const differentKeys = [];
+    Object.keys(oldObj).forEach(key => {
+        if (!compareObjects(oldObj[key], newObj[key])) differentKeys.push(key);
+    });
+    return differentKeys;
+}
+
 module.exports = {
     downloadFile,
     getOrNull,
@@ -56,5 +84,6 @@ module.exports = {
     decapitalize,
     toCamelCase,
     validChannelId,
-    loadEnvPath
+    loadEnvPath,
+    compareOldAndNew
 };
