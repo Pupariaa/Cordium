@@ -91,6 +91,7 @@ class MessagesDatabase {
     }
 
     async init() {
+        // TODO: it seems that not all messages are fetched and cached the first run
         const functionName = 'init';
         try {
             await this.#connectToDatabase();
