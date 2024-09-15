@@ -53,22 +53,27 @@ function logFactory(logger, type, typeColor, defaultFormatArgs = defaultFormatAr
     };
 }
 
-const parseErrStackRegex = new RegExp(' +at ([_$a-zA-Z\\xA0-\\uFFFF][_$a-zA-Z0-9\\xA0-\\uFFFF]*) \\(([^)]+?).js:(\\d+)(?::(\\d+))?\\)', '')
+const parseErrStackRegex = new RegExp(' +at (?:(.+?) )?\\(?([^)]+?).js:(\\d+)(?::(\\d+))?\\)?', '');
 
 function parseErr(err) {
-    const match = parseErrStackRegex.exec(err.stack);
-    if (!match) return null;
-    const functionName = match[1];
-    const filename = path.relative(global.projectRoot, match[2]);
-    const lineNumber = match[3];
-    const rowNumber = match[4];
-    return [functionName, filename, lineNumber, rowNumber];
+    const lines = err.stack.split('\n');
+    for (const line of lines) {
+        const match = parseErrStackRegex.exec(line);
+        if (match && !match[2].includes('node_modules')) {
+            const functionName = match[1] || '<anonymous>';
+            const filename = path.relative(global.projectRoot, match[2]);
+            const lineNumber = match[3];
+            const rowNumber = match[4] || undefined;
+            return [functionName, filename, lineNumber, rowNumber];
+        }
+    }
+    return null;
 }
 
 function formatErr(err) {
     let errorNameAndMessage = `(${err.name}) ${err.message.includes('Require stack') ? err.message.split('\n')[0] : err.message}`;
     const parsedErr = parseErr(err);
-    return !parsedErr || parsedErr.every(e => !e) ? errorNameAndMessage : `${errorNameAndMessage}(${parsedErr.filter(e => e).join(':')})`;
+    return !parsedErr || parsedErr.every(e => !e) ? errorNameAndMessage : `${errorNameAndMessage} (${parsedErr.filter(e => e).join(':')})`;
 }
 
 function getFormatArgsForError(formatErrFunction) {
