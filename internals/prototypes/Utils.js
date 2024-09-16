@@ -48,32 +48,51 @@ function loadEnvPath(key, defaultValue) {
     return path.join(global.projectRoot, envValue ? (fs.existsSync(envValue) ? envValue : defaultValue) : defaultValue);
 }
 
-function compareObjects(obj1, obj2) {
-    if (typeof obj1 !== typeof obj2) return true;
-    if (typeof obj1 !== 'object' || obj1 === null || obj2 === null) return obj1 !== obj2;
-    if (Array.isArray(obj1) !== Array.isArray(obj2)) return true;
+function compareObjects(obj1, obj2, path = '', seen = new WeakMap()) {
+    // Check for circular references
+    if (typeof obj1 === 'object' && obj1 !== null) {
+        if (seen.has(obj1)) return seen.get(obj1) === obj2 ? [] : [path];
+        seen.set(obj1, obj2);
+    }
+
+    if (typeof obj1 !== typeof obj2) return [path];
+    if (typeof obj1 !== 'object' || obj1 === null || obj2 === null) {
+        return obj1 !== obj2 ? [path] : [];
+    }
+    if (Array.isArray(obj1) !== Array.isArray(obj2)) return [path];
+
+    let differences = [];
+
     if (Array.isArray(obj1)) {
-        if (obj1.length !== obj2.length) return true;
+        if (obj1.length !== obj2.length) return [path];
         for (let i = 0; i < obj1.length; i++) {
-            if (compareObjects(obj1[i], obj2[i])) return true;
+            differences.push(...compareObjects(obj1[i], obj2[i], `${path}[${i}]`, seen));
         }
-        return false;
+    } else {
+        const keys1 = Object.keys(obj1);
+        const keys2 = Object.keys(obj2);
+        if (keys1.length !== keys2.length) return [path];
+
+        for (let key of keys1) {
+            if (!obj2.hasOwnProperty(key)) {
+                differences.push(path ? `${path}.${key}` : key);
+            } else {
+                differences.push(...compareObjects(obj1[key], obj2[key], path ? `${path}.${key}` : key, seen));
+            }
+        }
     }
-    const keys1 = Object.keys(obj1);
-    const keys2 = Object.keys(obj2);
-    if (keys1.length !== keys2.length) return true;
-    for (let key of keys1) {
-        if (!obj2.hasOwnProperty(key) || compareObjects(obj1[key], obj2[key])) return true;
-    }
-    return false;
+
+    return differences;
 }
 
 function compareOldAndNew(oldObj, newObj) {
-    const differentKeys = [];
-    Object.keys(oldObj).forEach(key => {
-        if (!compareObjects(oldObj[key], newObj[key])) differentKeys.push(key);
+    const reportEventArgs = [];
+    compareObjects(oldObj, newObj).forEach(diff => {
+        const oldValue = getOrNull(oldObj, diff); if (typeof oldValue !== 'string') return;
+        const newValue = getOrNull(newObj, diff); if (typeof newValue !== 'string') return;
+        reportEventArgs.push(diff, getOrNull(oldObj, diff), '->', getOrNull(newObj, diff));
     });
-    return differentKeys;
+    return reportEventArgs;
 }
 
 module.exports = {
