@@ -1,7 +1,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const { Client, Events } = require('discord.js');
+const { Client, Events, GatewayIntentBits, Partials } = require('discord.js');
 
 // Fix discord.js inconsistencies
 Object.keys(Events).forEach((key) => {
@@ -143,11 +143,44 @@ async function walkDir(dirPath, callback) {
 
             // Empty collections
             // global.client.invitesCache = new Map();
-            global.databaseCache = {};
+            // global.databaseCache = {};
             global.sigintSubscribers = [];
 
             // Create global modules
-            global.client = new Client({ intents: 3276799, partials: ['MESSAGE', 'REACTION'], });
+            global.client = new Client({
+                intents: [
+                    GatewayIntentBits.Guilds,
+                    GatewayIntentBits.GuildMembers,
+                    GatewayIntentBits.GuildModeration,
+                    // GatewayIntentBits.GuildBans, // deprecated
+                    GatewayIntentBits.GuildEmojisAndStickers,
+                    GatewayIntentBits.GuildIntegrations,
+                    GatewayIntentBits.GuildWebhooks,
+                    GatewayIntentBits.GuildInvites,
+                    GatewayIntentBits.GuildVoiceStates,
+                    GatewayIntentBits.GuildPresences,
+                    GatewayIntentBits.GuildMessages,
+                    GatewayIntentBits.GuildMessageReactions,
+                    GatewayIntentBits.GuildMessageTyping,
+                    GatewayIntentBits.DirectMessages,
+                    GatewayIntentBits.DirectMessageReactions,
+                    GatewayIntentBits.DirectMessageTyping,
+                    GatewayIntentBits.MessageContent,
+                    GatewayIntentBits.GuildScheduledEvents,
+                    GatewayIntentBits.AutoModerationConfiguration,
+                    GatewayIntentBits.AutoModerationExecution,
+                    GatewayIntentBits.GuildMessagePolls,
+                    GatewayIntentBits.DirectMessagePolls
+                ], partials: [
+                    Partials.User,
+                    Partials.Channel,
+                    Partials.GuildMember,
+                    Partials.Message,
+                    Partials.Reaction,
+                    Partials.GuildScheduledEvent,
+                    Partials.ThreadMember
+                ]
+            });
 
             const Channels = require(global.channelsPath);
             global.channels = new Channels();
@@ -158,11 +191,11 @@ async function walkDir(dirPath, callback) {
             const AttachmentsManager = require(global.attachmentsManagerPath);
             global.attachmentsManager = new AttachmentsManager();
 
-            const EventsDatabase = require(global.eventsDatabasePath);
-            global.eventsDatabase = new EventsDatabase();
+            // const EventsDatabase = require(global.eventsDatabasePath);
+            // global.eventsDatabase = new EventsDatabase();
 
-            const MessagesDatabase = require(global.messagesDatabasePath);
-            global.messagesDatabase = new MessagesDatabase();
+            // const MessagesDatabase = require(global.messagesDatabasePath);
+            // global.messagesDatabase = new MessagesDatabase();
 
             report(__line, functionName, 'global modules created');
 
@@ -188,12 +221,12 @@ async function walkDir(dirPath, callback) {
             }
 
             // Init databases
-            await Promise.all([global.eventsDatabase.init(), global.messagesDatabase.init()]);
+            // await Promise.all([global.eventsDatabase.init(), global.messagesDatabase.init()]);
 
             // Feed discord.js with old messages
-            report(__line, functionName, 'Feeding Discord.js old messages...');
-            await global.messagesDatabase.feedDiscordjs();
-            report(__line, functionName, 'Done feeding Discord.js old messages');
+            // report(__line, functionName, 'Feeding Discord.js old messages...');
+            // await global.messagesDatabase.feedDiscordjs();
+            // report(__line, functionName, 'Done feeding Discord.js old messages');
 
             // Init caches
             // const invites = await global.guild.invites.fetch();

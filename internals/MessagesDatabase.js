@@ -112,7 +112,7 @@ class MessagesDatabase {
             }
             let mostRecentTimestamps = {};
             const applyToEvery = (message, r) => {
-                promises.push(this.set(message));
+                promises.push(this.#set(message));
                 if (!(message.channel.id in mostRecentTimestamps) || message.createdTimestamp > mostRecentTimestamps[message.channel.id]) {
                     this.lastMessagesId[message.channel.id] = message.id;
                     mostRecentTimestamps[message.channel.id] = message.createdTimestamp;
@@ -207,9 +207,8 @@ class MessagesDatabase {
         ];
     }
 
-    set(message) {
+    #set(message) {
         const functionName = 'set';
-        this.lastMessagesId[message.channel.id] = message.id;
         const insertsSQL = [`INSERT INTO messages (${this.messageSQLFields}) VALUES (${this.messageSQLValues})`];
         const params = [this.#extractFields(message)];
         /*
@@ -273,6 +272,11 @@ class MessagesDatabase {
         ));
     }
 
+    set(message) {
+        this.#set(message);
+        this.lastMessagesId[message.channel.id] = message.id;
+    }
+
     get(id) {
         return new Promise((resolve, reject) =>
             this.db.get(`SELECT * FROM messages WHERE messageId = ?`, [id], (err, cachedMessage) => {
@@ -305,6 +309,7 @@ class MessagesDatabase {
         const functionName = 'update';
         const insertOrReplaceSQL = `UPDATE messages SET (${this.messageSQLFields}) = (${this.messageSQLValues}) WHERE messageId = ${newMessage.id}`;
         const params = this.#extractFields(newMessage);
+        console.log('caca');
         return new Promise((resolve, reject) =>
             this.db.run(insertOrReplaceSQL, params, (err) => {
                 if (err) {
@@ -389,7 +394,6 @@ class MessagesDatabase {
                 reportError(__line, functionName, `Channel ${message.channel.id} not found`);
                 return;
             }
-            // if (message.content === 'qsdq') console.log(`caching ${message.id} (${message.content.abbreviate(10)})`);
             channel.messages.cache.set(message.id, message);
         });
     }

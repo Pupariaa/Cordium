@@ -18,8 +18,8 @@ module.exports = {
             return validationError;
         }
 
-        const messageData = await global.databaseCache.get_message(requestData.id);
-        return messageData
+        // const messageData = await global.databaseCache.get_message(requestData.id);
+        // return messageData
     },
 };
 

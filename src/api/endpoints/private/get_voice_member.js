@@ -18,8 +18,8 @@ module.exports = {
             return validationError;
         }
 
-        const pairs = await global.databaseCache.get_voice_member(requestData.userid)
-        return pairs
+        // const pairs = await global.databaseCache.get_voice_member(requestData.userid)
+        // return pairs
 
     },
 };
