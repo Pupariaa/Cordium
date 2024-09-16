@@ -42,18 +42,6 @@ function shouldListen(event) {
     return global.listenEvents && global.configListenEvents[event];
 }
 
-// TODO: ApplicationCommandPermissionsUpdate
-
-// TODO: AutoModerationActionExecution
-
-// TODO: AutoModerationRuleCreate
-
-// TODO: AutoModerationRuleDelete
-
-// TODO: AutoModerationRuleUpdate
-
-// TODO: CacheSweep
-
 function eventToPath(event) {
     let category;
     switch (String(event)) {
@@ -212,6 +200,18 @@ function registerEvent(event, guildId, trigger) {
     set(eventScope, 'args', undefined, true);
     return eventScope;
 }
+
+// TODO: ApplicationCommandPermissionsUpdate
+
+// TODO: AutoModerationActionExecution
+
+// TODO: AutoModerationRuleCreate
+
+// TODO: AutoModerationRuleDelete
+
+// TODO: AutoModerationRuleUpdate
+
+// TODO: CacheSweep
 
 report(__line, __cfn, 'Dispatching events...');
 
@@ -804,6 +804,8 @@ registerEvent(Events.ThreadUpdate, (oldThread, newThread) => newThread.guild.id,
 // TODO: VoiceServerUpdate
 
 registerEvent(Events.VoiceStateUpdate, (oldState, newState) => newState.guild.id, async function (oldState, newState) {
+    this.oldState = oldState;
+    this.newState = newState;
     if (!oldState.channelId && !newState.channelId) {
         this.impossibleCaseReached('old and new states are null');
         return;
@@ -905,7 +907,7 @@ registerEvent(Events.VoiceStateUpdate, (oldState, newState) => newState.guild.id
         reportWarn(__line, this.eventName, 'impossible case reached:', msg);
         const module = require(eventToPath(this.event));
         module.event = this.event;
-        module.callback(oldState, newState);
+        module.callback(this.oldState, this.newState);
     })
     .listen();
 
