@@ -385,8 +385,11 @@ class MessagesDatabase {
         const functionName = 'feedDiscordjs';
         return this.forEach((message) => {
             const channel = global.client.getChannelById(message.channel.id);
-            if (!channel) reportError(__line, functionName, `Channel ${message.channel.id} not found`);
-            if (message.content === 'qsdq') console.log(`caching ${message.id} (${message.content.abbreviate(10)})`);
+            if (!channel) {
+                reportError(__line, functionName, `Channel ${message.channel.id} not found`);
+                return;
+            }
+            // if (message.content === 'qsdq') console.log(`caching ${message.id} (${message.content.abbreviate(10)})`);
             channel.messages.cache.set(message.id, message);
         });
     }
