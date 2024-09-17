@@ -1,8 +1,6 @@
 'use strict';
 const { SlashCommandBuilder } = require('discord.js');
 
-const { __cfn, __cf } = eval(require(`current_filename`));
-const { report, reportWarn, reportError } = console.createReports(__cf);
 
 const cmdName = 'pp';
 const cmdDescription = 'send the given user\'s profile pictures';
@@ -27,7 +25,6 @@ module.exports = {
      * @param {Object} interaction - The interaction object from Discord.js.
      */
     async execute(interaction) {
-        const functionName = 'execute';
         try {
             let user = interaction.options.getUser('user');
             const getGuildPp = interaction.options.getBoolean('guild');
@@ -50,7 +47,7 @@ module.exports = {
                 content: content
             });
         } catch (err) {
-            reportError(__line, functionName, err);
+            console.reportError(err);
         }
     }
 };

@@ -1,6 +1,4 @@
 'use-strict';
-const { __cfn, __cf } = eval(require(`current_filename`));
-const { report, reportWarn, reportError } = console.createReports(__cfn);
 
 const { validChannelId, getOrNull } = require(global.utilsPath);
 
@@ -58,18 +56,17 @@ class Channels {
     }
 
     initCache = function () {
-        const functionName = 'initCache';
         this.categories.forEach((category) =>
             Object.entries(global.configChannels[category]).forEach(([channelName, channelAlias]) => {
                 const channelId = channelAlias.id;
                 if (!validChannelId(channelId)) {
-                    reportWarn(__line, functionName, `Invalid channel ID ${channelId} for channel ${channelName}`);
+                    console.reportWarn(`Invalid channel ID ${channelId} for channel ${channelName}`);
                     return;
                 }
                 try {
                     cache[channelId] = global.guild.channels.cache.get(channelId);
                 } catch (err) {
-                    reportError(__line, functionName, `Error fetching channel with ID ${channelId}:`, err);
+                    console.reportError(`Error fetching channel with ID ${channelId}:`, err);
                 }
             })
         );
@@ -100,7 +97,6 @@ class Channels {
             getFetchOptions = (lastId) => ({ before: lastId }),
             defaultLastId = null) {
 
-            const functionName = 'fetchAllMessages';
             const optimalLimit = 100;
             let lastId = defaultLastId;
             const r = [];
@@ -116,7 +112,7 @@ class Channels {
                     for (let i = fetchedMessages.length - 1; i >= 0; i--) applyToEvery(fetchedMessages[i], r);
                 } while (fetchedMessages.length === optimalLimit);
             } catch (err) {
-                reportError(__line, functionName, err);
+                console.reportError(err);
             }
             return r;
         },

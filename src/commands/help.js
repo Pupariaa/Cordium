@@ -1,8 +1,6 @@
 'use strict';
 const { SlashCommandBuilder } = require('discord.js');
 
-const { __cfn, __cf } = eval(require(`current_filename`));
-const { report, reportWarn, reportError } = console.createReports(__cf);
 
 const cmdName = 'help';
 const cmdDescription = 'gives an overview of the commands';
@@ -17,7 +15,6 @@ module.exports = {
      * @param {Object} interaction - The interaction object from Discord.js.
      */
     async execute(interaction) {
-        const functionName = 'execute';
         try {
             const replyObject = {
                 ephemeral: false,
@@ -30,7 +27,7 @@ module.exports = {
             }
             await interaction.reply(replyObject);
         } catch (err) {
-            reportError(__line, functionName, err);
+            console.reportError(err);
         }
     }
 };

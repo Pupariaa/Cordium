@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "init": "echo|set /p=> config/config.env & echo 'use strict';> src\\sandbox\\index.js & echo.>> src\\sandbox\\index.js & echo const { __cfn, __cf } = eval(require(`current_filename`));>> src\\sandbox\\index.js & echo const { report, reportWarn, reportError } = console.createReports(__cfn);>> src\\sandbox\\index.js & echo.>> src\\sandbox\\index.js & echo report(__line, __cfn, '--------------------------------------------SANDBOX OUTPUT START--------------------------------------------');>> src\\sandbox\\index.js & echo const fs = require('fs');>> src\\sandbox\\index.js & echo const path = require('path');>> src\\sandbox\\index.js & echo const guild = global.client.guilds.cache.get(global.discordGuildId);>> src\\sandbox\\index.js & echo.>> src\\sandbox\\index.js & echo.>> src\\sandbox\\index.js & echo.>> src\\sandbox\\index.js & echo|set /p=report(__line, __cfn, '--------------------------------------------SANDBOX OUTPUT END----------------------------------------------');>> src\\sandbox\\index.js & npm i & echo. & powershell -ExecutionPolicy Bypass -File ./config/cli/init.ps1",
+    "init": "echo|set /p=> config/config.env & echo 'use strict';> src\\sandbox\\index.js & echo.>> src\\sandbox\\index.js & echo require('extend-console');>> src\\sandbox\\index.js & echo.>> src\\sandbox\\index.js & echo report('--------------------------------------------SANDBOX OUTPUT START--------------------------------------------');>> src\\sandbox\\index.js & echo const fs = require('fs');>> src\\sandbox\\index.js & echo const path = require('path');>> src\\sandbox\\index.js & echo const guild = global.client.guilds.cache.get(global.discordGuildId);>> src\\sandbox\\index.js & echo.>> src\\sandbox\\index.js & echo.>> src\\sandbox\\index.js & echo.>> src\\sandbox\\index.js & echo|set /p=report('--------------------------------------------SANDBOX OUTPUT END----------------------------------------------');>> src\\sandbox\\index.js & npm i & echo. & powershell -ExecutionPolicy Bypass -File ./config/cli/init.ps1",
     "prod": "set prod=true && node index.js"
   },
   "bin": {
@@ -36,7 +36,7 @@
     "epxress": "^0.0.1-security",
     "exceljs": "^4.4.0",
     "express": "^4.19.2",
-    "extend-console": "^1.0.0",
+    "extend-console": "^3.4.2",
     "fastify": "^4.28.1",
     "ffmpeg-static": "^5.2.0",
     "figures": "^6.1.0",

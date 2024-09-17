@@ -10,7 +10,6 @@ BaseChannel.prototype._hasTag = function (channels, tag) {
 };
 
 // async getCreator(channel) {
-//     const functionName = 'getCreator';
 //     try {
 //         let auditLogs = await global.guild.fetchAllAuditLogs();
 //         if (!auditLogs) return null;
@@ -20,7 +19,7 @@ BaseChannel.prototype._hasTag = function (channels, tag) {
 //             }
 //         }
 //     } catch (err) {
-//         reportError(__line, functionName, `Error fetching audit logs:`, err);
+//         console.reportError(`Error fetching audit logs:`, err);
 //     }
 //     return null;
 // }

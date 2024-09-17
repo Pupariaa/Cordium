@@ -3,8 +3,6 @@ const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
 const { Collection, Sticker, cleanContent } = require('discord.js');
 
-const { __cfn, __cf } = eval(require(`current_filename`));
-const { report, reportWarn, reportError } = console.createReports(__cfn);
 const { getOrNull } = require(global.utilsPath);
 
 class MessagesDatabase {
@@ -15,14 +13,13 @@ class MessagesDatabase {
         dbPath = path.join(global.projectRoot, 'internals', 'cache', this.messagesDbFilename),
         cachePath = path.join(global.projectRoot, 'internals', 'cache', this.lastMessagesIdFilename)
     ) {
-        const functionName = 'constructor';
         this.cachePath = cachePath;
         this.dbPath = dbPath;
         this.#defineTablesColumns();
         this.messageSQLFields = Object.keys(this.messagesTableColumns).filter(key => key !== 'id').join(', ');
         this.messageSQLValues = Object.keys(this.messagesTableColumns).filter(key => key !== 'id').map(() => '?').join(', ');
-        report(__line, functionName, `${this.messagesDbFilename} path set to:`, dbPath);
-        report(__line, functionName, `${this.lastMessagesIdFilename} path set to:`, cachePath);
+        console.report(`${this.messagesDbFilename} path set to:`, dbPath);
+        console.report(`${this.lastMessagesIdFilename} path set to:`, cachePath);
         global.sigintSubscribers.push(this.close.bind(this));
     }
 
@@ -76,14 +73,13 @@ class MessagesDatabase {
     }
 
     #connectToDatabase() {
-        const functionName = 'connectToDatabase';
         return new Promise((resolve, reject) => {
             this.db = new sqlite3.Database(this.dbPath, (err) => {
                 if (err) {
-                    reportError(__line, functionName, 'Error initializing database:', err);
+                    console.reportError('Error initializing database:', err);
                     reject(err);
                 } else {
-                    report(__line, functionName, 'Connected to the SQLite database');
+                    console.report('Connected to the SQLite database');
                     resolve();
                 }
             });
@@ -92,10 +88,9 @@ class MessagesDatabase {
 
     async init() {
         // TODO: it seems that not all messages are fetched and cached the first run
-        const functionName = 'init';
         try {
             await this.#connectToDatabase();
-            report(__line, functionName, 'Initializing messagesDatabase...');
+            console.report('Initializing messagesDatabase...');
             await this.#createTables();
             const promises = [];
             let applyToAll, getFetchOptions, getDefaultLastId;
@@ -120,14 +115,14 @@ class MessagesDatabase {
             };
             global.guild.channels.cache.each((channel) => {
                 if (!channel.isTextBased()) return;
-                report(__line, functionName, 'Fetching messages from channel:', channel.name);
+                console.report('Fetching messages from channel:', channel.name);
                 channel.fetchAllMessages(applyToAll, applyToEvery, getFetchOptions, getDefaultLastId(channel));
             });
 
             await Promise.all(promises);
-            report(__line, functionName, 'messagesDatabase initialized');
+            console.report('messagesDatabase initialized');
         } catch (error) {
-            reportError(__line, functionName, 'Initialization error:', error);
+            console.reportError('Initialization error:', error);
         }
     }
 
@@ -174,7 +169,6 @@ class MessagesDatabase {
     */
 
     #createTables() {
-        const functionName = 'createTables';
         const createsSQL = [
             `CREATE TABLE IF NOT EXISTS messages (
                 ${Object.entries(this.messagesTableColumns)
@@ -186,10 +180,10 @@ class MessagesDatabase {
             new Promise((resolve, reject) =>
                 this.db.run(createSQL, (err) => {
                     if (err) {
-                        reportError(__line, functionName, 'Error creating table:', err);
+                        console.reportError('Error creating table:', err);
                         reject(err);
                     } else {
-                        report(__line, functionName, 'Table "messages" created');
+                        console.report('Table "messages" created');
                         resolve();
                     }
                 })
@@ -208,7 +202,6 @@ class MessagesDatabase {
     }
 
     #set(message) {
-        const functionName = 'set';
         const insertsSQL = [`INSERT INTO messages (${this.messageSQLFields}) VALUES (${this.messageSQLValues})`];
         const params = [this.#extractFields(message)];
         /*
@@ -262,7 +255,7 @@ class MessagesDatabase {
             new Promise((resolve, reject) =>
                 this.db.run(insertSQL, params[index], (err) => {
                     if (err) {
-                        reportError(__line, functionName, 'Error inserting message:', err);
+                        console.reportError('Error inserting message:', err);
                         reject(err);
                     } else {
                         resolve();
@@ -281,7 +274,7 @@ class MessagesDatabase {
         return new Promise((resolve, reject) =>
             this.db.get(`SELECT * FROM messages WHERE messageId = ?`, [id], (err, cachedMessage) => {
                 if (err) {
-                    reportError(__line, functionName, 'Error getting message:', err);
+                    console.reportError('Error getting message:', err);
                     reject(err);
                 } else {
                     resolve(this.#cachedMessageToMessage(cachedMessage));
@@ -291,11 +284,10 @@ class MessagesDatabase {
     }
 
     forEach(callback) {
-        const functionName = 'forEach';
         return new Promise((resolve, reject) => {
             this.db.all('SELECT * FROM messages', [], (err, cachedMessages) => {
                 if (err) {
-                    reportError(__line, functionName, 'Error retrieving messages:', err);
+                    console.reportError('Error retrieving messages:', err);
                     reject(err);
                 } else {
                     cachedMessages.forEach((cachedMessage) => callback(this.#cachedMessageToMessage(cachedMessage)));
@@ -306,14 +298,13 @@ class MessagesDatabase {
     }
 
     update(newMessage) {
-        const functionName = 'update';
         const insertOrReplaceSQL = `UPDATE messages SET (${this.messageSQLFields}) = (${this.messageSQLValues}) WHERE messageId = ${newMessage.id}`;
         const params = this.#extractFields(newMessage);
         console.log('caca');
         return new Promise((resolve, reject) =>
             this.db.run(insertOrReplaceSQL, params, (err) => {
                 if (err) {
-                    reportError(__line, functionName, 'Error updating message:', err);
+                    console.reportError('Error updating message:', err);
                     reject(err);
                 } else {
                     resolve();
@@ -387,11 +378,10 @@ class MessagesDatabase {
     }
 
     feedDiscordjs() {
-        const functionName = 'feedDiscordjs';
         return this.forEach((message) => {
             const channel = global.client.getChannelById(message.channel.id);
             if (!channel) {
-                reportError(__line, functionName, `Channel ${message.channel.id} not found`);
+                console.reportError(`Channel ${message.channel.id} not found`);
                 return;
             }
             channel.messages.cache.set(message.id, message);
@@ -399,7 +389,6 @@ class MessagesDatabase {
     }
 
     close() {
-        const functionName = 'close';
         if (this.lastMessagesId) {
             const stringifiedLastMessagesId = JSON.stringify(this.lastMessagesId, null, 4);
             if (stringifiedLastMessagesId) fs.writeFileSync(this.cachePath, stringifiedLastMessagesId, 'utf8');
@@ -408,10 +397,10 @@ class MessagesDatabase {
         return new Promise((resolve, reject) =>
             this.db.close((err) => {
                 if (err) {
-                    reportError(__line, functionName, 'Error closing database:', err);
+                    console.reportError('Error closing database:', err);
                     reject(err);
                 } else {
-                    report(__line, functionName, 'Database connection closed successfully.');
+                    console.report('Database connection closed successfully.');
                     resolve();
                 }
             })

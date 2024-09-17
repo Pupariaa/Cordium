@@ -3,20 +3,14 @@ const fs = require('fs');
 const path = require('path');
 const { Client, Events, GatewayIntentBits, Partials } = require('discord.js');
 
-require('extend-console');
-const { __cfn, __cf } = eval(require(`current_filename`));
-const { report, reportWarn, reportError } = console.createReports(__cfn);
+// Must haves
+global.projectRoot = __dirname;
+require('dotenv').config({ path: path.join(global.projectRoot, 'config', 'config.env') });
 
 // Fix discord.js inconsistencies
 Object.keys(Events).forEach((key) => {
     Events[key] = key;
 });
-
-// Must haves
-global.projectRoot = __dirname;
-global.utilsPath = path.join(__dirname, 'internals', 'Utils.js');
-const configEnvPath = path.join(__dirname, 'config', 'config.env');
-require('dotenv').config({ path: configEnvPath });
 
 // Defaults for unspecified env variables
 const defaultEndpointsFolder = './src/api/endpoints';
@@ -27,28 +21,17 @@ const defaultPrototypesFolder = './src/prototypes';
 const defaultSandboxFolder = './src/sandbox';
 const defaultPort = 3000;
 
-const { validPort, capitalize, toCamelCase, getOrNull, loadEnvPath } = require(global.utilsPath);
-
-// Because apparently javascript doesn't have a built-in way to do this
-async function walkDir(dirPath, callback) {
-    const files = await fs.readdirSync(dirPath);
-    for (const file of files) {
-        const filePath = path.join(dirPath, file);
-        const stats = await fs.statSync(filePath);
-        if (stats.isDirectory()) {
-            await walkDir(filePath, callback);
-        } else {
-            callback(filePath);
-        }
-    }
-}
+// Must require now
+require('extend-console');
+global.utilsPath = path.join(global.projectRoot, 'internals', 'Utils.js');
+const { validPort, capitalize, toCamelCase, getOrNull, loadEnvPath, walkDir } = require(global.utilsPath);
 
 // Nice to have, avoids path.join with relative paths everywhere
 (async function initGlobalPaths() {
     await walkDir(
         path.join(global.projectRoot, 'internals'),
-        function (filePath) {
-            if (path.extname(filePath) !== '.js') return;
+        function (filePath, stats) {
+            if (!stats.isFile() || path.extname(filePath) !== '.js') return;
             const propertyName = toCamelCase(path.basename(filePath, path.extname(filePath))) + 'Path';
             if (propertyName in global) return;
             Object.defineProperty(global, propertyName, {
@@ -64,7 +47,6 @@ async function walkDir(dirPath, callback) {
     // Now the index.js can start
 
     (function loadPrototypes() {
-        const functionName = 'loadPrototypes';
         try {
             const prototypesFolder = path.join(global.projectRoot, 'internals/prototypes');
             fs.readdirSync(prototypesFolder)
@@ -76,12 +58,11 @@ async function walkDir(dirPath, callback) {
             fs.readdirSync(global.prototypesFolder)
                 .forEach((filename) => require(path.join(global.prototypesFolder, filename)));
         } catch (err) {
-            reportError(__line, functionName, err);
+            console.reportError(err);
         }
     })();
 
     async function initGlobal() {
-        const functionName = 'initGlobal';
         try {
             // Load configs
             const missingVars = [];
@@ -98,7 +79,7 @@ async function walkDir(dirPath, callback) {
                 }
             }
             if (missingVars.length > 0) {
-                reportError(__line, functionName, 'Missing required environment variables:', ...missingVars);
+                console.reportError('Missing required environment variables:', ...missingVars);
                 process.exit(1);
             }
             global.listenEvents = process.env.listen_events ? process.env.listen_events.toLowerCase() === 'true' : true;
@@ -116,7 +97,7 @@ async function walkDir(dirPath, callback) {
 
             global.configChannels = JSON.parse(fs.readFileSync(path.join(global.projectRoot, 'config', 'channels.json'), 'utf-8'));
             if (Object.values(global.configChannels).every((channels) => Object.keys(channels).length === 0)) {
-                reportWarn(__line, functionName, 'No channels in config/channels.json.');
+                console.reportWarn('No channels in config/channels.json.');
             }
             for (const basename of ['reportEvents', 'listenEvents']) {
                 const filename = `${basename}.json`;
@@ -130,11 +111,11 @@ async function walkDir(dirPath, callback) {
                 });
                 for (const eventName of Object.keys(Events)) {
                     if (!Object.keys(json).includes(eventName) && eventName !== Events.ClientReady) {
-                        reportWarn(__line, functionName, `Missing ${eventName} in ${filename}`);
+                        console.reportWarn(`Missing ${eventName} in ${filename}`);
                     }
                 }
             }
-            report(__line, functionName, 'config files loaded');
+            console.report('config files loaded');
 
             // mkdir gitignored folders
             global.cacheFolder = path.join(global.projectRoot, 'internals', 'cache');
@@ -198,26 +179,25 @@ async function walkDir(dirPath, callback) {
             // const MessagesDatabase = require(global.messagesDatabasePath);
             // global.messagesDatabase = new MessagesDatabase();
 
-            report(__line, functionName, 'global modules created');
+            console.report('global modules created');
 
             // TODO:
             // require(global.getDatabasePath);
         } catch (err) {
-            reportError(__line, functionName, err);
+            console.reportError(err);
         }
     }
 
     await initGlobal();
 
     async function onReady() {
-        const functionName = 'onReady';
         try {
-            report(__line, functionName, `Client ready`);
+            console.report(`Client ready`);
 
             // Get guild
             global.guild = global.client.guilds.cache.get(global.discordGuildId);
             if (!global.guild) {
-                reportError(__line, functionName, `Guild of id ${global.discordGuildId} not found`);
+                console.reportError(`Guild of id ${global.discordGuildId} not found`);
                 process.exit(1);
             }
 
@@ -225,9 +205,9 @@ async function walkDir(dirPath, callback) {
             // await Promise.all([global.eventsDatabase.init(), global.messagesDatabase.init()]);
 
             // Feed discord.js with old messages
-            // report(__line, functionName, 'Feeding Discord.js old messages...');
+            // console.report('Feeding Discord.js old messages...');
             // await global.messagesDatabase.feedDiscordjs();
-            // report(__line, functionName, 'Done feeding Discord.js old messages');
+            // console.report('Done feeding Discord.js old messages');
 
             // Init caches
             // const invites = await global.guild.invites.fetch();
@@ -276,34 +256,33 @@ async function walkDir(dirPath, callback) {
             global.commandManager.loadCommands();
             global.commandManager.deployCommands();
         } catch (err) {
-            reportError(__line, functionName, err);
+            console.reportError(err);
         }
     }
 
     (async function dispatchHandlers() {
-        const functionName = 'dispatchHandlers';
         try {
 
             global.client.on(Events.ClientReady, onReady);
 
             process.on('uncaughtException', (err) => {
-                reportError(__line, 'uncaughtException', err);
+                console.reportError(err);
             });
 
             process.on('unhandledRejection', (reason, promise) => {
-                reportError(__line, 'unhandledRejection', promise, reason);
+                console.reportError(promise, reason);
             });
 
             process.on('SIGINT', async () => {
                 try {
                     await Promise.all(global.sigintSubscribers.map(async (subscriber) => await subscriber()));
                 } catch (err) {
-                    reportError(__line, functionName, err);
+                    console.reportError(err);
                 }
                 process.exit(0);
             });
         } catch (err) {
-            reportError(__line, functionName, err);
+            console.reportError(err);
         }
     })();
 

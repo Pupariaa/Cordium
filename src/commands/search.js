@@ -1,8 +1,6 @@
 'use strict';
 const { SlashCommandBuilder, AttachmentBuilder } = require('discord.js');
 
-const { __cfn, __cf } = eval(require(`current_filename`));
-const { report, reportWarn, reportError } = console.createReports(__cf);
 const wait = require('node:timers/promises').setTimeout;
 
 const cmdName = 'search';
@@ -81,8 +79,7 @@ const gets = [
 ];
 
 function log_matches(matches, replyObject) {
-    const functionName = 'log_matches';
-    for (const result of matches) report(__line, functionName, result);
+    for (const result of matches) console.report(result);
 }
 
 function report_matches(matches, replyObject) {
@@ -219,7 +216,6 @@ module.exports = {
      * @param {Object} interaction - The interaction object from Discord.js.
      */
     async execute(interaction) {
-        const functionName = 'execute';
         try {
             const regex = new RegExp(interaction.options.getString('regex'), interaction.options.getString('flags') || '');
             const types = JSON.parse(interaction.options.getString('type'))?.map(type => gets[type]) || [...gets];
@@ -254,7 +250,7 @@ module.exports = {
                 await interaction.reply(replyObject);
             }
         } catch (err) {
-            reportError(__line, functionName, err);
+            console.reportError(err);
             await interaction.reply({ content: `${cmdName} failed`, ephemeral: true });
             await wait(5000);
             await interaction.deleteReply();

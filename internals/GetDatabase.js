@@ -63,7 +63,7 @@ async function getVoiceConnectionStatusWithEvents(voiceUpdates) {
                     channelIds.push(disconnectedChannelId);
                 }
 
-                report(__line, functionName, `Canaux pour l'utilisateur ${userId}:`, channelIds)
+                console.report(`Canaux pour l'utilisateur ${userId}:`, channelIds)
 
 
                 if (channelIds.length > 0) {

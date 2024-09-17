@@ -1,8 +1,6 @@
 const { Events } = require('discord.js');
 const { Sequelize, DataTypes, Op } = require('sequelize');
 
-const { __cfn, __cf } = eval(require(`current_filename`));
-const { report, reportWarn, reportError } = console.createReports(__cfn);
 
 class EventsDatabase {
     constructor() {
@@ -12,9 +10,8 @@ class EventsDatabase {
     }
 
     init() {
-        const functionName = 'init';
         if (!process.env.db_name || !process.env.db_host || !process.env.db_user || !process.env.db_pass || !process.env.db_port) {
-            reportWarn(__line, functionName, 'Database connection parameters are missing. Cannot connect. Nothing will be recorded');
+            console.reportWarn('Database connection parameters are missing. Cannot connect. Nothing will be recorded');
             return;
         }
 
@@ -36,11 +33,11 @@ class EventsDatabase {
             this.sequelize.authenticate()
                 .then(() => {
                     global.eventsDatabaseOnline = true;
-                    report(__line, functionName, 'Database connection successful')
+                    console.report('Database connection successful')
                     resolve();
                 })
                 .catch(err => {
-                    reportError(__line, functionName, 'Unable to connect to the database:', err);
+                    console.reportError('Unable to connect to the database:', err);
                     reject(err);
                 })
         );
@@ -549,11 +546,10 @@ class EventsDatabase {
     }
 
     async addEntry(event, data) {
-        const functionName = 'addEntry';
         try {
             // if (global.eventsDatabaseOnline) await this[`EVENTS_${event}`].create(data);
         } catch (err) {
-            reportError(__line, functionName, `Error adding ${data} entry:`, err);
+            console.reportError(`Error adding ${data} entry:`, err);
         }
     }
 }

@@ -4,7 +4,6 @@ const path = require('path');
 const { exec } = require('child_process');
 
 function downloadFile(url, filePath) {
-    const functionName = 'downloadFile';
     const command = `curl "${url}" --output "${filePath}" > NUL 2>&1`;
 
     return new Promise((resolve, reject) => {
@@ -85,14 +84,18 @@ function compareObjects(obj1, obj2, path = '', seen = new WeakMap()) {
     return differences;
 }
 
-function compareOldAndNew(oldObj, newObj) {
-    const reportEventArgs = [];
-    compareObjects(oldObj, newObj).forEach(diff => {
-        const oldValue = getOrNull(oldObj, diff); if (typeof oldValue !== 'string') return;
-        const newValue = getOrNull(newObj, diff); if (typeof newValue !== 'string') return;
-        reportEventArgs.push(diff, getOrNull(oldObj, diff), '->', getOrNull(newObj, diff));
-    });
-    return reportEventArgs;
+// Because apparently javascript doesn't have a built-in way to do this
+async function walkDir(dirPath, callback) {
+    const files = await fs.readdirSync(dirPath);
+    for (const file of files) {
+        const filePath = path.join(dirPath, file);
+        const stats = await fs.statSync(filePath);
+        if (stats.isDirectory()) {
+            await walkDir(filePath, callback);
+        } else {
+            callback(filePath, stats);
+        }
+    }
 }
 
 module.exports = {
@@ -104,5 +107,5 @@ module.exports = {
     toCamelCase,
     validChannelId,
     loadEnvPath,
-    compareOldAndNew
+    walkDir
 };
