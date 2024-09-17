@@ -3,7 +3,7 @@ const path = require('path');
 const { AuditLogEvent, Events, MessageType } = require('discord.js');
 const AuditLogEntry = require(global.auditLogEntryPath);
 
-const { config: { colors }, defaultLogFormat, defaultFormatArgsForWarn, defaultFormatArgsForError } = require('extend-console');
+const { config: { colors }, defaultLogFormat, defaultFormatArgsForWarn, defaultFormatArgsForError, defaultShouldLog } = require('extend-console');
 const { compareObjects } = require(global.utilsPath);
 
 function compareOldAndNew(oldObj, newObj) {
@@ -46,7 +46,7 @@ function formatArgs(logContext, ...args) {
 }
 
 function shouldLog(logContext, ...args) {
-    return global.reportEvents && global.configReportEvents[args[0].split('.')[0]];
+    return defaultShouldLog(logContext, ...args) && global.reportEvents && global.configReportEvents[args[0].split('.')[0]];
 }
 
 const reportEvent = console.createReport(logFormat, formatArgs, shouldLog);
