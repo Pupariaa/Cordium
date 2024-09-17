@@ -5,7 +5,7 @@ const { exec } = require('child_process');
 
 function downloadFile(url, filePath) {
     const functionName = 'downloadFile';
-    const command = `curl "${url}" --output "${filePath}" > /dev/null 2>&1`;
+    const command = `curl "${url}" --output "${filePath}" > NUL 2>&1`;
 
     return new Promise((resolve, reject) => {
         exec(command, (err, stdout, stderr) => {
