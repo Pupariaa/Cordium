@@ -14,7 +14,7 @@ Object.keys(Events).forEach((key) => {
 
 // Must haves
 global.projectRoot = __dirname;
-global.utilsPath = path.join(__dirname, 'internals', 'prototypes', 'Utils.js');
+global.utilsPath = path.join(__dirname, 'internals', 'Utils.js');
 const configEnvPath = path.join(__dirname, 'config', 'config.env');
 require('dotenv').config({ path: configEnvPath });
 
