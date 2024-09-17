@@ -3,7 +3,6 @@ const { SlashCommandBuilder, AttachmentBuilder } = require('discord.js');
 
 const { __cfn, __cf } = eval(require(`current_filename`));
 const { report, reportWarn, reportError } = console.createReports(__cf);
-
 const wait = require('node:timers/promises').setTimeout;
 
 const cmdName = 'search';

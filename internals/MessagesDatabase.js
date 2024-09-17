@@ -2,9 +2,9 @@ const fs = require('fs');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
 const { Collection, Sticker, cleanContent } = require('discord.js');
+
 const { __cfn, __cf } = eval(require(`current_filename`));
 const { report, reportWarn, reportError } = console.createReports(__cfn);
-
 const { getOrNull } = require(global.utilsPath);
 
 class MessagesDatabase {

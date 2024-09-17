@@ -19,10 +19,6 @@ Guild.prototype.fetchAllAuditLogs = async function () {
     return r;
 };
 
-/**
- * Gets the latest audit log entry for this guild.
- * @returns {AuditLogEntry | null} The latest audit log entry, or null if none exist.
- */
 Guild.prototype.latestAuditLog = async function () {
     const fetchedAuditLogs = Array.from((await this.fetchAuditLogs({ limit: 1 })).entries);
     return fetchedAuditLogs[0][1] || null;

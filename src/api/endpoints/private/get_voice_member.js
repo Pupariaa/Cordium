@@ -1,3 +1,5 @@
+'use strict';
+
 const spectraget = require('spectraget')
 
 module.exports = {

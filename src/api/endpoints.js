@@ -1,3 +1,5 @@
+'use strict';
+
 const endpoints = [
   {
     name: "get_voice_member",

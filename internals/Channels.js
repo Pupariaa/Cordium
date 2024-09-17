@@ -1,6 +1,7 @@
 'use-strict';
 const { __cfn, __cf } = eval(require(`current_filename`));
 const { report, reportWarn, reportError } = console.createReports(__cfn);
+
 const { validChannelId, getOrNull } = require(global.utilsPath);
 
 const cache = {};

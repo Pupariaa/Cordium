@@ -4,12 +4,13 @@ const { AuditLogEvent, Events, MessageType } = require('discord.js');
 const AuditLogEntry = require(global.auditLogEntryPath);
 
 const { __cfn } = eval(require(`current_filename`));
+const { colors } = require('extend-console');
 const { compareOldAndNew } = require(global.utilsPath);
 
 function formatArgs(logContext, ...args) {
     let i = 0;
     let formattedArgs = '';
-    const mustEndWith = `${global.colors.Reset}"`;
+    const mustEndWith = `${colors.Reset}"`;
     while (i < args.length) {
         const common = `\n ${colors['FgCyan']}${args[i]}${colors['Reset']}=`;
         if (i + 2 < args.length && args[i + 2] === '->') {

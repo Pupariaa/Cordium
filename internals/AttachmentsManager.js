@@ -1,11 +1,12 @@
 'use strict';
 
-const { __cfn, __cf } = eval(require(`current_filename`));
-const { report, reportWarn, reportError } = console.createReports(__cfn);
-
 const fs = require('fs');
 const path = require('path');
 const sanitizeFilename = require('sanitize-filename');
+
+const { __cfn, __cf } = eval(require(`current_filename`));
+const { report, reportWarn, reportError } = console.createReports(__cfn);
+const { colors } = require('extend-console');
 const { downloadFile } = require(global.utilsPath);
 
 class AttachmentsManager {
@@ -56,7 +57,7 @@ class AttachmentsManager {
             const filename = path.basename(pathname);
             return sanitizeFilename(filename);
         } catch (err) {
-            reportError(__line, functionName, `Error extracting filename from ${global.colors.FgYellow}${url}${global.colors.Reset}:`, err);
+            reportError(__line, functionName, `Error extracting filename from ${colors.FgYellow}${url}${colors.Reset}:`, err);
             return 'unknown';
         }
     }

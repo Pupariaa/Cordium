@@ -1,5 +1,5 @@
-const { Sequelize, DataTypes, Op } = require('sequelize');
 const { Events } = require('discord.js');
+const { Sequelize, DataTypes, Op } = require('sequelize');
 
 const { __cfn, __cf } = eval(require(`current_filename`));
 const { report, reportWarn, reportError } = console.createReports(__cfn);

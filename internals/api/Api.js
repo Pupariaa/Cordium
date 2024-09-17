@@ -1,13 +1,14 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const app = express();
-const endpoints = require(global.endpointsFolder);
+const http = require('http');
+const express = require('express');
+const bodyParser = require('body-parser');
 
 const { __cfn, __cf } = eval(require(`current_filename`));
 const { report, reportWarn, reportError } = console.createReports(__cfn);
+const endpoints = require(global.endpointsFolder);
+
+const app = express();
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));

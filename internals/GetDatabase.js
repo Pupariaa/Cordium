@@ -1,13 +1,4 @@
-
-/**
- * Process a list of voice state updates and returns an array of voice connection status objects.
- * Each object contains the user ID, the datetime of the connection, the datetime of the disconnection,
- * the executor ID of the disconnection (if any), a boolean indicating if the user is still connected,
- * an array of events (channel changes, state changes), an array of messages exchanged during the connection
- * and the IDs of the channels the user was connected to.
- * @param {Array<Object>} voiceUpdates - A list of voice state updates.
- * @returns {Promise<Array<Object>>} - An array of voice connection status objects.
- */
+'use strict';
 
 async function getVoiceConnectionStatusWithEvents(voiceUpdates) {
 
@@ -127,13 +118,6 @@ async function getVoiceConnectionStatusWithEvents(voiceUpdates) {
     return results;
 }
 
-/**
- * Adds events to the given events list based on the differences between the old and new values in the given event.
- * The added events are serverMute, serverDeaf, selfStream, selfCam, clientMute and clientDeaf.
- * @param {Array<Object>} eventsList - The list of events to add to.
- * @param {Object} event - The event object containing the old and new values to compare.
- * @returns {void}
- */
 function addEventChanges(eventsList, event) {
     const changeFields = [
         { old: 'oldServerMute', new: 'newServerMute', eventName: 'serverMute' },
@@ -155,13 +139,6 @@ function addEventChanges(eventsList, event) {
     });
 }
 
-/**
- * Adds events to the given events list based on the differences between the old and new values in the given event.
- * The added events are serverMute, serverDeaf, selfStream, selfCam, clientMute and clientDeaf.
- * @param {Array<Object>} eventsList - The list of events to add to.
- * @param {Object} event - The event object containing the old and new values to compare.
- * @returns {void}
- */
 function addEventChanges(eventsList, event) {
     const changeFields = [
         { old: 'oldServerMute', new: 'newServerMute', eventName: 'serverMute' },
@@ -183,13 +160,6 @@ function addEventChanges(eventsList, event) {
     });
 }
 
-/**
- * Adds events to the given events list based on the differences between the old and new values in the given event.
- * The added events are serverMute, serverDeaf, selfStream, selfCam, clientMute and clientDeaf.
- * @param {Array<Object>} eventsList - The list of events to add to.
- * @param {Object} event - The event object containing the old and new values to compare.
- * @returns {void}
- */
 function addEventChanges(eventsList, event) {
     const changeFields = [
         { old: 'oldServerMute', new: 'newServerMute', eventName: 'serverMute' },
@@ -210,7 +180,6 @@ function addEventChanges(eventsList, event) {
         }
     });
 }
-
 
 async function getMessageDetails(messageId) {
     try {

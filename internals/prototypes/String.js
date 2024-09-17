@@ -1,7 +1,9 @@
 'use strict';
 
+const { colors } = require('extend-console');
+
 const colorCodesRegex = new RegExp(
-    Object.values(global.colors)
+    Object.values(colors)
         .map((colorCode) => colorCode.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
         .join('|'),
     'g'

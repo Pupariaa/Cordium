@@ -3,6 +3,10 @@ const fs = require('fs');
 const path = require('path');
 const { Client, Events, GatewayIntentBits, Partials } = require('discord.js');
 
+require('extend-console');
+const { __cfn, __cf } = eval(require(`current_filename`));
+const { report, reportWarn, reportError } = console.createReports(__cfn);
+
 // Fix discord.js inconsistencies
 Object.keys(Events).forEach((key) => {
     Events[key] = key;
@@ -58,9 +62,6 @@ async function walkDir(dirPath, callback) {
 })().then(async () => {
 
     // Now the index.js can start
-    require(global.logsPath);
-    const { __cfn, __cf } = eval(require(`current_filename`));
-    const { report, reportWarn, reportError } = console.createReports(__cfn);
 
     (function loadPrototypes() {
         const functionName = 'loadPrototypes';
