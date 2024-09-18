@@ -1,5 +1,5 @@
 'use strict';
-
+const { Sequelize } = require('sequelize')
 async function getVoiceConnectionStatusWithEvents(voiceUpdates) {
 
     const filteredUpdates = voiceUpdates.filter(event => [1, 2, 3, 4].includes(event.eventType));
@@ -180,6 +180,41 @@ function addEventChanges(eventsList, event) {
         }
     });
 }
+async function getMessages(...Datas) {
+    // Déstructurer les paramètres pour plus de clarté
+    const [startAt, endAt, limit, channelsIds, usersIds] = Datas;
+
+    // Construire les conditions dynamiques pour la requête
+    const whereConditions = {};
+
+    if (startAt !== undefined && endAt !== undefined) {
+        whereConditions.datetime = { [Sequelize.Op.between]: [startAt, endAt] };
+    }
+
+    if (channelsIds !== undefined && channelsIds.length > 0) {
+        whereConditions.channelId = { [Sequelize.Op.in]: channelsIds.split(',').map(id => id.trim()) };
+    }
+
+    if (usersIds !== undefined && usersIds.length > 0) {
+        whereConditions.userId = { [Sequelize.Op.in]: usersIds.split(',').map(id => id.trim()) };
+    }
+    const results = await global.eventsDatabase.EVENTS_messageCreate.findAll({
+        attributes: ['messageId'],
+        where: whereConditions,
+        order: [['datetime', 'DESC']],
+        limit: limit ? parseInt(limit) : 1000,
+    });
+
+    let messages_stack = [];
+
+    for (const message of results) {
+        messages_stack.push(await getMessageDetails(message.messageId));
+    }
+    if (messages_stack.length === 0) return { error: "No messages found", status_code: 204 };
+    return messages_stack;
+
+
+}
 
 async function getMessageDetails(messageId) {
     try {
@@ -284,10 +319,19 @@ async function getMessageDetails(messageId) {
     }
 };
 
-global.databaseCache.get_voice_member = async function (userid) {
-    return await getVoiceConnectionStatusWithEvents(await global.eventsDatabase.getVoiceStateUpdatesByUserId(userid));
+try {
+    global.databaseCache.get_voice_member = async function (userid) {
+        return await getVoiceConnectionStatusWithEvents(await global.eventsDatabase.getVoiceStateUpdatesByUserId(userid));
+    }
+
+} catch (e) {
+    console.error(e)
 }
 
 global.databaseCache.get_message = async function (messageId) {
     return await getMessageDetails(messageId)
+}
+
+global.databaseCache.get_messages = async function (...Datas) {
+    return await getMessages(...Datas)
 }
