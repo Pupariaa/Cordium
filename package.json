@@ -36,7 +36,7 @@
     "epxress": "^0.0.1-security",
     "exceljs": "^4.4.0",
     "express": "^4.19.2",
-    "extend-console": "^3.4.2",
+    "extend-console": "^4.2.0",
     "fastify": "^4.28.1",
     "ffmpeg-static": "^5.2.0",
     "figures": "^6.1.0",
