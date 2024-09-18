@@ -4,7 +4,7 @@ const { AuditLogEvent, Events, MessageType } = require('discord.js');
 const AuditLogEntry = require(global.auditLogEntryPath);
 
 const { config: { colors }, defaultLogFormat, defaultFormatArgsForWarn, defaultFormatArgsForError, defaultShouldLog } = require('extend-console');
-const { compareObjects } = require(global.utilsPath);
+const { getOrNull, compareObjects } = require(global.utilsPath);
 
 function compareOldAndNew(oldObj, newObj) {
     const reportEventArgs = [];

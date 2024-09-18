@@ -107,5 +107,6 @@ module.exports = {
     toCamelCase,
     validChannelId,
     loadEnvPath,
+    compareObjects,
     walkDir
 };
