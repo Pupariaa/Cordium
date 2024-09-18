@@ -6,16 +6,6 @@ const AuditLogEntry = require(global.auditLogEntryPath);
 const { config: { colors }, defaultLogFormat, defaultFormatArgsForWarn, defaultFormatArgsForError, defaultShouldLog } = require('extend-console');
 const { getOrNull, compareObjects } = require(global.utilsPath);
 
-function compareOldAndNew(oldObj, newObj) {
-    const reportEventArgs = [];
-    compareObjects(oldObj, newObj).forEach(diff => {
-        const oldValue = getOrNull(oldObj, diff); if (typeof oldValue !== 'string') return;
-        const newValue = getOrNull(newObj, diff); if (typeof newValue !== 'string') return;
-        reportEventArgs.push(diff, getOrNull(oldObj, diff), '->', getOrNull(newObj, diff));
-    });
-    return reportEventArgs;
-}
-
 function logFormat(logContext, ...args) {
     // replace functionName with eventName
     logContext.functionName = args[0];
@@ -52,6 +42,16 @@ function shouldLog(logContext, ...args) {
 const reportEvent = console.createReport(logFormat, formatArgs, shouldLog);
 const reportEventWarn = console.createReportWarn(logFormat, defaultFormatArgsForWarn, shouldLog);
 const reportEventError = console.createReportError(logFormat, defaultFormatArgsForError, shouldLog);
+
+function compareOldAndNew(oldObj, newObj) {
+    const reportEventArgs = [];
+    compareObjects(oldObj, newObj).forEach(diff => {
+        const oldValue = getOrNull(oldObj, diff); if (typeof oldValue !== 'string') return;
+        const newValue = getOrNull(newObj, diff); if (typeof newValue !== 'string') return;
+        reportEventArgs.push(diff, getOrNull(oldObj, diff), '->', getOrNull(newObj, diff));
+    });
+    return reportEventArgs;
+}
 
 function shouldListen(event) {
     return global.listenEvents && global.configListenEvents[event];
