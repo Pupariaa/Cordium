@@ -1,7 +1,6 @@
 'use strict';
 const { SlashCommandBuilder } = require('discord.js');
 
-
 const cmdName = 'pp';
 const cmdDescription = 'send the given user\'s profile pictures';
 

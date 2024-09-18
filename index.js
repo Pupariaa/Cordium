@@ -21,8 +21,32 @@ const defaultPrototypesFolder = './src/prototypes';
 const defaultSandboxFolder = './src/sandbox';
 const defaultPort = 3000;
 
+// Add logic to a default behavior
+const { defaultLogFormat } = require('extend-console');
+
+function extendLogFormat(logFormat) {
+    return function (logContext, ...args) {
+        if (logContext.filePath && (logContext.filePath.includes('internals') || logContext.filePath === __filename)) {
+            const parts = logContext.filePath.split('.');
+            logContext.filePath = parts.slice(0, parts.length - 1).join('.');
+        }
+        return logFormat(logContext, ...args);
+    }
+}
+
+const oldCreateReport = console.createReport;
+const oldCreateReportWarn = console.createReportWarn;
+const oldCreateReportError = console.createReportError;
+
+console.createReport = (...args) => args.length === 0 ? oldCreateReport(extendLogFormat(defaultLogFormat)) : oldCreateReport(extendLogFormat(args[0]), ...args.slice(1));
+console.createReportWarn = (...args) => args.length === 0 ? oldCreateReportWarn(extendLogFormat(defaultLogFormat)) : oldCreateReportWarn(extendLogFormat(args[0]), ...args.slice(1));
+console.createReportError = (...args) => args.length === 0 ? oldCreateReportError(extendLogFormat(defaultLogFormat)) : oldCreateReportError(extendLogFormat(args[0]), ...args.slice(1));
+
+console.report = console.createReport();
+console.reportWarn = console.createReportWarn();
+console.reportError = console.createReportError();
+
 // Must require now
-require('extend-console');
 global.utilsPath = path.join(global.projectRoot, 'internals', 'Utils.js');
 const { validPort, capitalize, toCamelCase, getOrNull, loadEnvPath, walkDir } = require(global.utilsPath);
 

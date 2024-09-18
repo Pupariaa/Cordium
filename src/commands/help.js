@@ -1,7 +1,6 @@
 'use strict';
 const { SlashCommandBuilder } = require('discord.js');
 
-
 const cmdName = 'help';
 const cmdDescription = 'gives an overview of the commands';
 

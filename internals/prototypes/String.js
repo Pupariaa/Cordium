@@ -1,5 +1,4 @@
 'use strict';
-
 const { config: { colors } } = require('extend-console');
 
 const colorCodesRegex = new RegExp(

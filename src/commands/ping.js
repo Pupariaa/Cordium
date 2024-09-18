@@ -1,7 +1,6 @@
 'use strict';
 const { SlashCommandBuilder } = require('discord.js');
 
-
 const cmdName = 'ping';
 const cmdDescription = 'ping the bot';
 
