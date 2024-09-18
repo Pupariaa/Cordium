@@ -10,37 +10,41 @@ class EventsDatabase {
     }
 
     init() {
-        if (!process.env.db_name || !process.env.db_host || !process.env.db_user || !process.env.db_pass || !process.env.db_port) {
-            console.reportWarn('Database connection parameters are missing. Cannot connect. Nothing will be recorded');
-            return;
-        }
+        return new Promise((resolve, reject) => {
+            if (!process.env.db_name || !process.env.db_host || !process.env.db_user || !process.env.db_pass || !process.env.db_port) {
+                console.reportWarn('Database connection parameters are missing. Cannot connect. Nothing will be recorded');
+                reject(err);
+            }
 
-        this.sequelize = new Sequelize(process.env.db_name, process.env.db_user, process.env.db_pass, {
-            host: process.env.db_host,
-            port: process.env.db_port,
-            dialect: 'mysql',
-            logging: false
-        });
+            this.sequelize = new Sequelize(process.env.db_name, process.env.db_user, process.env.db_pass, {
+                host: process.env.db_host,
+                port: process.env.db_port,
+                dialect: 'mysql',
+                logging: false
+            });
 
-        this.defineModels();
-        this.models = {};
-        Object.keys(Events).forEach(event => {
-            const modelName = `EVENTS_${event}`;
-            this.models[modelName] = this[modelName];
-        });
+            this.defineModels();
+            this.models = {};
+            Object.keys(Events).forEach(event => {
+                const modelName = `EVENTS_${event}`;
+                this.models[modelName] = this[modelName];
+            });
 
-        return new Promise((resolve, reject) =>
+
             this.sequelize.authenticate()
-                .then(() => {
+                .then((db) => {
                     global.eventsDatabaseOnline = true;
-                    console.report('Database connection successful')
-                    resolve();
+                    // console.report('Database connection successful')
+                    resolve(db);
                 })
                 .catch(err => {
-                    console.reportError('Unable to connect to the database:', err);
+                    // console.reportError('Unable to connect to the database:', err);
+                    console.error(err)
                     reject(err);
                 })
-        );
+
+        })
+
     }
 
     #defineEventModel(event, columns, tableMetadata) {
