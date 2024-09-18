@@ -181,20 +181,14 @@ function addEventChanges(eventsList, event) {
     });
 }
 async function getMessages(...Datas) {
-    // Déstructurer les paramètres pour plus de clarté
     const [startAt, endAt, limit, channelsIds, usersIds] = Datas;
-
-    // Construire les conditions dynamiques pour la requête
     const whereConditions = {};
-
     if (startAt !== undefined && endAt !== undefined) {
         whereConditions.datetime = { [Sequelize.Op.between]: [startAt, endAt] };
     }
-
     if (channelsIds !== undefined && channelsIds.length > 0) {
         whereConditions.channelId = { [Sequelize.Op.in]: channelsIds.split(',').map(id => id.trim()) };
     }
-
     if (usersIds !== undefined && usersIds.length > 0) {
         whereConditions.userId = { [Sequelize.Op.in]: usersIds.split(',').map(id => id.trim()) };
     }
@@ -319,13 +313,9 @@ async function getMessageDetails(messageId) {
     }
 };
 
-try {
-    global.databaseCache.get_voice_member = async function (userid) {
-        return await getVoiceConnectionStatusWithEvents(await global.eventsDatabase.getVoiceStateUpdatesByUserId(userid));
-    }
 
-} catch (e) {
-    console.error(e)
+global.databaseCache.get_voice_member = async function (userid) {
+    return await getVoiceConnectionStatusWithEvents(await global.eventsDatabase.getVoiceStateUpdatesByUserId(userid));
 }
 
 global.databaseCache.get_message = async function (messageId) {

@@ -12,7 +12,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use((req, res, next) => {
-    console.report(`Requête reçue: ${req.method} ${req.path}`);
+    // console.report(`Requête reçue: ${req.method} ${req.path}`);
     next();
 });
 
@@ -39,7 +39,8 @@ const rh = async (req, res) => {
 
         if (e) {
             const eFolder = e.type === 'private' ? 'private' : 'public';
-            const fPath = path.join(endpointsPath, eFolder, `${ePath}.js`);
+            const fPath = path.join(global.projectRoot, 'src/api/endpoints', eFolder, `${ePath}.js`);
+
             try {
                 if (fs.existsSync(fPath)) {
                     const eHandler = require(fPath);
@@ -48,7 +49,7 @@ const rh = async (req, res) => {
                         l = { client: cIp, endpoint: ePath, error: resData.error, status_code: resData.status_code, request_data: rData };
                         res.status(resData.status_code || 200).json(resData.error);
                     } else {
-                        res.status(resData.status_code || 200).json(resData);
+                        res.status(resData.status_code || 200).json(resData || resData.error);
                         l = { client: cIp, endpoint: ePath, request_data: rData };
                     }
                 } else {
