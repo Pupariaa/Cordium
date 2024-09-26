@@ -11,14 +11,10 @@ class CommandHandler {
         if (!global.client.commands) global.client.commands = new Collection();
     }
 
-    /**
-     * Loads commands from the 'handlers' directory and registers them with the client.
-     */
     loadCommands() {
         try {
             console.report('Loading commands...');
 
-            // Read command files from the handlers directory
             const commandFiles = fs.readdirSync(global.commandsFolder);
             for (const file of commandFiles) {
                 try {
@@ -35,13 +31,36 @@ class CommandHandler {
             }
 
         } catch (err) {
-            console.reportError(`Error loading commands:`, err);
+            console.reportError('Error loading commands:', err);
         }
     }
 
-    /**
-     * Deploys the commands to the Discord application for a specific guild.
-     */
+    reloadCommands() {
+        try {
+            console.report('Reloading commands...');
+
+            const commandFiles = fs.readdirSync(global.commandsFolder);
+            for (const file of commandFiles) {
+                try {
+                    const filePath = path.join(global.commandsFolder, file);
+                    delete require.cache[require.resolve(filePath)];
+                    const command = require(filePath);
+                    if ('data' in command && 'execute' in command) {
+                        global.client.commands.set(command.data.name, command);
+                        console.report(`Command reloaded: ${command.data.name}`);
+                    } else {
+                        console.reportWarn(`The command at ${file} is missing a required "data" or "execute" property`);
+                    }
+                } catch (err) {
+                    console.reportError(`Error reloading command from file ${file}:`, err);
+                }
+            }
+
+        } catch (err) {
+            console.reportError('Error reloading commands:', err);
+        }
+    }
+
     async deployCommands() {
 
         const commands = [];
@@ -57,7 +76,7 @@ class CommandHandler {
 
             console.report('Commands deployed successfully');
         } catch (err) {
-            console.reportError(`Error deploying commands:`, err);
+            console.reportError('Error deploying commands:', err);
         }
     }
 }
