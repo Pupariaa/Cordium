@@ -255,8 +255,8 @@ const { validPort, capitalize, toCamelCase, getOrNull, loadEnvPath, walkDir } = 
                 );
                 if (!command) {
                     await interaction.reply({
-                        content: 'Not a command',
                         ephemeral: true,
+                        content: 'Not a command',
                     });
                     return;
                 }
@@ -265,8 +265,8 @@ const { validPort, capitalize, toCamelCase, getOrNull, loadEnvPath, walkDir } = 
                     await command.execute(interaction);
                 } catch (err) {
                     const responseMessage = {
-                        content: 'There was an error while executing this command!',
                         ephemeral: true,
+                        content: 'There was an error while executing this command!',
                     };
                     if (interaction.replied || interaction.deferred) {
                         await interaction.followUp(responseMessage);
@@ -278,7 +278,7 @@ const { validPort, capitalize, toCamelCase, getOrNull, loadEnvPath, walkDir } = 
 
             // Deploy commands
             global.commandManager.loadCommands();
-            global.commandManager.deployCommands();
+            await global.commandManager.deployCommands();
         } catch (err) {
             console.reportError(err);
         }
