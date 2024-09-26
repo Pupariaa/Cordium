@@ -688,7 +688,7 @@ registerEvent(Events.MessageDelete, (message) => message.guild.id, async functio
     //     executorId: executor.id,
     // });
 
-    reportEvent(this.eventName, 'executor.tag', executor.tag, 'channel.name', message.channel.name, 'content', message.content);
+    reportEvent(this.eventName, 'channel.name', message.channel.name, 'executor.tag', executor.tag, 'content', message.content);
 }).listen();
 
 // TODO: MessagePollVoteAdd
