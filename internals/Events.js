@@ -651,7 +651,7 @@ registerEvent(Events.MessageBulkDelete, (messages, channel) => channel.guild.id,
     //     executorId: executor.id,
     // });
 
-    reportEvent(this.eventName, 'executor.tag', executor.tag, 'messages.size', messages.size);
+    reportEvent(this.eventName, 'channel.name', channel.name, 'executor.tag', executor.tag, 'messages.size', messages.size);
 }).listen();
 
 registerEvent(Events.MessageCreate, (message) => message.guild.id, async function (message) {
