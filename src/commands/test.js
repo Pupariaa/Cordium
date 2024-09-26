@@ -17,6 +17,7 @@ module.exports = {
      */
     async execute(interaction) {
         try {
+            // test
 
             await interaction.reply({
                 ephemeral: true,
