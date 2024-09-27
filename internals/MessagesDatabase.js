@@ -18,6 +18,9 @@ class MessagesDatabase {
         this.#defineTablesColumns();
         this.messageSQLFields = Object.keys(this.messagesTableColumns).filter(key => key !== 'id').join(', ');
         this.messageSQLValues = Object.keys(this.messagesTableColumns).filter(key => key !== 'id').map(() => '?').join(', ');
+        this.queue = [];
+        this.operationResults = new Map();
+        this.processing = false;
         console.report(`${this.messagesDbFilename} path set to:`, dbPath);
         console.report(`${this.lastMessagesIdFilename} path set to:`, cachePath);
         global.sigintSubscribers.push(this.close.bind(this));
@@ -142,9 +145,40 @@ class MessagesDatabase {
 
             await Promise.all(promises);
             console.report('messagesDatabase initialized');
-        } catch (error) {
-            console.reportError('Initialization error:', error);
+        } catch (err) {
+            console.reportError('Initialization error:', err);
         }
+    }
+
+    async processQueue() {
+        this.processing = true;
+        while (this.queue.length > 0) {
+            const { id, operation } = this.queue.shift();
+            try {
+                this.operationResults.set(id, await operation());
+            } catch (err) {
+                this.operationResults.set(id, err);
+            }
+        }
+        this.processing = false;
+    }
+
+    enqueue(operation) {
+        const id = Date.now() + Math.random();
+        this.queue.push({ id, operation });
+
+        if (!this.processing) this.processQueue();
+
+        return new Promise((resolve, reject) => {
+            const checkResult = setInterval(() => {
+                const result = this.operationResults.get(id);
+                if (result !== undefined) {
+                    clearInterval(checkResult);
+                    this.operationResults.delete(id);
+                    (result instanceof Error ? reject : resolve)(result);
+                }
+            }, 50);
+        });
     }
 
     /*
@@ -264,10 +298,12 @@ class MessagesDatabase {
         ));
     }
 
-    set(message) {
-        const promise = this.#set(message);
-        this.lastMessagesId[message.channel.id] = message.id;
-        return promise;
+    async set(message) {
+        return await this.enqueue(() => {
+            const promise = this.#set(message);
+            this.lastMessagesId[message.channel.id] = message.id;
+            return promise;
+        });
     }
 
     #cachedMessageToMessage(cachedMessage) {
@@ -334,72 +370,72 @@ class MessagesDatabase {
         }
     }
 
-    get(id) {
-        return new Promise((resolve, reject) =>
+    async get(id) {
+        return await this.enqueue(() => new Promise((resolve, reject) => {
             this.db.get(`SELECT * FROM messages WHERE messageId = ?`, [id], (err, cachedMessage) => {
                 if (err) {
                     console.reportError('Error getting message:', err);
                     reject(err);
                 } else {
-                    resolve(this.#cachedMessageToMessage(cachedMessage));
+                    resolve(cachedMessage ? this.#cachedMessageToMessage(cachedMessage) : null);
                 }
-            })
-        );
+            });
+        }));
     }
 
-    each(callback) {
-        return new Promise((resolve, reject) => {
+    async each(callback) {
+        return await this.enqueue(() => new Promise((resolve, reject) => {
             this.db.all('SELECT * FROM messages', [], (err, cachedMessages) => {
                 if (err) {
                     console.reportError('Error retrieving messages:', err);
                     reject(err);
                 } else {
                     cachedMessages.forEach((cachedMessage) => callback(this.#cachedMessageToMessage(cachedMessage)));
-                    resolve();
+                    resolve(this);
                 }
             });
-        });
+        }));
     }
 
-    update(newMessage) {
+    async update(newMessage) {
         const insertOrReplaceSQL = `UPDATE messages SET (${this.messageSQLFields}) = (${this.messageSQLValues}) WHERE messageId = ${newMessage.id}`;
         const params = this.#extractFields(newMessage);
-        return new Promise((resolve, reject) =>
+        return await this.enqueue(() => new Promise((resolve, reject) => {
             this.db.run(insertOrReplaceSQL, params, (err) => {
                 if (err) {
                     console.reportError('Error updating message:', err);
                     reject(err);
                 } else {
-                    resolve();
+                    resolve(this);
                 }
-            })
-        );
+            });
+        }));
     }
 
-    delete(messageId) {
-        return new Promise((resolve, reject) =>
+    async delete(messageId) {
+        return await this.enqueue(() => new Promise((resolve, reject) => {
             this.db.run(`DELETE FROM messages WHERE messageId = ?`, [messageId], (err) => {
                 if (err) {
                     console.reportError('Error deleting message:', err);
                     reject(err);
                 } else {
-                    resolve();
+                    resolve(this);
                 }
-            })
-        );
+            });
+        }));
     }
 
-    bulkDelete(channelId) {
-        return new Promise((resolve, reject) =>
+    async bulkDelete(channelId) {
+        return await this.enqueue(() => new Promise((resolve, reject) => {
             this.db.run(`DELETE FROM messages WHERE channelId = ?`, [channelId], (err) => {
                 if (err) {
                     console.reportError('Error deleting messages:', err);
                     reject(err);
                 } else {
-                    resolve();
+                    resolve(this);
                 }
-            })
-        );
+            });
+        }));
     }
 
     async feedDiscordjs() {

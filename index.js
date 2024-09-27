@@ -251,9 +251,7 @@ const { validPort, capitalize, toCamelCase, getOrNull, loadEnvPath, walkDir } = 
             global.client.on(Events.InteractionCreate, async (interaction) => {
                 if (!interaction.isChatInputCommand()) return;
 
-                const command = interaction.client.commands.get(
-                    interaction.commandName
-                );
+                const command = interaction.client.commands.get(interaction.commandName);
                 if (!command) {
                     await interaction.reply({
                         ephemeral: true,
@@ -265,15 +263,10 @@ const { validPort, capitalize, toCamelCase, getOrNull, loadEnvPath, walkDir } = 
                 try {
                     await command.execute(interaction);
                 } catch (err) {
-                    const responseMessage = {
+                    await (interaction.replied || interaction.deferred ? interaction.followUp : interaction.reply)({
                         ephemeral: true,
-                        content: 'There was an error while executing this command!',
-                    };
-                    if (interaction.replied || interaction.deferred) {
-                        await interaction.followUp(responseMessage);
-                    } else {
-                        await interaction.reply(responseMessage);
-                    }
+                        content: `There was an error while executing the ${interaction.commandName} command`,
+                    });
                 }
             });
 
