@@ -2,6 +2,8 @@
 const { SlashCommandBuilder } = require('discord.js');
 const wait = require('node:timers/promises').setTimeout;
 
+const { loadConfig } = require(global.utilsPath);
+
 const cmdName = 'reload';
 const cmdDescription = 'reload commands';
 
@@ -17,6 +19,7 @@ module.exports = {
 	async execute(interaction) {
 		try {
 			global.commandManager.reloadCommands();
+			loadConfig();
 
 			await interaction.reply({
 				ephemeral: true,

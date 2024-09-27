@@ -4,23 +4,15 @@ const path = require('path');
 const { Client, Events, GatewayIntentBits, Partials } = require('discord.js');
 const wait = require('node:timers/promises').setTimeout;
 
-// Must haves
-global.projectRoot = __dirname;
-require('dotenv').config({ path: path.join(global.projectRoot, 'config', 'config.env') });
-
 // Fix discord.js inconsistencies
 Object.keys(Events).forEach((key) => {
     Events[key] = key;
 });
 
-// Defaults for unspecified env variables
-const defaultEndpointsFolder = './src/api/endpoints';
-const defaultCommandsFolder = './src/commands';
-const defaultEventsFolder = './src/events';
-const defaultFilesFolder = './src/files';
-const defaultPrototypesFolder = './src/prototypes';
-const defaultSandboxFolder = './src/sandbox';
-const defaultPort = 3000;
+// Must haves
+global.projectRoot = __dirname;
+global.utilsPath = path.join(global.projectRoot, 'internals', 'Utils.js');
+const { walkDir, toCamelCase, loadEnvPath, loadConfig, getOrNull } = require(global.utilsPath);
 
 // Add logic to a default behavior
 const { defaultLogFormat } = require('extend-console');
@@ -46,10 +38,6 @@ console.createReportError = (...args) => args.length === 0 ? oldCreateReportErro
 console.report = console.createReport();
 console.reportWarn = console.createReportWarn();
 console.reportError = console.createReportError();
-
-// Must require now
-global.utilsPath = path.join(global.projectRoot, 'internals', 'Utils.js');
-const { validPort, capitalize, toCamelCase, getOrNull, loadEnvPath, walkDir } = require(global.utilsPath);
 
 // Nice to have, avoids path.join with relative paths everywhere
 (async function initGlobalPaths() {
@@ -78,6 +66,8 @@ const { validPort, capitalize, toCamelCase, getOrNull, loadEnvPath, walkDir } = 
                 .filter((filename) => filename !== 'Logs.js')
                 .forEach((filename) => require(path.join(prototypesFolder, filename)));
 
+            const defaultPrototypesFolder = './src/prototypes';
+
             global.prototypesFolder = loadEnvPath('prototypes_folder', defaultPrototypesFolder);
             if (!fs.existsSync(global.prototypesFolder)) fs.mkdirSync(global.prototypesFolder);
             fs.readdirSync(global.prototypesFolder)
@@ -89,57 +79,8 @@ const { validPort, capitalize, toCamelCase, getOrNull, loadEnvPath, walkDir } = 
 
     async function initGlobal() {
         try {
-            // Load configs
-            const missingVars = [];
-            for (const requiredVar of ['client_token', 'client_id', 'discord_guild_id']) {
-                if (!process.env[requiredVar]) {
-                    missingVars.push(requiredVar);
-                } else if (missingVars.length === 0) {
-                    Object.defineProperty(global, toCamelCase(requiredVar), {
-                        value: process.env[requiredVar],
-                        configurable: false,
-                        enumerable: true,
-                        writable: false,
-                    });
-                }
-            }
-            if (missingVars.length > 0) {
-                console.reportError('Missing required environment variables:', ...missingVars);
-                process.exit(1);
-            }
-            global.listenEvents = process.env.listen_events ? process.env.listen_events.toLowerCase() === 'true' : true;
-            global.reportEvents = process.env.report_events ? process.env.report_events.toLowerCase() === 'true' : true;
-
-            global.endpointsFolder = loadEnvPath('endpoints_folder', defaultEndpointsFolder);
-            global.commandsFolder = loadEnvPath('commands_folder', defaultCommandsFolder);
-            global.eventsFolder = loadEnvPath('events_folder', defaultEventsFolder);
-            global.filesFolder = loadEnvPath('files_folder', defaultFilesFolder);
-            global.sandboxFolder = loadEnvPath('sandbox_folder', defaultSandboxFolder);
-
-            global.apiEnable = process.env.api_enable ? process.env.api_enable.toLowerCase() === 'true' : false;
-            global.apiPort = process.env.api_port ? validPort(process.env.api_port) ? process.env.api_port : defaultPort : defaultPort;
-            global.utcDiff = parseInt((process.env.utc_diff ? process.env.utc_diff : 0) * 60 * 60 * 1000);
-
-            global.configChannels = JSON.parse(fs.readFileSync(path.join(global.projectRoot, 'config', 'channels.json'), 'utf-8'));
-            if (Object.values(global.configChannels).every((channels) => Object.keys(channels).length === 0)) {
-                console.reportWarn('No channels in config/channels.json.');
-            }
-            for (const basename of ['reportEvents', 'listenEvents']) {
-                const filename = `${basename}.json`;
-                const jsonPath = path.join(global.projectRoot, 'config', filename);
-                const json = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
-                Object.defineProperty(global, `config${capitalize(basename)}`, {
-                    value: json,
-                    configurable: false,
-                    enumerable: true,
-                    writable: false,
-                });
-                for (const eventName of Object.keys(Events)) {
-                    if (!Object.keys(json).includes(eventName) && eventName !== Events.ClientReady) {
-                        console.reportWarn(`Missing ${eventName} in ${filename}`);
-                    }
-                }
-            }
+            // Load config
+            loadConfig();
             console.report('config files loaded');
 
             // mkdir gitignored folders
