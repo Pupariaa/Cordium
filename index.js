@@ -2,6 +2,7 @@
 const fs = require('fs');
 const path = require('path');
 const { Client, Events, GatewayIntentBits, Partials } = require('discord.js');
+const wait = require('node:timers/promises').setTimeout;
 
 // Must haves
 global.projectRoot = __dirname;
@@ -257,6 +258,8 @@ const { validPort, capitalize, toCamelCase, getOrNull, loadEnvPath, walkDir } = 
                         ephemeral: true,
                         content: 'Not a command',
                     });
+                    await wait(5000);
+                    await interaction.deleteReply();
                     return;
                 }
 

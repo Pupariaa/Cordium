@@ -9,10 +9,12 @@ const urlRegex = new RegExp('https?:\\\/\\\/(?:www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1
 
 const cooldown = 2;
 const getMinutesRemaining = (remainingMessages) => Math.ceil(remainingMessages * cooldown / 60);
-const shouldDelete = (msg) =>
-    msg.attachments.size === 0
-    && msg.embeds.length === 0
-    && !urlRegex.test(msg.content);
+const shouldDelete = (msg) => {
+    if (msg.attachments.size === 0) return true;
+    if (msg.embeds.length === 0) return true;
+    if (!urlRegex.test(msg.content)) return true;
+    if (Object.values(msg.attachments).every((attachment) => !attachment.width && !attachment.height)) return true;
+};
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -27,6 +29,7 @@ module.exports = {
         try {
             const messagesToDelete = [];
             const channel = interaction.channel;
+            // TODO: TypeError: existing._patch is not a function
             (await channel.fetchAllMessages(
                 global.channels.fetchAllMessages.scanUp,
                 (message, r) => r.push(message),
