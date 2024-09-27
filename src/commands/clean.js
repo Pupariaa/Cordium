@@ -8,12 +8,14 @@ const cmdDescription = 'cleans the current channel';
 const urlRegex = new RegExp('https?:\\\/\\\/(?:www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b(?:[-a-zA-Z0-9()@:%_\\+.~#?&\\\/=]*)', '');
 
 const cooldown = 2;
+const batchSize = 100;
 const getMinutesRemaining = (remainingMessages) => Math.ceil(remainingMessages * cooldown / 60);
 const shouldDelete = (msg) => {
-    if (msg.attachments.size === 0) return true;
-    if (msg.embeds.length === 0) return true;
-    if (!urlRegex.test(msg.content)) return true;
-    if (Object.values(msg.attachments).every((attachment) => !attachment.width && !attachment.height)) return true;
+    if (msg.attachments.size > 0) return false;
+    if (msg.embeds.length > 0) return false;
+    if (urlRegex.test(msg.content)) return false;
+    if (Object.values(msg.attachments).some((attachment) => attachment.width && attachment.height)) return false;
+    return true;
 };
 
 module.exports = {
@@ -27,24 +29,34 @@ module.exports = {
      */
     async execute(interaction) {
         try {
-            const messagesToDelete = [];
             const channel = interaction.channel;
-            // TODO: TypeError: existing._patch is not a function
-            (await channel.fetchAllMessages(
+            const messagesToDelete = await channel.fetchAllMessages(
                 global.channels.fetchAllMessages.scanUp,
-                (message, r) => r.push(message),
+                (message, r) => {
+                    if (!shouldDelete(message)) return;
+                    if (r.currentBatch.length >= batchSize) {
+                        r.batches.push(r.currentBatch);
+                        r.currentBatch = [];
+                    }
+                    r.currentBatch.push(message);
+                },
                 (lastId) => ({ before: lastId }),
-                null
-            )).forEach(msg => {
-                if (shouldDelete(msg)) messagesToDelete.push(msg);
-            });
-            messagesToDelete.forEach(msg => {
-                console.report(`Deleting "${msg.content}" from ${msg.author.username} in #${msg.channel.name}`);
-            });
-            const bulkDeletePromise = channel.bulkDelete(messagesToDelete, true);
+                null,
+                { batches: [], currentBatch: [] }
+            );
+            if (messagesToDelete.currentBatch.length > 0) messagesToDelete.batches.push(messagesToDelete.currentBatch);
 
-            const twoWeeksAgo = Date.now() - (14 * 24 * 60 * 60 * 1000);
-            const filteredMessages = messagesToDelete.filter(msg => msg.createdTimestamp < twoWeeksAgo);
+            const deletedMessageIds = [];
+            await Promise.all(
+                messagesToDelete.batches.map(async (batch) => {
+                    const ids = Object.keys(await channel.bulkDelete(batch, true));
+                    deletedMessageIds.push(...ids);
+                })
+            );
+
+            const filteredMessages = messagesToDelete.batches
+                .flat()
+                .filter(msg => !deletedMessageIds.includes(msg.id));
             const totalMessages = filteredMessages.length;
             if (totalMessages > 0) {
                 let deletedCount = 0;
@@ -55,6 +67,7 @@ module.exports = {
                 });
 
                 for (const msg of filteredMessages) {
+                    console.log(`cleaning ${msg.content} from ${msg.author.username} in #${msg.channel.name}`);
                     await msg.delete();
                     const waitPromise = wait(cooldown * 1000);
 
@@ -67,8 +80,6 @@ module.exports = {
 
                     await waitPromise;
                 }
-
-                await bulkDeletePromise;
 
                 await interaction.editReply({
                     content: 'done',
