@@ -266,10 +266,13 @@ const { validPort, capitalize, toCamelCase, getOrNull, loadEnvPath, walkDir } = 
                 try {
                     await command.execute(interaction);
                 } catch (err) {
-                    await (interaction.replied || interaction.deferred ? interaction.followUp : interaction.reply)({
-                        ephemeral: true,
-                        content: `There was an error while executing the ${interaction.commandName} command`,
-                    });
+                    if (interaction) {
+                        await (interaction.replied || interaction.deferred ? interaction.followUp : interaction.reply)({
+                            ephemeral: true,
+                            content: `There was an error while executing the ${interaction.commandName} command`,
+                        });
+                    }
+                    console.reportError(err);
                 }
             });
 
