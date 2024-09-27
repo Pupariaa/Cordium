@@ -674,7 +674,7 @@ registerEvent(Events.MessageCreate, (message) => message.guild.id, async functio
     //     replyToMessageId: message.reference ? message.reference.messageId : null,
     // });
 
-    // global.messagesDatabase.set(message);
+    global.messagesDatabase.set(message);
 
     reportEvent(this.eventName, 'channel.name', channel.name, 'executor.tag', executor.tag, 'content', content);
 }).listen();

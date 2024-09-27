@@ -200,8 +200,8 @@ const { validPort, capitalize, toCamelCase, getOrNull, loadEnvPath, walkDir } = 
             // const EventsDatabase = require(global.eventsDatabasePath);
             // global.eventsDatabase = new EventsDatabase();
 
-            // const MessagesDatabase = require(global.messagesDatabasePath);
-            // global.messagesDatabase = new MessagesDatabase();
+            const MessagesDatabase = require(global.messagesDatabasePath);
+            global.messagesDatabase = new MessagesDatabase();
 
             console.report('global modules created');
 
@@ -227,11 +227,12 @@ const { validPort, capitalize, toCamelCase, getOrNull, loadEnvPath, walkDir } = 
 
             // Init databases
             // await Promise.all([global.eventsDatabase.init(), global.messagesDatabase.init()]);
+            await global.messagesDatabase.init();
 
             // Feed discord.js with old messages
-            // console.report('Feeding Discord.js old messages...');
-            // await global.messagesDatabase.feedDiscordjs();
-            // console.report('Done feeding Discord.js old messages');
+            console.report('Feeding Discord.js old messages...');
+            await global.messagesDatabase.feedDiscordjs();
+            console.report('Done feeding Discord.js old messages');
 
             // Init caches
             // const invites = await global.guild.invites.fetch();

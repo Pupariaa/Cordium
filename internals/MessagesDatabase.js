@@ -26,7 +26,7 @@ class MessagesDatabase {
     #defineTablesColumns() {
         this.messagesTableColumns = {
             id: 'INTEGER PRIMARY KEY AUTOINCREMENT',
-            messageId: 'INTEGER NOT NULL',
+            messageId: 'TEXT NOT NULL',
             type: 'INTEGER NOT NULL',
             authorId: 'TEXT NOT NULL',
             channelId: 'TEXT NOT NULL',
@@ -46,13 +46,13 @@ class MessagesDatabase {
         };
         this.partiesTableColumns = {
             id: 'INTEGER PRIMARY KEY AUTOINCREMENT',
-            messageId: 'INTEGER NOT NULL',
+            messageId: 'TEXT NOT NULL',
             partyId: 'TEXT NOT NULL',
             type: 'TEXT NOT NULL CHECK(type >= 0 AND type <= 3)'
         };
         this.attachmentsTableColumns = {
             id: 'INTEGER PRIMARY KEY AUTOINCREMENT',
-            messageId: 'INTEGER NOT NULL',
+            messageId: 'TEXT NOT NULL',
             contentType: 'TEXT NOT NULL',
             description: 'TEXT',
             duration: 'INTEGER',
@@ -69,7 +69,29 @@ class MessagesDatabase {
             waveform: 'TEXT',
             width: 'INTEGER'
         };
+    }
 
+    #createTables() {
+        const createsSQL = [
+            `CREATE TABLE IF NOT EXISTS messages (
+                ${Object.entries(this.messagesTableColumns)
+                .map(([column, definition]) => `${column} ${definition}`)
+                .join(', ')}
+            )`
+        ];
+        return Promise.all(createsSQL.map(createSQL =>
+            new Promise((resolve, reject) =>
+                this.db.run(createSQL, (err) => {
+                    if (err) {
+                        console.reportError('Error creating table:', err);
+                        reject(err);
+                    } else {
+                        console.report('Table "messages" created');
+                        resolve();
+                    }
+                })
+            )
+        ));
     }
 
     #connectToDatabase() {
@@ -87,7 +109,6 @@ class MessagesDatabase {
     }
 
     async init() {
-        // TODO: it seems that not all messages are fetched and cached the first run
         try {
             await this.#connectToDatabase();
             console.report('Initializing messagesDatabase...');
@@ -168,29 +189,6 @@ class MessagesDatabase {
   
     */
 
-    #createTables() {
-        const createsSQL = [
-            `CREATE TABLE IF NOT EXISTS messages (
-                ${Object.entries(this.messagesTableColumns)
-                .map(([column, definition]) => `${column} ${definition}`)
-                .join(', ')}
-            )`
-        ];
-        return Promise.all(createsSQL.map(createSQL =>
-            new Promise((resolve, reject) =>
-                this.db.run(createSQL, (err) => {
-                    if (err) {
-                        console.reportError('Error creating table:', err);
-                        reject(err);
-                    } else {
-                        console.report('Table "messages" created');
-                        resolve();
-                    }
-                })
-            )
-        ));
-    }
-
     #extractFields(message) {
         const reference = `${getOrNull(message, 'reference.guildId')},${getOrNull(message, 'reference.channelId')},${getOrNull(message, 'reference.messageId')}`;
         const stickers = Object.values(message.stickers);
@@ -205,50 +203,51 @@ class MessagesDatabase {
         const insertsSQL = [`INSERT INTO messages (${this.messageSQLFields}) VALUES (${this.messageSQLValues})`];
         const params = [this.#extractFields(message)];
         /*
+        TODO
         if (message.activity) {
-            insertsSQL.push(`TODO`);
-            params.push(`TODO`);
+            insertsSQL.push(``);
+            params.push(``);
         }
         for (const attachment of message.attachments.values()) {
-            insertsSQL.push(`TODO`);
-            params.push(`TODO`);
+            insertsSQL.push(``);
+            params.push(``);
         }
         if (message.call) {
-            insertsSQL.push(`TODO`);
-            params.push(`TODO`);
+            insertsSQL.push(``);
+            params.push(``);
         }
         for (const component of message.components) {
-            insertsSQL.push(`TODO`);
-            params.push(`TODO`);
+            insertsSQL.push(``);
+            params.push(``);
         }
         for (const embed of message.embeds) {
-            insertsSQL.push(`TODO`);
-            params.push(`TODO`);
+            insertsSQL.push(``);
+            params.push(``);
         }
         if (message.interactionMetadata) {
-            insertsSQL.push(`TODO`);
-            params.push(`TODO`);
+            insertsSQL.push(``);
+            params.push(``);
         }
         for (const mention of message.mentions) {
-            insertsSQL.push(`TODO`);
-            params.push(`TODO`);
+            insertsSQL.push(``);
+            params.push(``);
         }
         if (message.poll) {
-            insertsSQL.push(`TODO`);
-            params.push(`TODO`);
+            insertsSQL.push(``);
+            params.push(``);
         }
         for (const reaction of message.reactions) {
-            insertsSQL.push(`TODO`);
-            params.push(`TODO`);
+            insertsSQL.push(``);
+            params.push(``);
         }
         if (message.roleSubscriptionData) {
-            insertsSQL.push(`TODO`);
-            params.push(`TODO`);
+            insertsSQL.push(``);
+            params.push(``);
         }
         global.attachmentsManager.saveAttachments(message);
         for (const attachment of message.attachments.values()) {
-            insertsSQL.push(`TODO`);
-            params.push(`TODO`);
+            insertsSQL.push(``);
+            params.push(``);
         }
         */
         return Promise.all(insertsSQL.map((insertSQL, index) =>
@@ -266,51 +265,9 @@ class MessagesDatabase {
     }
 
     set(message) {
-        this.#set(message);
+        const promise = this.#set(message);
         this.lastMessagesId[message.channel.id] = message.id;
-    }
-
-    get(id) {
-        return new Promise((resolve, reject) =>
-            this.db.get(`SELECT * FROM messages WHERE messageId = ?`, [id], (err, cachedMessage) => {
-                if (err) {
-                    console.reportError('Error getting message:', err);
-                    reject(err);
-                } else {
-                    resolve(this.#cachedMessageToMessage(cachedMessage));
-                }
-            })
-        );
-    }
-
-    forEach(callback) {
-        return new Promise((resolve, reject) => {
-            this.db.all('SELECT * FROM messages', [], (err, cachedMessages) => {
-                if (err) {
-                    console.reportError('Error retrieving messages:', err);
-                    reject(err);
-                } else {
-                    cachedMessages.forEach((cachedMessage) => callback(this.#cachedMessageToMessage(cachedMessage)));
-                    resolve();
-                }
-            });
-        });
-    }
-
-    update(newMessage) {
-        const insertOrReplaceSQL = `UPDATE messages SET (${this.messageSQLFields}) = (${this.messageSQLValues}) WHERE messageId = ${newMessage.id}`;
-        const params = this.#extractFields(newMessage);
-        console.log('caca');
-        return new Promise((resolve, reject) =>
-            this.db.run(insertOrReplaceSQL, params, (err) => {
-                if (err) {
-                    console.reportError('Error updating message:', err);
-                    reject(err);
-                } else {
-                    resolve();
-                }
-            })
-        );
+        return promise;
     }
 
     #cachedMessageToMessage(cachedMessage) {
@@ -377,21 +334,87 @@ class MessagesDatabase {
         }
     }
 
-    feedDiscordjs() {
-        return this.forEach((message) => {
-            const channel = global.client.getChannelById(message.channel.id);
+    get(id) {
+        return new Promise((resolve, reject) =>
+            this.db.get(`SELECT * FROM messages WHERE messageId = ?`, [id], (err, cachedMessage) => {
+                if (err) {
+                    console.reportError('Error getting message:', err);
+                    reject(err);
+                } else {
+                    resolve(this.#cachedMessageToMessage(cachedMessage));
+                }
+            })
+        );
+    }
+
+    each(callback) {
+        return new Promise((resolve, reject) => {
+            this.db.all('SELECT * FROM messages', [], (err, cachedMessages) => {
+                if (err) {
+                    console.reportError('Error retrieving messages:', err);
+                    reject(err);
+                } else {
+                    cachedMessages.forEach((cachedMessage) => callback(this.#cachedMessageToMessage(cachedMessage)));
+                    resolve();
+                }
+            });
+        });
+    }
+
+    update(newMessage) {
+        const insertOrReplaceSQL = `UPDATE messages SET (${this.messageSQLFields}) = (${this.messageSQLValues}) WHERE messageId = ${newMessage.id}`;
+        const params = this.#extractFields(newMessage);
+        return new Promise((resolve, reject) =>
+            this.db.run(insertOrReplaceSQL, params, (err) => {
+                if (err) {
+                    console.reportError('Error updating message:', err);
+                    reject(err);
+                } else {
+                    resolve();
+                }
+            })
+        );
+    }
+
+    delete(messageId) {
+        return new Promise((resolve, reject) =>
+            this.db.run(`DELETE FROM messages WHERE messageId = ?`, [messageId], (err) => {
+                if (err) {
+                    console.reportError('Error deleting message:', err);
+                    reject(err);
+                } else {
+                    resolve();
+                }
+            })
+        );
+    }
+
+    async feedDiscordjs() {
+        const messageIdsToDelete = [];
+        await this.each((message) => {
+            const channel = message.channel;
             if (!channel) {
-                console.reportError(`Channel ${message.channel.id} not found`);
+                // associated channel no longer exists
+                messageIdsToDelete.push(message.id);
                 return;
             }
-            channel.messages.cache.set(message.id, message);
+            if (!channel.messages.cache.get(message.id)) {
+                channel.messages.cache.set(message.id, message);
+            }
         });
+        const promises = [];
+        messageIdsToDelete.forEach((id) => promises.push(this.delete(id)));
+        await Promise.all(promises);
     }
 
     close() {
         if (this.lastMessagesId) {
             const stringifiedLastMessagesId = JSON.stringify(this.lastMessagesId, null, 4);
-            if (stringifiedLastMessagesId) fs.writeFileSync(this.cachePath, stringifiedLastMessagesId, 'utf8');
+            if (stringifiedLastMessagesId) {
+                fs.writeFileSync(this.cachePath, stringifiedLastMessagesId, 'utf8');
+            } else {
+                console.reportWarn('Serialization of lastMessagesId failed');
+            }
         }
         if (!this.db) return;
         return new Promise((resolve, reject) =>
