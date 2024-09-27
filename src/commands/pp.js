@@ -24,6 +24,7 @@ module.exports = {
      * @param {Object} interaction - The interaction object from Discord.js.
      */
     async execute(interaction) {
+        let hasReplied = false;
         try {
             let user = interaction.options.getUser('user');
             const getGuildPp = interaction.options.getBoolean('guild');
@@ -45,8 +46,14 @@ module.exports = {
                 ephemeral: false,
                 content: content
             });
+            hasReplied = true;
         } catch (err) {
             console.reportError(err);
+
+            await (hasReplied ? interaction.editReply : interaction.reply)({
+                ephemeral: true,
+                content: `${cmdName} failed`,
+            });
         }
     }
 };

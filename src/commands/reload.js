@@ -15,6 +15,7 @@ module.exports = {
 	 * @param {Object} interaction - The interaction object from Discord.js.
 	 */
 	async execute(interaction) {
+		let hasReplied = false;
 		try {
 			global.commandManager.reloadCommands();
 
@@ -22,10 +23,11 @@ module.exports = {
 				ephemeral: true,
 				content: 'done',
 			});
+			hasReplied = true;
 		} catch (err) {
 			console.reportError(err);
 
-			await interaction.reply({
+			await (hasReplied ? interaction.editReply : interaction.reply)({
 				ephemeral: true,
 				content: `${cmdName} failed`,
 			});
