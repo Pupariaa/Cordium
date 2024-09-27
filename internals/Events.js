@@ -258,6 +258,8 @@ registerEvent(Events.ChannelDelete, (channel) => channel.guild.id, async functio
     //     executorId: executor.id,
     // });
 
+    global.messagesDatabase.bulkDelete(channel.id);
+
     reportEvent(this.eventName, 'channel.name', channel.name, 'executor.tag', executor.tag, 'channel.type', global.guild.channelTypeStr(channel.type));
 }).listen();
 

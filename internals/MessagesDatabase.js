@@ -389,6 +389,19 @@ class MessagesDatabase {
         );
     }
 
+    bulkDelete(channelId) {
+        return new Promise((resolve, reject) =>
+            this.db.run(`DELETE FROM messages WHERE channelId = ?`, [channelId], (err) => {
+                if (err) {
+                    console.reportError('Error deleting messages:', err);
+                    reject(err);
+                } else {
+                    resolve();
+                }
+            })
+        );
+    }
+
     async feedDiscordjs() {
         const messageIdsToDelete = [];
         await this.each((message) => {
