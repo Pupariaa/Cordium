@@ -24,7 +24,6 @@ module.exports = {
      * @param {Object} interaction - The interaction object from Discord.js.
      */
     async execute(interaction) {
-        let hasReplied = false;
         try {
             const messagesToDelete = [];
             const channel = interaction.channel;
@@ -51,7 +50,6 @@ module.exports = {
                     ephemeral: true,
                     content: `Deleting messages older than 2 weeks (${getMinutesRemaining(totalMessages)} min(s) remaining)`,
                 });
-                hasReplied = true;
 
                 for (const msg of filteredMessages) {
                     await msg.delete();
@@ -81,7 +79,7 @@ module.exports = {
         } catch (err) {
             console.reportError(err);
 
-            await (hasReplied ? interaction.editReply : interaction.reply)({
+            await (interaction.replied || interaction.deferred ? interaction.followUp : interaction.reply)({
                 ephemeral: true,
                 content: `${cmdName} failed`,
             });

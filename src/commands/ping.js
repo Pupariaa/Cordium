@@ -14,14 +14,12 @@ module.exports = {
      * @param {Object} interaction - The interaction object from Discord.js.
      */
     async execute(interaction) {
-        let hasReplied = false;
         try {
             await interaction.reply(`pong (${Math.round((Date.now() - interaction.createdTimestamp) / 1000)}ms)`);
-            hasReplied = true;
         } catch (err) {
             console.reportError(err);
 
-            await (hasReplied ? interaction.editReply : interaction.reply)({
+            await (interaction.replied || interaction.deferred ? interaction.followUp : interaction.reply)({
                 ephemeral: true,
                 content: `${cmdName} failed`,
             });

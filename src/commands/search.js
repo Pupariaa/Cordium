@@ -216,7 +216,6 @@ module.exports = {
      * @param {Object} interaction - The interaction object from Discord.js.
      */
     async execute(interaction) {
-        let hasReplied = false;
         try {
             const regex = new RegExp(interaction.options.getString('regex'), interaction.options.getString('flags') || '');
             const types = JSON.parse(interaction.options.getString('type'))?.map(type => gets[type]) || [...gets];
@@ -243,19 +242,17 @@ module.exports = {
                     ephemeral: true,
                     content: 'done'
                 });
-                hasReplied = true;
                 await wait(5000);
                 await interaction.deleteReply();
             }
             else {
                 replyObject.content = `${querySummary(regex, types, channelsName)}\n\nFound **${matches.length}** matches` + replyObject.content;
                 await interaction.reply(replyObject);
-                hasReplied = true;
             }
         } catch (err) {
             console.reportError(err);
 
-            await (hasReplied ? interaction.editReply : interaction.reply)({
+            await (interaction.replied || interaction.deferred ? interaction.followUp : interaction.reply)({
                 ephemeral: true,
                 content: `${cmdName} failed`,
             });
