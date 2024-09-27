@@ -118,17 +118,18 @@ class MessagesDatabase {
             await this.#createTables();
             const promises = [];
             let applyToAll, getFetchOptions, getDefaultLastId;
-            if (fs.existsSync(this.cachePath)) {
-                this.lastMessagesId = JSON.parse(fs.readFileSync(this.cachePath), "utf-8");
-                applyToAll = global.channels.fetchAllMessages.scanDown;
-                getFetchOptions = (lastId) => ({ after: lastId });
-                getDefaultLastId = (channel) => this.lastMessagesId[channel.id];
-            } else {
-                this.lastMessagesId = {};
-                applyToAll = global.channels.fetchAllMessages.scanUp;
-                getFetchOptions = (lastId) => ({ before: lastId });
-                getDefaultLastId = (channel) => null;
-            }
+            // if (fs.existsSync(this.cachePath)) {
+            //     this.lastMessagesId = JSON.parse(fs.readFileSync(this.cachePath), "utf-8");
+            //     applyToAll = global.channels.fetchAllMessages.scanDown;
+            //     getFetchOptions = (lastId) => ({ after: lastId });
+            //     getDefaultLastId = (channel) => this.lastMessagesId[channel.id];
+            // } else {
+            // always start fresh to avoid caching, yet to do, uncomplete messages
+            this.lastMessagesId = {};
+            applyToAll = global.channels.fetchAllMessages.scanUp;
+            getFetchOptions = (lastId) => ({ before: lastId });
+            getDefaultLastId = (channel) => null;
+            // }
             let mostRecentTimestamps = {};
             const applyToEvery = (message, r) => {
                 promises.push(this.#set(message));
@@ -164,6 +165,7 @@ class MessagesDatabase {
     }
 
     enqueue(operation) {
+        return;
         const id = Date.now() + Math.random();
         this.queue.push({ id, operation });
 
