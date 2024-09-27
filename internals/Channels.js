@@ -95,11 +95,12 @@ class Channels {
             applyToAll = global.channels.fetchAllMessages.sortUp,
             applyToEvery = (message, r) => r.unshift(message),
             getFetchOptions = (lastId) => ({ before: lastId }),
-            defaultLastId = null) {
+            defaultLastId = null,
+            defaultResult = []) {
 
             const optimalLimit = 100;
             let lastId = defaultLastId;
-            const r = [];
+            const r = defaultResult;
             try {
                 let fetchedMessages = [];
                 do {
