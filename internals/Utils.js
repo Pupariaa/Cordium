@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { exec } = require('child_process');
 const { Events } = require('discord.js');
+const wait = require('node:timers/promises').setTimeout;
 
 function downloadFile(url, filePath) {
 	const command = `curl "${url}" --output "${filePath}" > NUL 2>&1`;
@@ -166,6 +167,19 @@ function loadConfig() {
 	}
 }
 
+async function waitForFile(filePath, timeout = 5000, interval = 100) {
+	const startTime = Date.now();
+	while (Date.now() - startTime < timeout) {
+		try {
+			await fs.access(filePath);
+			return true;
+		} catch (err) {
+			await wait(interval);
+		}
+	}
+	return false;
+}
+
 module.exports = {
 	downloadFile,
 	getOrNull,
@@ -177,5 +191,6 @@ module.exports = {
 	loadEnvPath,
 	compareObjects,
 	walkDir,
-	loadConfig
+	loadConfig,
+	waitForFile,
 };

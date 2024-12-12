@@ -22,7 +22,7 @@ module.exports = {
 		try {
 			loadConfig();
 			global.commandManager.reloadCommands();
-			await reloadEndpoints();
+			reloadEndpoints();
 
 			await interaction.reply({
 				ephemeral: true,

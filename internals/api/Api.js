@@ -5,6 +5,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 
 global.endpoints = require(global.endpointsFolder);
+const { walkDir } = require(global.utilsPath);
 
 const app = express();
 
@@ -39,10 +40,11 @@ const rh = async (req, res) => {
 
 		if (e) {
 			const eFolder = e.type === 'private' ? 'private' : 'public';
-			const fPath = path.join(global.projectRoot, 'src/api/endpoints', eFolder, `${ePath}.js`);
+			const fPath = path.join(global.endpointsFolder, eFolder, `${ePath}.js`);
 
 			try {
 				if (fs.existsSync(fPath)) {
+					// delete require.cache[require.resolve(fPath)];
 					const eHandler = require(fPath);
 					const resData = await eHandler.handleRequest(e, rData);
 					if (resData.error && resData.error === 'Unauthorized') {
@@ -90,9 +92,29 @@ if (global.apiPort) {
 	}
 }
 
-async function reloadEndpoints() {
-	delete require.cache[require.resolve(global.endpointsFolder)];
-	global.endpoints = require(global.endpointsFolder);
+function reloadEndpoints() {
+	try {
+		console.report('Reloading API endpoints...');
+
+		walkDir(global.endpointsFolder, function (filePath, fileStats) {
+			try {
+				delete require.cache[require.resolve(filePath)];
+				const apiModule = require(filePath);
+				if (filePath !== path.join(global.endpointsFolder, 'endpoints.js')) {
+					const endpoint = path.basename(filePath).split('.')[0];;
+					if ('handleRequest' in apiModule && typeof apiModule.handleRequest === 'function') {
+						console.report(`Endpoint reloaded: ${endpoint}`);
+					} else {
+						console.reportWarn(`The endpoint ${endpoint} is missing a required "handleRequest" function`);
+					}
+				}
+			} catch (err) {
+				console.reportError(`Error reloading endpoint at ${filePath}:`, err);
+			}
+		});
+	} catch (err) {
+		console.reportError('Error reloading endpoints:', err);
+	}
 }
 
 module.exports = {
