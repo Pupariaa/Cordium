@@ -166,6 +166,13 @@ function loadConfig() {
 	}
 }
 
+
+async function reloadEndpoints() {
+	delete require.cache[require.resolve(global.endpointsFolder)];
+	global.endpoints = require(global.endpointsFolder);
+}
+
+
 module.exports = {
 	downloadFile,
 	getOrNull,
@@ -178,4 +185,5 @@ module.exports = {
 	compareObjects,
 	walkDir,
 	loadConfig,
+	reloadEndpoints
 };

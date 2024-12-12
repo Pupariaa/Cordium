@@ -4,7 +4,7 @@ const http = require('http');
 const express = require('express');
 const bodyParser = require('body-parser');
 
-const endpoints = require(global.endpointsFolder);
+global.endpoints = require(global.endpointsFolder);
 
 const app = express();
 
@@ -35,7 +35,7 @@ const rh = async (req, res) => {
 		const rData = req.query;
 		const ePath = req.path.split('/')[3];
 
-		const e = endpoints.find((e) => e.name === ePath);
+		const e = global.endpoints.find((e) => e.name === ePath);
 
 		if (e) {
 			const eFolder = e.type === 'private' ? 'private' : 'public';
