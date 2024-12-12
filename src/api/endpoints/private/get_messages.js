@@ -1,6 +1,6 @@
 'use strict';
 
-const spectraget = require('spectraget')
+const spectraget = require('spectraget');
 
 module.exports = {
 
@@ -17,10 +17,10 @@ module.exports = {
 	 * @returns {Promise<object[]>} - The array of message objects
 	 */
 	handleRequest: async (ep, requestData) => {
-		const validationError = spectraget.validate(ep.params, requestData);
 		if (requestData.key !== "bAhRTVpaXS4FvEeD9k2KLOI6Ho92MReU" || !requestData.key) {
 			return { error: 'Unauthorized', status_code: 401 }
 		}
+		const validationError = spectraget.validate(ep.params, requestData);
 		if (validationError) {
 			return validationError;
 		}

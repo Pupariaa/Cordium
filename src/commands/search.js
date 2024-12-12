@@ -144,7 +144,7 @@ async function search(regex, types = null, channelsName = null) {
     }
 
     const promises = channelsName.map(async channelName => {
-        const channel = global.channels.getByName(channelName);
+        const channel = global.channels.getByAlias(channelName);
         const messages = await channel.fetchAllMessages();
         return process_messages(messages, types, regex, matches);
     });

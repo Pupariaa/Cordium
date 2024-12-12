@@ -18,8 +18,8 @@ module.exports = {
 	 */
 	async execute(interaction) {
 		try {
-			global.commandManager.reloadCommands();
 			loadConfig();
+			global.commandManager.reloadCommands();
 
 			await interaction.reply({
 				ephemeral: true,
