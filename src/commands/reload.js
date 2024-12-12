@@ -1,8 +1,10 @@
 'use strict';
+
 const { SlashCommandBuilder } = require('discord.js');
 const wait = require('node:timers/promises').setTimeout;
 
 const { loadConfig } = require(global.utilsPath);
+const { reloadEndpoints } = require(global.apiPath);
 
 const cmdName = 'reload';
 const cmdDescription = 'reload commands';
@@ -20,6 +22,7 @@ module.exports = {
 		try {
 			loadConfig();
 			global.commandManager.reloadCommands();
+			await reloadEndpoints();
 
 			await interaction.reply({
 				ephemeral: true,

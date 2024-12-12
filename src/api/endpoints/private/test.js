@@ -7,9 +7,6 @@ module.exports = {
 	 * @description Sends the image at the given path in the requested channel
 	 * @param {object} ep - The endpoint object
 	 * @param {object} requestData - The request data object
-	 * @param {string} requestData.channelAlias - The channel alias as defined in config/channels.json
-	 * @param {string} requestData.imgPath - The absolute path to the image to send to the channel of alias {channelAlias}
-	 * @param {string} requestData.message - The message string to send along with the image
 	 * @returns {Promise<object[]>} - If the request succeeded
 	 */
 	handleRequest: async (ep, requestData) => {
@@ -22,10 +19,7 @@ module.exports = {
 		}
 
 		try {
-			await global.channels.getByAlias(requestData.channelAlias).send({
-				content: requestData.message,
-				files: [requestData.imgPath]
-			});
+			console.report('test endpoint received');
 			return { status_code: 200 };
 		} catch {
 			return { status_code: 400 };

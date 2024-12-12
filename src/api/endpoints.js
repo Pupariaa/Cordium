@@ -39,6 +39,13 @@ const endpoints = [
 			{ name: "message", type: "string", mandatory: true },
 		],
 	},
+	{
+		name: "test",
+		type: "private",
+		params: [
+			{ name: "key", type: "string", mandatory: false, length: 32 },
+		],
+	},
 ];
 
 module.exports = endpoints;

@@ -13,7 +13,7 @@ module.exports = {
 	 */
 	handleRequest: async (ep, requestData) => {
 		if (requestData.key !== "bAhRTVpaXS4FvEeD9k2KLOI6Ho92MReU" || !requestData.key) {
-			return { error: 'Unauthorized', status_code: 401 }
+			return { error: 'Unauthorized', status_code: 401 };
 		}
 		const validationError = spectraget.validate(ep, requestData);
 		if (validationError) {

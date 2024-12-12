@@ -89,3 +89,12 @@ if (global.apiPort) {
 		console.reportWarn('API is not setup properly, check environment variables');
 	}
 }
+
+async function reloadEndpoints() {
+	delete require.cache[require.resolve(global.endpointsFolder)];
+	global.endpoints = require(global.endpointsFolder);
+}
+
+module.exports = {
+	reloadEndpoints
+};
