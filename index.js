@@ -164,30 +164,31 @@ const { set, walkDirSync, toCamelCase, loadEnvPath, getOrNull, setReportFunction
 		}
 
 		// Interaction handler
-		global.client.on(Events.InteractionCreate, async (interaction) => {
-			if (!interaction.isChatInputCommand()) return;
+		try {
+			global.client.on(Events.InteractionCreate, async (interaction) => {
+				if (!interaction.isChatInputCommand()) return;
 
-			const command = interaction.client.commands.get(interaction.commandName);
-			if (!command) {
-				return interaction.reply({
-					ephemeral: true,
-					content: 'Not a command',
-				});
-			}
-
-			try {
-				return command.execute(interaction);
-			} catch (err) {
-				console.reportError(err);
-				if (!interaction) {
-					return;
+				const command = interaction.client.commands.get(interaction.commandName);
+				if (!command) {
+					return interaction.reply({
+						ephemeral: true,
+						content: 'Not a command',
+					});
 				}
-				return (interaction.replied || interaction.deferred ? interaction.followUp : interaction.reply)({
-					ephemeral: true,
-					content: `${interaction.commandName} failed (${err})`,
-				});
-			}
-		});
+
+				try {
+					return command.execute(interaction);
+				} catch (err) {
+					console.reportError(err);
+					return (interaction.replied || interaction.deferred ? interaction.followUp : interaction.reply)({
+						ephemeral: true,
+						content: `${interaction.commandName} failed (${err})`,
+					});
+				}
+			});
+		} catch (err) {
+			console.reportError(err);
+		}
 
 		// Deploy commands
 		global.commandsManager.loadAll();

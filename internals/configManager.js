@@ -69,7 +69,8 @@ class ConfigManager {
 		global.sandboxFolder = loadEnvPath(env.sandbox_folder, 'src/sandbox');
 
 		global.apiPort = env.api_port ? (validPort(env.api_port) ? env.api_port : defaultPort) : defaultPort;
-		global.utcDiff = parseInt((env.utc_diff ? env.utc_diff : 0) * 60 * 60 * 1000);
+		global.timezone = ('timezone' in env) ? env.timezone : 'UTC';
+		global.locale = ('locale' in env) ? env.locale : 'en-US';
 
 		const configChannelsPath = path.join(global.projectRoot, 'config', 'channels.json');
 		try {

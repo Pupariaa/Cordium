@@ -89,14 +89,37 @@ function report_matches(matches, replyObject) {
 	];
 }
 
+// function link_matches(matches, replyObject) {
+// 	const limit = 10;
+// 	const n = Math.min(limit, matches.length);
+// 	if (matches.length > limit) replyObject.content += `\nFirst ${n} matches:`;
+// 	for (const result of matches.slice(0, n)) {
+// 		const date = new Date(result.createdTimestamp + global.utcDiff);
+// 		const dateString = `${date.getUTCFullYear()}/${date.getUTCMonth()}/${date.getUTCDate()} ${String(date.getUTCHours()).padStart(2, '0')}:${String(date.getUTCMinutes()).padStart(2, '0')}:${String(date.getUTCSeconds()).padStart(2, '0')}`;
+// 		replyObject.content += `\n- [${result.channel.name} > ${result.author.username} > ${dateString}](<https://discord.com/channels/${global.guild.id}/${result.channel.id}/${result.id}>)`;
+// 	}
+// }
+
+const formatter = new Intl.DateTimeFormat(global.locale, {
+	timeZone: global.timezone,
+	year: 'numeric',
+	month: '2-digit',
+	day: '2-digit',
+	hour: '2-digit',
+	minute: '2-digit',
+	second: '2-digit',
+	hour12: false
+});
+
 function link_matches(matches, replyObject) {
 	const limit = 10;
 	const n = Math.min(limit, matches.length);
-	if (matches.length > limit) replyObject.content += `\nFirst ${n} matches:`;
+	if (matches.length > limit) {
+		replyObject.content += `\nFirst ${n} matches:`;
+	}
 	for (const result of matches.slice(0, n)) {
-		const date = new Date(result.createdTimestamp + global.utcDiff);
-		const dateString = `${date.getUTCFullYear()}/${date.getUTCMonth()}/${date.getUTCDate()} ${String(date.getUTCHours()).padStart(2, '0')}:${String(date.getUTCMinutes()).padStart(2, '0')}:${String(date.getUTCSeconds()).padStart(2, '0')}`;
-		replyObject.content += `\n- [${result.channel.name} > ${result.author.username} > ${dateString}](<https://discord.com/channels/${global.guild.id}/${result.channel.id}/${result.id}>)`;
+		const formattedDate = formatter.format(new Date(result.createdTimestamp));
+		replyObject.content += `\n- [${result.channel.name} > ${result.author.username} > ${formattedDate}](<https://discord.com/channels/${global.guild.id}/${result.channel.id}/${result.id}>)`;
 	}
 }
 
