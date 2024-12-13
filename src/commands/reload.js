@@ -24,10 +24,13 @@ module.exports = {
 				replyMsg = 'There is nothing to reload in dev mode';
 			} else {
 				global.configManager.reload();
-				global.commandManager.reload();
-				if (global.apiEnable) {
-					await global.apiManager.reload();
+				if (global.listenEvents) {
+					global.eventsManager.reload();
 				}
+				if (global.listenEndpoints) {
+					await global.endpointsManager.reload();
+				}
+				await global.commandsManager.reload();
 			}
 			await interaction.reply({
 				ephemeral: true,

@@ -1,3 +1,5 @@
+'use strict';
+
 const fs = require('fs');
 const path = require('path');
 const { REST } = require('@discordjs/rest');
@@ -5,7 +7,7 @@ const { Collection } = require('discord.js');
 const { Routes } = require('discord-api-types/v10');
 const chokidar = require('chokidar');
 
-class CommandHandler {
+class CommandsManager {
 	constructor() {
 		this.rest = new REST({ version: '10' }).setToken(global.clientToken);
 		if (!global.client.commands) global.client.commands = new Collection();
@@ -72,6 +74,20 @@ class CommandHandler {
 		}
 	}
 
+	reload() {
+		return walkDirAsync(global.commandsFolder, (filePath, stats) => this.onFileChange(filePath));
+	}
+
+	async onFileChange(filePath) {
+		try {
+			delete require.cache[require.resolve(filePath)];
+			this.load(filePath);
+			return this.deploy(filePath);
+		} catch (err) {
+			console.reportError(`Failed to reload command at ${filePath}:`, err);
+		}
+	}
+
 	watch() {
 		const watcher = chokidar.watch(global.commandsFolder, {
 			persistent: true,
@@ -84,22 +100,8 @@ class CommandHandler {
 
 		console.report('Watching commands...');
 	}
-
-	onFileChange(filePath) {
-		delete require.cache[require.resolve(filePath)];
-		this.load(filePath);
-		this.deploy(filePath);
-	}
-
-	reload() {
-		try {
-			for (const file of fs.readdirSync(global.commandsFolder)) {
-				this.onFileChange(path.join(global.commandsFolder, file));
-			}
-		} catch (err) {
-			console.reportError('Error reloading commands:', err);
-		}
-	}
 }
 
-module.exports = CommandHandler;
+module.exports = {
+	CommandsManager
+};

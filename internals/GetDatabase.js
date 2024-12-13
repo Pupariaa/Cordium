@@ -1,4 +1,5 @@
 'use strict';
+
 const { Sequelize } = require('sequelize')
 async function getVoiceConnectionStatusWithEvents(voiceUpdates) {
 

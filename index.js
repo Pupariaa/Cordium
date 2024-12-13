@@ -13,24 +13,16 @@ Object.keys(Events).forEach((key) => {
 // Must haves
 global.projectRoot = __dirname;
 global.utilsPath = path.join(global.projectRoot, 'internals', 'Utils.js');
-const { walkDir, toCamelCase, loadEnvPath, getOrNull, setReportFunctions } = require(global.utilsPath);
+const { set, walkDirSync, toCamelCase, loadEnvPath, getOrNull, setReportFunctions } = require(global.utilsPath);
 
 // Nice to have, avoids path.join with relative paths everywhere
 (async function initGlobalPaths() {
-	await walkDir(
-		path.join(global.projectRoot, 'internals'),
-		function (filePath, stats) {
-			if (!stats.isFile() || path.extname(filePath) !== '.js') return;
-			const propertyName = toCamelCase(path.basename(filePath, '.js')) + 'Path';
-			if (propertyName in global) return;
-			Object.defineProperty(global, propertyName, {
-				value: filePath,
-				configurable: false,
-				enumerable: true,
-				writable: false,
-			});
-		}
-	);
+	return walkDirSync(path.join(global.projectRoot, 'internals'), function (filePath, stats) {
+		if (!stats.isFile() || path.extname(filePath) !== '.js') return;
+		const propertyName = toCamelCase(path.basename(filePath, '.js')) + 'Path';
+		if (propertyName in global) return;
+		set(global, propertyName, filePath);
+	});
 })().then(async () => {
 
 	// Now the index.js can start
@@ -41,7 +33,7 @@ const { walkDir, toCamelCase, loadEnvPath, getOrNull, setReportFunctions } = req
 	async function initGlobal() {
 		try {
 			// Load config
-			const ConfigManager = require(global.configManagerPath);
+			const { ConfigManager } = require(global.configManagerPath);
 			global.configManager = new ConfigManager();
 			configManager.load();
 			if (global.dev) {
@@ -98,8 +90,8 @@ const { walkDir, toCamelCase, loadEnvPath, getOrNull, setReportFunctions } = req
 			const Channels = require(global.channelsPath);
 			global.channels = new Channels();
 
-			const CommandManager = require(global.commandManagerPath);
-			global.commandManager = new CommandManager();
+			const { CommandsManager } = require(global.commandsManagerPath);
+			global.commandsManager = new CommandsManager();
 
 			const AttachmentsManager = require(global.attachmentsManagerPath);
 			global.attachmentsManager = new AttachmentsManager();
@@ -110,12 +102,13 @@ const { walkDir, toCamelCase, loadEnvPath, getOrNull, setReportFunctions } = req
 			const MessagesDatabase = require(global.messagesDatabasePath);
 			global.messagesDatabase = new MessagesDatabase();
 
-			console.report('global modules created');
-
 			// TODO:
 			// require(global.getDatabasePath);
+
+			console.report('global modules created');
 		} catch (err) {
 			console.reportError(err);
+			process.exit(1);
 		}
 	}
 
@@ -150,8 +143,13 @@ const { walkDir, toCamelCase, loadEnvPath, getOrNull, setReportFunctions } = req
 			// Dispatch events
 			if (global.listenEvents) {
 				console.report('Dispatching events...');
-				const { dispatchEvents } = require(global.eventsPath);
-				dispatchEvents();
+				const { EventsManager } = require(global.eventsPath);
+				global.eventsManager = await new EventsManager();
+				await global.eventsManager.init();
+				global.eventsManager.dispatchAll();
+				if (global.dev) {
+					eventsManager.watch();
+				}
 			}
 
 			// Load endpoints
@@ -194,10 +192,10 @@ const { walkDir, toCamelCase, loadEnvPath, getOrNull, setReportFunctions } = req
 			});
 
 			// Deploy commands
-			global.commandManager.loadAll();
-			await global.commandManager.deployAll();
+			global.commandsManager.loadAll();
+			await global.commandsManager.deployAll();
 			if (global.dev) {
-				global.commandManager.watch();
+				global.commandsManager.watch();
 			}
 		} catch (err) {
 			console.reportError(err);

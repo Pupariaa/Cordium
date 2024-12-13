@@ -1,5 +1,8 @@
+'use strict';
+
 const { Events } = require('discord.js');
 const { Sequelize, DataTypes, Op } = require('sequelize');
+const { set } = require(global.utilsPath);
 
 class EventsDatabase {
 	constructor() {
@@ -47,12 +50,7 @@ class EventsDatabase {
 	}
 
 	#defineEventModel(event, columns, tableMetadata) {
-		Object.defineProperty(this, `EVENTS_${event}`, {
-			value: this.sequelize.define(`EVENTS_${event}`, columns, tableMetadata),
-			enumerable: true,
-			configurable: false,
-			writable: false
-		});
+		set(this, `EVENTS_${event}`, this.sequelize.define(`EVENTS_${event}`, columns, tableMetadata));
 	}
 
 	defineModels() {

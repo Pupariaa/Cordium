@@ -1,6 +1,6 @@
 'use-strict';
 
-const { validChannelId, getOrNull } = require(global.utilsPath);
+const { set, validChannelId, getOrNull } = require(global.utilsPath);
 
 const cache = {};
 
@@ -32,24 +32,19 @@ class Channels {
 		this.categories = Array.from(Object.keys(global.configChannels));
 		for (const category of this.categories) {
 			cache[category] = {};
-			Object.defineProperty(this, category, {
-				configurable: false,
-				enumerable: true,
-				writable: false,
-				value: {
-					aliases: global.configChannels[category],
-					getById: function (channelId) {
-						return _getById(channelId);
-					},
-					getByAlias: function (channelName) {
-						return _getByAlias(category, channelName);
-					},
-					getByTags: function (...tags) {
-						return _getByTags(category, ...tags);
-					},
-					each: function (callback) {
-						Object.entries(this.channels).forEach((channel) => callback(_getById(channel[1].id)));
-					}
+			set(this, category, {
+				aliases: global.configChannels[category],
+				getById: function (channelId) {
+					return _getById(channelId);
+				},
+				getByAlias: function (channelName) {
+					return _getByAlias(category, channelName);
+				},
+				getByTags: function (...tags) {
+					return _getByTags(category, ...tags);
+				},
+				each: function (callback) {
+					Object.entries(this.channels).forEach((channel) => callback(_getById(channel[1].id)));
 				}
 			});
 		}

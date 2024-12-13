@@ -1,4 +1,5 @@
 'use strict';
+
 const fs = require('fs');
 const path = require('path');
 const { exec } = require('child_process');
@@ -63,6 +64,10 @@ function loadEnvPath(envValue, defaultValue) {
 	return path.join(global.projectRoot, envValue ? (fs.existsSync(envValue) ? envValue : defaultValue) : defaultValue);
 }
 
+function getLoadEnvBool(key, defaultValue) {
+	return (key in this) ? this[key].toLowerCase() === 'true' : defaultValue;
+}
+
 function compareObjects(obj1, obj2, path = '', seen = new WeakMap()) {
 	// Check for circular references
 	if (typeof obj1 === 'object' && obj1 !== null) {
@@ -101,13 +106,26 @@ function compareObjects(obj1, obj2, path = '', seen = new WeakMap()) {
 }
 
 // Because apparently javascript doesn't have a built-in way to do this
-async function walkDir(dirPath, callback) {
-	const files = await fs.readdirSync(dirPath);
+async function walkDirSync(dirPath, callback) {
+	const files = fs.readdirSync(dirPath);
 	for (const file of files) {
 		const filePath = path.join(dirPath, file);
-		const stats = await fs.statSync(filePath);
+		const stats = fs.statSync(filePath);
 		if (stats.isDirectory()) {
-			await walkDir(filePath, callback);
+			await walkDirSync(filePath, callback);
+		} else {
+			await callback(filePath, stats);
+		}
+	}
+}
+
+function walkDirAsync(dirPath, callback) {
+	const files = fs.readdirSync(dirPath);
+	for (const file of files) {
+		const filePath = path.join(dirPath, file);
+		const stats = fs.statSync(filePath);
+		if (stats.isDirectory()) {
+			walkDirAsync(filePath, callback);
 		} else {
 			callback(filePath, stats);
 		}
@@ -173,8 +191,9 @@ module.exports = {
 	decapitalize,
 	toCamelCase,
 	loadEnvPath,
+	getLoadEnvBool,
 	compareObjects,
-	walkDir,
+	walkDirSync,
 	waitForFile,
 	setReportFunctions
 };
