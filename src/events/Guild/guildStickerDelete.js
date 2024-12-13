@@ -1,6 +1,6 @@
 'use strict';
 
 module.exports = {
-    callback: async function (sticker) {
-    }
+	callback: async function (sticker) {
+	}
 }

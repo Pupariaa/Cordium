@@ -1,6 +1,6 @@
 'use strict';
 
 module.exports = {
-    callback: async function (members, guild, date) {
-    }
+	callback: async function (members, guild, date) {
+	}
 }

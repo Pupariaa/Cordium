@@ -1,6 +1,6 @@
 'use strict';
 
 module.exports = {
-    callback: async function (shardId, replayedEvents) {
-    }
+	callback: async function (shardId, replayedEvents) {
+	}
 }

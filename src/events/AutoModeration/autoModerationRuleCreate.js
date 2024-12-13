@@ -1,6 +1,6 @@
 'use strict';
 
 module.exports = {
-    callback: async function (autoModerationRule) {
-    }
+	callback: async function (autoModerationRule) {
+	}
 }

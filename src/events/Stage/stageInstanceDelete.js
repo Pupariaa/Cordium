@@ -1,6 +1,6 @@
 'use strict';
 
 module.exports = {
-    callback: async function (stageInstance) {
-    }
+	callback: async function (stageInstance) {
+	}
 }

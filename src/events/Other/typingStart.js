@@ -1,6 +1,6 @@
 'use strict';
 
 module.exports = {
-    callback: async function (typing) {
-    }
+	callback: async function (typing) {
+	}
 }

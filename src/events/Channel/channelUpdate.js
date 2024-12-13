@@ -1,6 +1,6 @@
 'use strict';
 
 module.exports = {
-    callback: async function (oldChannel, newChannel) {
-    }
+	callback: async function (oldChannel, newChannel) {
+	}
 }

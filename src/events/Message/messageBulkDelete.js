@@ -1,6 +1,6 @@
 'use strict';
 
 module.exports = {
-    callback: async function (messages, channel) {
-    }
+	callback: async function (messages, channel) {
+	}
 }

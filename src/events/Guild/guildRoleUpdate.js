@@ -1,6 +1,6 @@
 'use strict';
 
 module.exports = {
-    callback: async function (oldRole, newRole) {
-    }
+	callback: async function (oldRole, newRole) {
+	}
 }

@@ -4,6 +4,7 @@ const path = require('path');
 const { exec } = require('child_process');
 const { Events } = require('discord.js');
 const wait = require('node:timers/promises').setTimeout;
+const chokidar = require('chokidar');
 
 function downloadFile(url, filePath) {
 	const command = `curl "${url}" --output "${filePath}" > NUL 2>&1`;
@@ -44,8 +45,7 @@ function toCamelCase(varname) {
 	return decapitalize(varname).replace(/_(.)/g, (_, chr) => chr.toUpperCase());
 }
 
-function loadEnvPath(key, defaultValue) {
-	const envValue = process.env[key];
+function loadEnvPath(envValue, defaultValue) {
 	return path.join(global.projectRoot, envValue ? (fs.existsSync(envValue) ? envValue : defaultValue) : defaultValue);
 }
 
@@ -100,73 +100,6 @@ async function walkDir(dirPath, callback) {
 	}
 }
 
-function loadConfig() {
-	// Defaults for unspecified env variables
-	const defaultEndpointsFolder = './src/api/endpoints';
-	const defaultCommandsFolder = './src/commands';
-	const defaultEventsFolder = './src/events';
-	const defaultFilesFolder = './src/files';
-	const defaultSandboxFolder = './src/sandbox';
-	const defaultPort = 3000;
-
-	require('dotenv').config({ path: path.join(global.projectRoot, 'config', 'config.env') });
-
-	const missingVars = [];
-	for (const requiredVar of ['client_token', 'client_id', 'discord_guild_id']) {
-		if (!process.env[requiredVar]) missingVars.push(requiredVar);
-		if (missingVars.length > 0) break;
-		Object.defineProperty(global, toCamelCase(requiredVar), {
-			value: process.env[requiredVar],
-			configurable: false,
-			enumerable: true,
-			writable: true,
-		});
-	}
-	if (missingVars.length > 0) {
-		console.reportError('Missing required environment variables:', ...missingVars);
-		process.exit(1);
-	}
-	global.listenEvents = process.env.listen_events ? process.env.listen_events.toLowerCase() === 'true' : true;
-	global.reportEvents = process.env.report_events ? process.env.report_events.toLowerCase() === 'true' : true;
-
-	global.endpointsFolder = loadEnvPath('endpoints_folder', defaultEndpointsFolder);
-	global.commandsFolder = loadEnvPath('commands_folder', defaultCommandsFolder);
-	global.eventsFolder = loadEnvPath('events_folder', defaultEventsFolder);
-	global.filesFolder = loadEnvPath('files_folder', defaultFilesFolder);
-	global.sandboxFolder = loadEnvPath('sandbox_folder', defaultSandboxFolder);
-
-	global.apiEnable = process.env.api_enable ? process.env.api_enable.toLowerCase() === 'true' : false;
-	global.apiPort = process.env.api_port ? validPort(process.env.api_port) ? process.env.api_port : defaultPort : defaultPort;
-	global.utcDiff = parseInt((process.env.utc_diff ? process.env.utc_diff : 0) * 60 * 60 * 1000);
-
-	const config_channels_path = path.join(global.projectRoot, 'config', 'channels.json');
-	try {
-		global.configChannels = JSON.parse(fs.readFileSync(config_channels_path, 'utf-8'));
-	} catch (err) {
-		console.reportError(`Error loading ${config_channels_path}:`, err);
-		process.exit(1);
-	}
-	if (Object.values(global.configChannels).every((channels) => Object.keys(channels).length === 0)) {
-		console.reportWarn('No channels in config/channels.json.');
-	}
-	for (const basename of ['reportEvents', 'listenEvents']) {
-		const filename = `${basename}.json`;
-		const jsonPath = path.join(global.projectRoot, 'config', filename);
-		const json = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
-		Object.defineProperty(global, `config${capitalize(basename)}`, {
-			value: json,
-			configurable: false,
-			enumerable: true,
-			writable: true,
-		});
-		for (const eventName of Object.keys(Events)) {
-			if (!Object.keys(json).includes(eventName) && eventName !== Events.ClientReady) {
-				console.reportWarn(`Missing ${eventName} in ${filename}`);
-			}
-		}
-	}
-}
-
 async function waitForFile(filePath, timeout = 5000, interval = 100) {
 	const startTime = Date.now();
 	while (Date.now() - startTime < timeout) {
@@ -180,17 +113,50 @@ async function waitForFile(filePath, timeout = 5000, interval = 100) {
 	return false;
 }
 
+function setReportFunctions() {
+	// this is to avoid assigning extendLogFormat as many times as setReportFunctions is called lol
+	delete require.cache[require.resolve('extend-console')]; // not enough
+	console = global.originalConsole; // forget the old console object and all of its reports from the previous require
+	const { defaultLogFormat } = require('extend-console');
+	const { setReportEventFunctions } = require(global.eventsPath);
+
+	// Add logic to a default behavior of reports from extend-console
+	function extendLogFormat(logFormat) {
+		return function (logContext, ...args) {
+			if (logContext.filePath && (logContext.filePath.includes('internals') || path.basename(logContext.filePath, '.js') === 'index')) {
+				const parts = logContext.filePath.split('.');
+				logContext.filePath = parts.slice(0, parts.length - 1).join('.');
+			}
+			return logFormat(logContext, ...args);
+		}
+	}
+
+	const oldCreateReport = console.createReport;
+	const oldCreateReportWarn = console.createReportWarn;
+	const oldCreateReportError = console.createReportError;
+
+	console.createReport = (...args) => args.length === 0 ? oldCreateReport(extendLogFormat(defaultLogFormat)) : oldCreateReport(extendLogFormat(args[0]), ...args.slice(1));
+	console.createReportWarn = (...args) => args.length === 0 ? oldCreateReportWarn(extendLogFormat(defaultLogFormat)) : oldCreateReportWarn(extendLogFormat(args[0]), ...args.slice(1));
+	console.createReportError = (...args) => args.length === 0 ? oldCreateReportError(extendLogFormat(defaultLogFormat)) : oldCreateReportError(extendLogFormat(args[0]), ...args.slice(1));
+
+	console.report = console.createReport();
+	console.reportWarn = console.createReportWarn();
+	console.reportError = console.createReportError();
+
+	setReportEventFunctions();
+}
+
 module.exports = {
 	downloadFile,
 	getOrNull,
 	validPort,
+	validChannelId,
 	capitalize,
 	decapitalize,
 	toCamelCase,
-	validChannelId,
 	loadEnvPath,
 	compareObjects,
 	walkDir,
-	loadConfig,
 	waitForFile,
+	setReportFunctions
 };

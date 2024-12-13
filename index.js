@@ -1,4 +1,5 @@
 'use strict';
+
 const fs = require('fs');
 const path = require('path');
 const { Client, Events, GatewayIntentBits, Partials } = require('discord.js');
@@ -12,32 +13,7 @@ Object.keys(Events).forEach((key) => {
 // Must haves
 global.projectRoot = __dirname;
 global.utilsPath = path.join(global.projectRoot, 'internals', 'Utils.js');
-const { walkDir, toCamelCase, loadEnvPath, loadConfig, getOrNull } = require(global.utilsPath);
-
-// Add logic to a default behavior
-const { defaultLogFormat } = require('extend-console');
-
-function extendLogFormat(logFormat) {
-	return function (logContext, ...args) {
-		if (logContext.filePath && (logContext.filePath.includes('internals') || logContext.filePath === __filename)) {
-			const parts = logContext.filePath.split('.');
-			logContext.filePath = parts.slice(0, parts.length - 1).join('.');
-		}
-		return logFormat(logContext, ...args);
-	}
-}
-
-const oldCreateReport = console.createReport;
-const oldCreateReportWarn = console.createReportWarn;
-const oldCreateReportError = console.createReportError;
-
-console.createReport = (...args) => args.length === 0 ? oldCreateReport(extendLogFormat(defaultLogFormat)) : oldCreateReport(extendLogFormat(args[0]), ...args.slice(1));
-console.createReportWarn = (...args) => args.length === 0 ? oldCreateReportWarn(extendLogFormat(defaultLogFormat)) : oldCreateReportWarn(extendLogFormat(args[0]), ...args.slice(1));
-console.createReportError = (...args) => args.length === 0 ? oldCreateReportError(extendLogFormat(defaultLogFormat)) : oldCreateReportError(extendLogFormat(args[0]), ...args.slice(1));
-
-console.report = console.createReport();
-console.reportWarn = console.createReportWarn();
-console.reportError = console.createReportError();
+const { walkDir, toCamelCase, loadEnvPath, getOrNull, setReportFunctions } = require(global.utilsPath);
 
 // Nice to have, avoids path.join with relative paths everywhere
 (async function initGlobalPaths() {
@@ -45,7 +21,7 @@ console.reportError = console.createReportError();
 		path.join(global.projectRoot, 'internals'),
 		function (filePath, stats) {
 			if (!stats.isFile() || path.extname(filePath) !== '.js') return;
-			const propertyName = toCamelCase(path.basename(filePath, path.extname(filePath))) + 'Path';
+			const propertyName = toCamelCase(path.basename(filePath, '.js')) + 'Path';
 			if (propertyName in global) return;
 			Object.defineProperty(global, propertyName, {
 				value: filePath,
@@ -58,6 +34,9 @@ console.reportError = console.createReportError();
 })().then(async () => {
 
 	// Now the index.js can start
+
+	global.originalConsole = { ...console }; // must run once
+	setReportFunctions();
 
 	(function loadPrototypes() {
 		try {
@@ -80,8 +59,12 @@ console.reportError = console.createReportError();
 	async function initGlobal() {
 		try {
 			// Load config
-			loadConfig();
-			console.report('config files loaded');
+			const ConfigManager = require(global.configManagerPath);
+			global.configManager = new ConfigManager();
+			configManager.load();
+			if (global.dev) {
+				configManager.watch();
+			}
 
 			// mkdir gitignored folders
 			global.cacheFolder = path.join(global.projectRoot, 'internals', 'cache');
@@ -183,12 +166,19 @@ console.reportError = console.createReportError();
 			global.attachmentsManager.loadIndex();
 
 			// Dispatch events
-			global.latestAuditLogCount = getOrNull(await global.guild.latestAuditLog(), 'extra.count'); // needed by VoiceStateUpdate
-			require(global.eventsPath);
+			console.report('Dispatching events...');
+			const { dispatchEvents } = require(global.eventsPath);
+			dispatchEvents();
 
 			// Load API
 			if (global.apiEnable) {
-				require(global.apiPath);
+				const ApiManager = require(global.apiManagerPath);
+				global.apiManager = new ApiManager();
+				global.apiManager.loadAll();
+				global.apiManager.listen();
+				if (global.dev) {
+					global.apiManager.watch();
+				}
 			}
 
 			// Interaction handler
@@ -220,8 +210,11 @@ console.reportError = console.createReportError();
 			});
 
 			// Deploy commands
-			global.commandManager.loadCommands();
-			await global.commandManager.deployCommands();
+			global.commandManager.loadAll();
+			await global.commandManager.deployAll();
+			if (global.dev) {
+				global.commandManager.watch();
+			}
 		} catch (err) {
 			console.reportError(err);
 		}
@@ -229,7 +222,6 @@ console.reportError = console.createReportError();
 
 	(async function dispatchHandlers() {
 		try {
-
 			global.client.on(Events.ClientReady, onReady);
 
 			process.on('uncaughtException', (err) => {

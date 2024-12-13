@@ -7,32 +7,32 @@ const cmdName = 'test';
 const cmdDescription = 'test';
 
 module.exports = {
-    data: new SlashCommandBuilder()
-        .setName(cmdName)
-        .setDescription(cmdDescription),
+	data: new SlashCommandBuilder()
+		.setName(cmdName)
+		.setDescription(cmdDescription),
 
-    /**
-     * Executes the 'test' command.
-     * @param {Object} interaction - The interaction object from Discord.js.
-     */
-    async execute(interaction) {
-        try {
+	/**
+	 * Executes the 'test' command.
+	 * @param {Object} interaction - The interaction object from Discord.js.
+	 */
+	async execute(interaction) {
+		try {
 
-            await interaction.reply({
-                ephemeral: true,
-                content: 'done'
-            });
+			await interaction.reply({
+				ephemeral: true,
+				content: 'done'
+			});
 
-            await wait(1000);
+			await wait(1000);
 
-            interaction.deleteReply();
-        } catch (err) {
-            console.reportError(err);
+			interaction.deleteReply();
+		} catch (err) {
+			console.reportError(err);
 
-            await (interaction.replied || interaction.deferred ? interaction.followUp : interaction.reply)({
-                ephemeral: true,
-                content: `${cmdName} failed`,
-            });
-        }
-    }
+			await (interaction.replied || interaction.deferred ? interaction.followUp : interaction.reply)({
+				ephemeral: true,
+				content: `${cmdName} failed`,
+			});
+		}
+	}
 };

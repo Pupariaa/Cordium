@@ -4,7 +4,6 @@ const { SlashCommandBuilder } = require('discord.js');
 const wait = require('node:timers/promises').setTimeout;
 
 const { loadConfig } = require(global.utilsPath);
-const { reloadEndpoints } = require(global.apiPath);
 
 const cmdName = 'reload';
 const cmdDescription = 'reload commands';
@@ -20,13 +19,19 @@ module.exports = {
 	 */
 	async execute(interaction) {
 		try {
-			loadConfig();
-			global.commandManager.reloadCommands();
-			reloadEndpoints();
-
+			let replyMsg = 'done';
+			if (global.dev) {
+				replyMsg = 'There is nothing to reload in dev mode';
+			} else {
+				global.configManager.reload();
+				global.commandManager.reload();
+				if (global.apiEnable) {
+					await global.apiManager.reload();
+				}
+			}
 			await interaction.reply({
 				ephemeral: true,
-				content: 'done',
+				content: replyMsg,
 			});
 		} catch (err) {
 			console.reportError(err);

@@ -1,6 +1,6 @@
 'use strict';
 
 module.exports = {
-    callback: async function (closeEvent, shardId) {
-    }
+	callback: async function (closeEvent, shardId) {
+	}
 }

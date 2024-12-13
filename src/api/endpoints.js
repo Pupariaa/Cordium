@@ -46,6 +46,13 @@ const endpoints = [
 			{ name: "key", type: "string", mandatory: false, length: 32 },
 		],
 	},
+	{
+		name: "ping",
+		type: "public",
+		params: [
+			{ name: "key", type: "string", mandatory: false, length: 32 },
+		],
+	},
 ];
 
 module.exports = endpoints;

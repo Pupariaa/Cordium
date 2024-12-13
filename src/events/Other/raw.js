@@ -1,6 +1,6 @@
 'use strict';
 
 module.exports = {
-    callback: async function (args) {
-    }
+	callback: async function (args) {
+	}
 }
