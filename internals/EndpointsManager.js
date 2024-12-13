@@ -88,13 +88,13 @@ class EndpointsManager {
 				return;
 			}
 			const scope = {};
-			set(scope, 'handler', handler.bind(scope));
 			set(endpoint, 'type', type);
 			set(endpoint, 'name', name);
 			set(endpoint, 'params', params);
 			set(scope, 'report', report ? () => reportEndpoint(scope) : () => { });
 			set(scope, 'endpoint', endpoint);
 			set(scope, 'set', getSet(true, true).bind(scope));
+			set(scope, 'handler', handler.bind(scope));
 			this.listeningEndpoints.set(`${type}/${name}`, scope);
 			console.report(`Endpoint loaded: ${name}`);
 		} catch (err) {
@@ -166,14 +166,11 @@ class EndpointsManager {
 
 			const resData = await scope.handler(params);
 
-			if (resData.error && resData.error === 'Unauthorized') {
-				res.status(resData.status_code || 200).json(resData.error);
-			} else {
-				res.status(resData.status_code || 200).json(resData || resData.error);
-			}
+			res.status(resData.status_code).json(resData);
 		} catch (err) {
 			console.reportError('Unexpected error in handling request:', err);
-			res.status(500).json('Internal Server Error');
+			const status_code = 500;
+			res.status(status_code).json({ status_code: status_code, error: 'Internal Server Error' });
 		}
 	}
 

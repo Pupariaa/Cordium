@@ -1,8 +1,6 @@
 'use strict';
 
 const { SlashCommandBuilder } = require('discord.js');
-const wait = require('node:timers/promises').setTimeout;
-const { loadConfig } = require(global.utilsPath);
 const path = require('path');
 
 const cmdName = path.basename(__filename, path.extname(__filename));

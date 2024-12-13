@@ -3,9 +3,10 @@
 const fs = require('fs');
 const path = require('path');
 const { exec } = require('child_process');
-const { Events } = require('discord.js');
-const wait = require('node:timers/promises').setTimeout;
-const chokidar = require('chokidar');
+
+function wait(t) {
+	return new Promise(resolve => setTimeout(resolve, t));
+}
 
 function set(o, k, v, w = false, e = true) {
 	if (typeof o !== 'object' || o === null) {
@@ -138,6 +139,7 @@ async function walkDirAsync(dirPath, callback) {
 }
 
 async function waitForFile(filePath, timeout = 5000, interval = 100) {
+	const fs = require('fs').promises;
 	const startTime = Date.now();
 	while (Date.now() - startTime < timeout) {
 		try {
@@ -186,6 +188,7 @@ function setReportFunctions() {
 }
 
 module.exports = {
+	wait,
 	set,
 	getSet,
 	downloadFile,

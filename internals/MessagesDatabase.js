@@ -471,7 +471,7 @@ class MessagesDatabase {
 			}
 		}
 		if (!this.db) return;
-		return new Promise((resolve, reject) =>
+		const promise = new Promise((resolve, reject) =>
 			this.db.close((err) => {
 				if (err) {
 					console.reportError('Error closing database:', err);
@@ -482,6 +482,8 @@ class MessagesDatabase {
 				}
 			})
 		);
+		global.sigintSubscribers.filter(item => item !== this.close.bind(this));
+		return promise;
 	}
 }
 

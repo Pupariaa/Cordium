@@ -42,6 +42,7 @@ class AttachmentsManager {
 		} catch (err) {
 			console.reportError(`Error saving ${this.indexFilename}:`, err);
 		}
+		global.sigintSubscribers.filter(item => item !== this.saveIndex.bind(this));
 	}
 
 	#extractFilenameFromUrl(url) {

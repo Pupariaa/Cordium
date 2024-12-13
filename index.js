@@ -3,7 +3,6 @@
 const fs = require('fs');
 const path = require('path');
 const { Client, Events, GatewayIntentBits, Partials } = require('discord.js');
-const wait = require('node:timers/promises').setTimeout;
 
 // Fix discord.js inconsistencies
 Object.keys(Events).forEach((key) => {
@@ -210,6 +209,7 @@ const { set, walkDirSync, toCamelCase, loadEnvPath, getOrNull, setReportFunction
 		});
 
 		process.on('SIGINT', async () => {
+			console.report('Closing...');
 			try {
 				await Promise.all(global.sigintSubscribers.map(async (subscriber) => await subscriber()));
 			} catch (err) {

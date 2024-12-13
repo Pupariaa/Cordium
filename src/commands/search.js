@@ -1,7 +1,6 @@
 'use strict';
 
 const { SlashCommandBuilder, AttachmentBuilder } = require('discord.js');
-const wait = require('node:timers/promises').setTimeout;
 const path = require('path');
 
 const cmdName = path.basename(__filename, path.extname(__filename));
