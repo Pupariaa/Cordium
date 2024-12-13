@@ -1,9 +1,10 @@
 'use strict';
+
 const { SlashCommandBuilder, AttachmentBuilder } = require('discord.js');
-
 const wait = require('node:timers/promises').setTimeout;
+const path = require('path');
 
-const cmdName = 'search';
+const cmdName = path.basename(__filename, path.extname(__filename));
 const cmdDescription = 'run a search and report matches';
 
 function get_content(msg) {
@@ -216,49 +217,34 @@ module.exports = {
 	 * @param {Object} interaction - The interaction object from Discord.js.
 	 */
 	async execute(interaction) {
-		try {
-			const regex = new RegExp(interaction.options.getString('regex'), interaction.options.getString('flags') || '');
-			const types = JSON.parse(interaction.options.getString('type'))?.map(type => gets[type]) || [...gets];
-			const channelsName = JSON.parse(interaction.options.getString('channel_name')) || [...Object.keys(global.channels.text.aliases)];
-			const matches = await search(
-				regex,
-				types,
-				channelsName
-			);
+		const regex = new RegExp(interaction.options.getString('regex'), interaction.options.getString('flags') || '');
+		const types = JSON.parse(interaction.options.getString('type'))?.map(type => gets[type]) || [...gets];
+		const channelsName = JSON.parse(interaction.options.getString('channel_name')) || [...Object.keys(global.channels.text.aliases)];
+		const matches = await search(
+			regex,
+			types,
+			channelsName
+		);
 
-			const output_format = interaction.options.getString('output_format');
-			const reportFunctions = output_format ? JSON.parse(output_format) : [...Array(reporters.length).keys()];
+		const output_format = interaction.options.getString('output_format');
+		const reportFunctions = output_format ? JSON.parse(output_format) : [...Array(reporters.length).keys()];
 
-			const replyObject = {
-				ephemeral: false,
-				content: ''
-			};
-			for (const reportFunction of reportFunctions) {
-				reporters[reportFunction](matches, replyObject);
-			}
-
-			if (reportFunctions.length === 1 && reportFunctions[0] === 0) {
-				await interaction.reply({
-					ephemeral: true,
-					content: 'done'
-				});
-				await wait(5000);
-				await interaction.deleteReply();
-			}
-			else {
-				replyObject.content = `${querySummary(regex, types, channelsName)}\n\nFound **${matches.length}** matches` + replyObject.content;
-				await interaction.reply(replyObject);
-			}
-		} catch (err) {
-			console.reportError(err);
-
-			await (interaction.replied || interaction.deferred ? interaction.followUp : interaction.reply)({
-				ephemeral: true,
-				content: `${cmdName} failed`,
-			});
-			await wait(5000);
-			await interaction.deleteReply();
+		const replyObject = {
+			ephemeral: false,
+			content: ''
+		};
+		for (const reportFunction of reportFunctions) {
+			reporters[reportFunction](matches, replyObject);
 		}
+
+		if (reportFunctions.length === 1 && reportFunctions[0] === 0) {
+			return interaction.reply({
+				ephemeral: true,
+				content: 'done'
+			});
+		}
+		replyObject.content = `${querySummary(regex, types, channelsName)}\n\nFound **${matches.length}** matches` + replyObject.content;
+		return interaction.reply(replyObject);
 	},
 
 	SearchType,

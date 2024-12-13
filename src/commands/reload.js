@@ -2,10 +2,10 @@
 
 const { SlashCommandBuilder } = require('discord.js');
 const wait = require('node:timers/promises').setTimeout;
-
 const { loadConfig } = require(global.utilsPath);
+const path = require('path');
 
-const cmdName = 'reload';
+const cmdName = path.basename(__filename, path.extname(__filename));
 const cmdDescription = 'reload commands';
 
 module.exports = {
@@ -13,38 +13,29 @@ module.exports = {
 		.setName(cmdName)
 		.setDescription(cmdDescription),
 
-	/**
-	 * Executes the 'reload' command.
-	 * @param {Object} interaction - The interaction object from Discord.js.
-	 */
 	async execute(interaction) {
-		try {
-			let replyMsg = 'done';
-			if (global.dev) {
-				replyMsg = 'There is nothing to reload in dev mode';
-			} else {
-				global.configManager.reload();
-				if (global.listenEvents) {
-					global.eventsManager.reload();
-				}
-				if (global.listenEndpoints) {
-					await global.endpointsManager.reload();
-				}
-				await global.commandsManager.reload();
-			}
-			await interaction.reply({
+		if (global.dev) {
+			return interaction.reply({
 				ephemeral: true,
-				content: replyMsg,
-			});
-		} catch (err) {
-			console.reportError(err);
-
-			await (interaction.replied || interaction.deferred ? interaction.followUp : interaction.reply)({
-				ephemeral: true,
-				content: `${cmdName} failed`,
+				content: 'There is nothing to reload in dev mode',
 			});
 		}
-		await wait(5000);
-		await interaction.deleteReply();
+		await interaction.reply({
+			ephemeral: false,
+			content: 'Reloading...'
+		});
+		const commandsPromise = global.commandsManager.reload();
+		global.configManager.reload();
+		if (global.listenEndpoints) {
+			global.endpointsManager.reload();
+		}
+		if (global.listenEvents) {
+			global.eventsManager.reload();
+		}
+		await commandsPromise;
+		return interaction.editReply({
+			ephemeral: true,
+			content: 'done',
+		});
 	}
 };

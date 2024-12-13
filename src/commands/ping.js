@@ -1,7 +1,9 @@
 'use strict';
-const { SlashCommandBuilder } = require('discord.js');
 
-const cmdName = 'ping';
+const { SlashCommandBuilder } = require('discord.js');
+const path = require('path');
+
+const cmdName = path.basename(__filename, path.extname(__filename));
 const cmdDescription = 'ping the bot';
 
 module.exports = {
@@ -14,15 +16,6 @@ module.exports = {
 	 * @param {Object} interaction - The interaction object from Discord.js.
 	 */
 	async execute(interaction) {
-		try {
-			await interaction.reply(`pong (${Math.round((Date.now() - interaction.createdTimestamp) / 1000)}ms)`);
-		} catch (err) {
-			console.reportError(err);
-
-			await (interaction.replied || interaction.deferred ? interaction.followUp : interaction.reply)({
-				ephemeral: true,
-				content: `${cmdName} failed`,
-			});
-		}
+		await interaction.reply(`pong (${Math.round((Date.now() - interaction.createdTimestamp) / 1000)}ms)`);
 	}
 };

@@ -6,6 +6,7 @@ const { REST } = require('@discordjs/rest');
 const { Collection } = require('discord.js');
 const { Routes } = require('discord-api-types/v10');
 const chokidar = require('chokidar');
+const { walkDirSync } = require(global.utilsPath);
 
 class CommandsManager {
 	constructor() {
@@ -20,7 +21,8 @@ class CommandsManager {
 				global.client.commands.set(command.data.name, command);
 				console.report(`Command loaded: ${command.data.name}`);
 			} else {
-				console.reportWarn(`The command at ${filePath} is missing a required "data" or "execute" property`);
+				// TODO: improve this error checking
+				console.reportWarn(`The command at ${filePath} is missing a required "data" and/or "execute" property`);
 			}
 		} catch (err) {
 			console.reportError(`Error loading command from file ${filePath}:`, err);
@@ -30,7 +32,6 @@ class CommandsManager {
 	async deploy(filePath) {
 		const command = require(filePath);
 		const commands = [command.data.toJSON()];
-
 		try {
 			console.report(`Deploying command ${command.data.name}...`);
 			await this.rest.put(
@@ -46,11 +47,7 @@ class CommandsManager {
 	loadAll() {
 		try {
 			console.report('Loading all commands...');
-			const commandFiles = fs.readdirSync(global.commandsFolder);
-			for (const file of commandFiles) {
-				const filePath = path.join(global.commandsFolder, file);
-				this.load(filePath);
-			}
+			fs.readdirSync(global.commandsFolder).forEach(filename => this.load(path.join(global.commandsFolder, filename)));
 			console.report('All commands loaded');
 		} catch (err) {
 			console.reportError('Error loading commands:', err);
@@ -59,9 +56,7 @@ class CommandsManager {
 
 	async deployAll() {
 		const commands = [];
-
 		global.client.commands.forEach(cmd => commands.push(cmd.data.toJSON()));
-
 		try {
 			console.report('Deploying all commands at once...');
 			await this.rest.put(
@@ -74,8 +69,12 @@ class CommandsManager {
 		}
 	}
 
-	reload() {
-		return walkDirAsync(global.commandsFolder, (filePath, stats) => this.onFileChange(filePath));
+	async reload() {
+		walkDirSync(global.commandsFolder, (filePath, stats) => {
+			delete require.cache[require.resolve(filePath)];
+			this.load(filePath);
+		});
+		return this.deployAll();
 	}
 
 	async onFileChange(filePath) {

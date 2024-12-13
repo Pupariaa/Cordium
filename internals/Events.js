@@ -171,18 +171,27 @@ class EventsManager {
 		this.latestAuditLogCount = getOrNull(await global.guild.latestAuditLog(), 'extra.count') || 0;
 	}
 
-	register(event, guildId, trigger) {
-		const filePath = path.join(global.eventsFolder, categoryFromEvent(event), `${event}.js`);
-		try {
-			// forget the old callback
-			const oldScope = this.listeningEvents.get(event);
-			const oldOnEventFunction = oldScope?.onEventFunction;
-			if (oldOnEventFunction) {
-				global.client.off(event, oldOnEventFunction);
-				delete require.cache[require.resolve(filePath)];
-			}
+	getFilePath(event) {
+		return path.join(global.eventsFolder, categoryFromEvent(event), `${event}.js`);
+	}
 
-			// register the new one
+	dismiss(event) {
+		const oldScope = this.listeningEvents.get(event);
+		const oldOnEventFunction = oldScope?.onEventFunction;
+		if (oldOnEventFunction) {
+			global.client.off(event, oldOnEventFunction);
+			delete require.cache[require.resolve(this.getFilePath(event))];
+			this.listeningEvents.delete(event);
+		}
+	}
+
+	register(event, guildId, trigger) {
+		if (this.listeningEvents.has(event)) {
+			console.reportWarn(`The event ${event} is already listening`);
+			return;
+		}
+		const filePath = this.getFilePath(event);
+		try {
 			const { listen: shouldListen, report, callback } = require(filePath);
 			if (!shouldListen) {
 				console.reportWarn(`The event ${event} is not listening`);
@@ -229,7 +238,7 @@ class EventsManager {
 		}
 	}
 
-	dispatch(event) {
+	listen(event) {
 		const latestAuditLogCount = this.latestAuditLogCount;
 		switch (event) {
 		
@@ -946,19 +955,28 @@ class EventsManager {
 		}
 	}
 
-	dispatchAll() {
-		Object.values(Events).forEach(event => this.dispatch(event));
+	runAll(callback) {
+		Object.values(Events).forEach(callback.bind(this));
+	}
+
+	dismissAll() {
+		this.runAll(event => this.dismiss(event));
+	}
+
+	listenAll() {
+		this.runAll(event => this.listen(event));
 	}
 
 	reload() {
-		this.listeningEvents.clear();
-		this.dispatchAll();
+		this.dismissAll();
+		this.listenAll();
 	}
 
 	onFileChange(filePath) {
 		try {
 			const event = path.basename(filePath, '.js');
-			this.dispatch(event);
+			this.dismiss(event);
+			this.listen(event);
 		} catch (err) {
 			console.reportError(`Failed to reload event at ${filePath}:`, err);
 		}

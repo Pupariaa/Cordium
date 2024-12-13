@@ -1,8 +1,10 @@
 'use strict';
+
 const { SlashCommandBuilder } = require('discord.js');
 const wait = require('node:timers/promises').setTimeout;
+const path = require('path');
 
-const cmdName = 'clean';
+const cmdName = path.basename(__filename, path.extname(__filename));
 const cmdDescription = 'cleans the current channel';
 
 const urlRegex = new RegExp('https?:\\\/\\\/(?:www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b(?:[-a-zA-Z0-9()@:%_\\+.~#?&\\\/=]*)', '');
@@ -28,77 +30,66 @@ module.exports = {
 	 * @param {Object} interaction - The interaction object from Discord.js.
 	 */
 	async execute(interaction) {
-		try {
-			const channel = interaction.channel;
-			const messagesToDelete = await channel.fetchAllMessages(
-				global.channels.fetchAllMessages.scanUp,
-				(message, r) => {
-					if (!shouldDelete(message)) return;
-					if (r.currentBatch.length >= batchSize) {
-						r.batches.push(r.currentBatch);
-						r.currentBatch = [];
-					}
-					r.currentBatch.push(message);
-				},
-				(lastId) => ({ before: lastId }),
-				null,
-				{ batches: [], currentBatch: [] }
-			);
-			if (messagesToDelete.currentBatch.length > 0) messagesToDelete.batches.push(messagesToDelete.currentBatch);
+		const channel = interaction.channel;
+		const messagesToDelete = await channel.fetchAllMessages(
+			global.channels.fetchAllMessages.scanUp,
+			(message, r) => {
+				if (!shouldDelete(message)) return;
+				if (r.currentBatch.length >= batchSize) {
+					r.batches.push(r.currentBatch);
+					r.currentBatch = [];
+				}
+				r.currentBatch.push(message);
+			},
+			(lastId) => ({ before: lastId }),
+			null,
+			{ batches: [], currentBatch: [] }
+		);
+		if (messagesToDelete.currentBatch.length > 0) messagesToDelete.batches.push(messagesToDelete.currentBatch);
 
-			const deletedMessageIds = [];
-			await Promise.all(
-				messagesToDelete.batches.map(async (batch) => {
-					const ids = Object.keys(await channel.bulkDelete(batch, true));
-					deletedMessageIds.push(...ids);
-				})
-			);
+		const deletedMessageIds = [];
+		await Promise.all(
+			messagesToDelete.batches.map(async (batch) => {
+				const ids = Object.keys(await channel.bulkDelete(batch, true));
+				deletedMessageIds.push(...ids);
+			})
+		);
 
-			const filteredMessages = messagesToDelete.batches
-				.flat()
-				.filter(msg => !deletedMessageIds.includes(msg.id));
-			const totalMessages = filteredMessages.length;
-			if (totalMessages > 0) {
-				let deletedCount = 0;
+		const filteredMessages = messagesToDelete.batches
+			.flat()
+			.filter(msg => !deletedMessageIds.includes(msg.id));
+		const totalMessages = filteredMessages.length;
+		if (totalMessages > 0) {
+			let deletedCount = 0;
 
-				await interaction.reply({
-					ephemeral: true,
-					content: `Deleting messages older than 2 weeks (${getMinutesRemaining(totalMessages)} min(s) remaining)`,
-				});
+			await interaction.reply({
+				ephemeral: true,
+				content: `Deleting messages older than 2 weeks (${getMinutesRemaining(totalMessages)} min(s) remaining)`,
+			});
 
-				for (const msg of filteredMessages) {
-					console.log(`cleaning ${msg.content} from ${msg.author.username} in #${msg.channel.name}`);
-					await msg.delete();
-					const waitPromise = wait(cooldown * 1000);
+			for (const msg of filteredMessages) {
+				console.log(`cleaning ${msg.content} from ${msg.author.username} in #${msg.channel.name}`);
+				await msg.delete();
+				const waitPromise = wait(cooldown * 1000);
 
-					deletedCount++;
-					if (deletedCount % 60 === 0) {
-						await interaction.editReply({
-							content: `Deleting messages older than 2 weeks (${getMinutesRemaining(totalMessages - deletedCount)} min(s) remaining)`,
-						});
-					}
-
-					await waitPromise;
+				deletedCount++;
+				if (deletedCount % 60 === 0) {
+					await interaction.editReply({
+						content: `Deleting messages older than 2 weeks (${getMinutesRemaining(totalMessages - deletedCount)} min(s) remaining)`,
+					});
 				}
 
-				await interaction.editReply({
-					content: 'done',
-				});
-			} else {
-				await interaction.reply({
-					ephemeral: true,
-					content: 'done',
-				});
+				await waitPromise;
 			}
-		} catch (err) {
-			console.reportError(err);
 
-			await (interaction.replied || interaction.deferred ? interaction.followUp : interaction.reply)({
+			await interaction.editReply({
+				content: 'done',
+			});
+		} else {
+			await interaction.reply({
 				ephemeral: true,
-				content: `${cmdName} failed`,
+				content: 'done',
 			});
 		}
-		await wait(5000);
-		await interaction.deleteReply();
 	}
 };

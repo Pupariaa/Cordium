@@ -119,17 +119,22 @@ async function walkDirSync(dirPath, callback) {
 	}
 }
 
-function walkDirAsync(dirPath, callback) {
+async function walkDirAsync(dirPath, callback) {
 	const files = fs.readdirSync(dirPath);
+	const promises = [];
+
 	for (const file of files) {
 		const filePath = path.join(dirPath, file);
 		const stats = fs.statSync(filePath);
+
 		if (stats.isDirectory()) {
-			walkDirAsync(filePath, callback);
+			promises.push(walkDirAsync(filePath, callback));
 		} else {
-			callback(filePath, stats);
+			promises.push(callback(filePath, stats));
 		}
 	}
+
+	return Promise.all(promises);
 }
 
 async function waitForFile(filePath, timeout = 5000, interval = 100) {
@@ -194,6 +199,7 @@ module.exports = {
 	getLoadEnvBool,
 	compareObjects,
 	walkDirSync,
+	walkDirAsync,
 	waitForFile,
 	setReportFunctions
 };

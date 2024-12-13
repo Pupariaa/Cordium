@@ -1,9 +1,10 @@
 'use strict';
+
 const { SlashCommandBuilder } = require('discord.js');
-
 const wait = require('node:timers/promises').setTimeout;
+const path = require('path');
 
-const cmdName = 'test';
+const cmdName = path.basename(__filename, path.extname(__filename));
 const cmdDescription = 'test';
 
 module.exports = {
@@ -16,23 +17,13 @@ module.exports = {
 	 * @param {Object} interaction - The interaction object from Discord.js.
 	 */
 	async execute(interaction) {
-		try {
+		await interaction.reply({
+			ephemeral: true,
+			content: 'done'
+		});
 
-			await interaction.reply({
-				ephemeral: true,
-				content: 'done'
-			});
+		await wait(1000);
 
-			await wait(1000);
-
-			interaction.deleteReply();
-		} catch (err) {
-			console.reportError(err);
-
-			await (interaction.replied || interaction.deferred ? interaction.followUp : interaction.reply)({
-				ephemeral: true,
-				content: `${cmdName} failed`,
-			});
-		}
+		interaction.deleteReply();
 	}
 };

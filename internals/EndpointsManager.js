@@ -7,7 +7,7 @@ const express = require('express');
 const http = require('http');
 const bodyParser = require('body-parser');
 const { Collection } = require('discord.js');
-const { set, getSet } = require(global.utilsPath);
+const { set, getSet, walkDirSync } = require(global.utilsPath);
 const spectraget = require('spectraget');
 const { config: { colors } } = require('extend-console');
 
@@ -54,8 +54,8 @@ class EndpointsManager {
 			next();
 		});
 
-		app.get('/api/private/*', this.requestTrigger);
-		app.get('/api/public/*', this.requestTrigger);
+		app.get('/api/private/*', this.requestTrigger.bind(this));
+		app.get('/api/public/*', this.requestTrigger.bind(this));
 		this.server = http.createServer(app);
 
 		this.listeningEndpoints = new Collection();
@@ -177,8 +177,8 @@ class EndpointsManager {
 		}
 	}
 
-	async reload() {
-		return walkDirSync(global.endpointsFolder, (filePath, stats) => this.onFileChange(filePath));
+	reload() {
+		walkDirSync(global.endpointsFolder, (filePath, stats) => this.onFileChange(filePath));
 	}
 
 	onFileChange(filePath) {

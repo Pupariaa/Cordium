@@ -1,7 +1,9 @@
 'use strict';
-const { SlashCommandBuilder } = require('discord.js');
 
-const cmdName = 'help';
+const { SlashCommandBuilder } = require('discord.js');
+const path = require('path');
+
+const cmdName = path.basename(__filename, path.extname(__filename));
 const cmdDescription = 'gives an overview of the commands';
 
 module.exports = {
@@ -14,24 +16,15 @@ module.exports = {
 	 * @param {Object} interaction - The interaction object from Discord.js.
 	 */
 	async execute(interaction) {
-		try {
-			const replyObject = {
-				ephemeral: false,
-				content: ''
-			};
-			for (const cmd of global.client.commands.values()) {
-				if (cmd.data.name !== cmdName && cmd.data.name !== 'test') {
-					replyObject.content += `${cmd.data.name} - ${cmd.data.description}\n`;
-				}
+		const replyObject = {
+			ephemeral: false,
+			content: ''
+		};
+		for (const cmd of global.client.commands.values()) {
+			if (cmd.data.name !== cmdName && cmd.data.name !== 'test') {
+				replyObject.content += `${cmd.data.name} - ${cmd.data.description}\n`;
 			}
-			await interaction.reply(replyObject);
-		} catch (err) {
-			console.reportError(err);
-
-			await (interaction.replied || interaction.deferred ? interaction.followUp : interaction.reply)({
-				ephemeral: true,
-				content: `${cmdName} failed`,
-			});
 		}
+		await interaction.reply(replyObject);
 	}
 };
