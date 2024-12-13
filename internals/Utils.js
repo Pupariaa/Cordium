@@ -6,6 +6,17 @@ const { Events } = require('discord.js');
 const wait = require('node:timers/promises').setTimeout;
 const chokidar = require('chokidar');
 
+function set(o, k, v, w = false, e = true) {
+	Object.defineProperty(o, k, { value: v, writable: w, enumerable: e });
+}
+
+function getSet(o, defaultW = false, defaultE = false) {
+	return function (key, value) {
+		set(o, key, value, defaultW, defaultE);
+		return o;
+	};
+}
+
 function downloadFile(url, filePath) {
 	const command = `curl "${url}" --output "${filePath}" > NUL 2>&1`;
 
@@ -119,6 +130,7 @@ function setReportFunctions() {
 	console = global.originalConsole; // forget the old console object and all of its reports from the previous require
 	const { defaultLogFormat } = require('extend-console');
 	const { setReportEventFunctions } = require(global.eventsPath);
+	const { setReportEndpointFunctions } = require(global.apiManagerPath);
 
 	// Add logic to a default behavior of reports from extend-console
 	function extendLogFormat(logFormat) {
@@ -144,9 +156,12 @@ function setReportFunctions() {
 	console.reportError = console.createReportError();
 
 	setReportEventFunctions();
+	setReportEndpointFunctions();
 }
 
 module.exports = {
+	set,
+	getSet,
 	downloadFile,
 	getOrNull,
 	validPort,

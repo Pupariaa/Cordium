@@ -5,36 +5,96 @@ const express = require('express');
 const http = require('http');
 const bodyParser = require('body-parser');
 const { Collection } = require('discord.js');
+const { set, getSet } = require(global.utilsPath);
 
-global.endpoints = require(global.endpointsFolder);
+let reportEndpoint;
+let reportEndpointWarn;
+let reportEndpointError;
+
+function setReportEndpointFunctions() {
+	const { defaultLogFormat, defaultFormatArgsForWarn, defaultFormatArgsForError, defaultShouldLog } = require('extend-console');
+
+	function logFormat(logContext, ...args) {
+		logContext.functionName = `${args[0]}/${args[1]}`;
+		return defaultLogFormat(logContext, ...args.slice(2));
+	}
+
+	function formatArgs(logContext, endpoint) {
+		let formattedArgs = `\n ${colors['FgCyan']}name${colors['Reset']}="${colors['FgYellow']}${endpoint.name}${colors.Reset}"`;
+		formattedArgs += `\n ${colors['FgCyan']}type${colors['Reset']}="${colors['FgYellow']}${endpoint.type}${colors.Reset}"`;
+
+		endpoint.params.forEach(param => {
+			formattedArgs += `\n ${colors['FgCyan']}param${colors['Reset']}="${colors['FgYellow']}name: ${param.name}, type: ${param.type}, mandatory: ${param.mandatory}`;
+			if (param.length) {
+				formattedArgs += `, length: ${param.length}`;
+			}
+			if (param.range) {
+				formattedArgs += `, range: [${param.range.join(', ')}]`;
+			}
+			formattedArgs += `${colors.Reset}"`;
+		});
+
+		return console.fitOnTerm(formattedArgs);
+	}
+
+	function shouldLog(logContext, ...args) {
+		// TODO: always report all for now
+		// return defaultShouldLog(logContext, ...args) && global.reportEndpoints && global.configReportEndpoints[`${args[0]}/${args[1]}`];
+		return defaultShouldLog(logContext, ...args) && true && true;
+	}
+
+	reportEndpoint = console.createReport(logFormat, formatArgs, shouldLog);
+	reportEndpointWarn = console.createReportWarn(logFormat, defaultFormatArgsForWarn, shouldLog);
+	reportEndpointError = console.createReportError(logFormat, defaultFormatArgsForError, shouldLog);
+}
+
+function shouldListen(type, name) {
+	// TODO: listen to all for now
+	// return global.apiEnable && global.configListenEndpoints[`${args[0]}/${args[1]}`];
+	return global.apiEnable && true;
+}
 
 class ApiManager {
 	constructor() {
+		this.endpoints = require(global.endpointsFolder);
+
 		this.server = null;
 
 		const app = express();
 		app.use(bodyParser.json());
 		app.use(bodyParser.urlencoded({ extended: true }));
-		app.use((req, res, next) => next());
+		app.use((req, res, next) => {
+			next();
+		});
 		
-		app.get('/api/private/*', this.requestHandler.bind(this));
-		app.get('/api/public/*', this.requestHandler.bind(this));
+		app.get('/api/private/*', this.requestTrigger.bind(this));
+		app.get('/api/public/*', this.requestTrigger.bind(this));
 		this.server = http.createServer(app);
 
-		this.endpoints = new Collection();
+		this.endpointScopes = new Collection();
 	}
 
 	load(filePath) {
 		try {
-			const endpoint = require(filePath);
-			if ('handleRequest' in endpoint && typeof endpoint.handleRequest === 'function') {
-				const type = path.basename(path.dirname(filePath));
-				const name = path.basename(filePath, '.js');
-				this.endpoints.set(`${type}/${name}`, endpoint);
-				console.report(`Endpoint loaded: ${name}`);
-			} else {
-				console.reportWarn(`The endpoint at ${filePath} is missing a required "handleRequest" function`);
+			const type = path.basename(path.dirname(filePath));
+			const name = path.basename(filePath, '.js');
+			const endpoint = this.endpoints.find(e => e.type === type && e.name === name);
+			if (!endpoint) {
+				console.reportWarn(`The endpoint at ${filePath} is missing a required endpoint info entry in ${global.endpointsFolder}.js`);
+				return;
 			}
+			const { handler } = require(filePath);
+			if (!handler || typeof handler !== 'function') {
+				console.reportWarn(`The endpoint at ${filePath} is missing a required "handler" function`);
+				return;
+			}
+			if (!shouldListen(type, name)) return;
+			const endpointScope = {};
+			set(endpointScope, 'handler', handler.bind(endpointScope));
+			set(endpointScope, 'endpoint', endpoint);
+			set(endpointScope, 'set', getSet(endpointScope, true, true).bind(endpointScope));
+			this.endpointScopes.set(`${type}/${name}`, endpointScope);
+			console.report(`Endpoint loaded: ${name}`);
 		} catch (err) {
 			console.reportError(`Error loading endpoint from file ${filePath}:`, err);
 		}
@@ -90,7 +150,7 @@ class ApiManager {
 				}
 			});
 			delete require.cache[require.resolve(global.endpointsFolder)];
-			global.endpoints = require(global.endpointsFolder);
+			this.endpoints = require(global.endpointsFolder);
 		} catch (err) {
 			console.reportError('Error reloading endpoints:', err);
 		}
@@ -106,37 +166,28 @@ class ApiManager {
 		}
 	}
 
-	async requestHandler(req, res) {
-		// let logData = {};
+	async requestTrigger(req, res) {
 		try {
-			// const client_ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-			const reqData = req.query;
 			const parts = req.path.split('/');
 			const type = parts[2];
 			const name = parts[3];
 			const code = `${type}/${name}`;
+			
+			if (!shouldHandle(code)) return;
 
-			const endpoint = global.endpoints.find(e => e.type === type && e.name === name);
-			if (!endpoint) {
+			const endpointScope = this.endpointScopes.get(code);
+			if (!endpointScope) {
 				res.status(400).json(`cannot get /${code}`);
-				// logData = { client: client_ip, error: `cannot get /${code}`, status_code: 400, request_data: reqData };
 				return;
 			}
-			
-			const handler = this.endpoints.get(code);
-			if (!handler) {
-				// logData = { client: client_ip, error: `cannot get /${code}`, status_code: 400, request_data: reqData };
-				res.status(400).json(`cannot get /${code}`);
-			}
-			
-			const resData = await handler.handleRequest(endpoint, reqData);
-			
+
+
+			const resData = await endpointScope.set('request', req).handler(req.query);
+
 			if (resData.error && resData.error === 'Unauthorized') {
-				// logData = { client: client_ip, endpoint: code, error: resData.error, status_code: resData.status_code, request_data: reqData };
 				res.status(resData.status_code || 200).json(resData.error);
 			} else {
 				res.status(resData.status_code || 200).json(resData || resData.error);
-				// logData = { client: client_ip, endpoint: code, request_data: reqData };
 			}
 		} catch (err) {
 			console.reportError('Unexpected error in routing:', err);
@@ -145,4 +196,7 @@ class ApiManager {
 	}
 }
 
-module.exports = ApiManager;
+module.exports = {
+	ApiManager,
+	setReportEndpointFunctions
+};

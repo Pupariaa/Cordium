@@ -4,7 +4,7 @@ const path = require('path');
 const { AuditLogEvent, Events, MessageType } = require('discord.js');
 
 const AuditLogEntry = require(global.auditLogEntryPath);
-const { getOrNull, compareObjects } = require(global.utilsPath);
+const { set, getSet, getOrNull, compareObjects } = require(global.utilsPath);
 
 const { config: { colors } } = require('extend-console');
 
@@ -186,48 +186,45 @@ function eventToPath(event) {
 }
 
 function dispatchEvent(event, guildId, trigger) {
+	const filePath = eventToPath(event);
+	const { callback } = require(filePath);
+
+	if (!callback || typeof callback !== 'function') {
+		console.reportWarn(`The event at ${filePath} is missing a required "callback" function`);
+		return;
+	}
+
 	const eventScope = {};
-	const set = function (o, k, v, w = false, e = true) {
-		Object.defineProperty(o, k, { value: v, writable: w, enumerable: e });
-	};
-	const eventScopeSet = function (key, value) {
-		Object.defineProperty(eventScope, key, {
-			value: value,
-			writable: true,
-			enumerable: true,
-		});
-		return eventScope;
-	};
 	const listen = function () {
 		if (!shouldListen(eventScope.event)) return;
 		global.client.on(eventScope.event, async function (...args) {
-			eventScope.eventName = String(eventScope.event);
 			try {
 				if (global.guild.id !== eventScope.guildId(...args)) return;
-				eventScope.latestAuditLog = await global.guild.latestAuditLog();
+				set(eventScope
+						.set('eventName', String(eventScope.event))
+						.set('args', []),
+					'latestAuditLog', await global.guild.latestAuditLog());
 				await eventScope.trigger(...args);
-				const module = require(eventToPath(eventScope.event));
-				module.event = eventScope.event;
-				module.eventName = eventScope.eventName;
-				module.latestAuditLog = eventScope.latestAuditLog;
-				module.callback(...args, ...(eventScope.args || []));
+				eventScope.callback(...args, ...(eventScope.args || []));
 			} catch (err) {
 				reportEventError(eventScope.eventName, err);
 			}
 		});
 		console.report('listening to event', eventScope.event);
 	};
+	set(eventScope, 'callback', callback.bind(eventScope));
 	set(eventScope, 'event', event);
-	set(eventScope, 'eventName', undefined, true);
-	set(eventScope, 'set', eventScopeSet.bind(eventScope));
 	set(eventScope, 'guildId', guildId.bind(eventScope));
 	set(eventScope, 'trigger', trigger.bind(eventScope));
 	set(eventScope, 'listen', listen.bind(eventScope));
-	set(eventScope, 'args', undefined, true);
+	set(eventScope, 'set', getSet(eventScope, true, true).bind(eventScope));
 	return eventScope;
 }
 
 async function dispatchEvents() {
+
+	// needed for VoiceStateUpdate
+	const latestAuditLogCount = getOrNull(await global.guild.latestAuditLog(), 'extra.count') || 0;
 
 	// TODO: ApplicationCommandPermissionsUpdate
 
@@ -923,25 +920,25 @@ async function dispatchEvents() {
 		if (executor) args.push('executor.tag', executor.tag);
 		reportEvent(this.eventName, 'user.tag', user.tag, 'channel.name', channel.name);
 	})
-	.set('count', getOrNull(await global.guild.latestAuditLog(), 'extra.count') || 0)
-	.set('now', undefined)
-	.set('getExecutor', async function getExecutor(auditLogEventType) {
-		const latestAuditLog = this.latestAuditLog;
-		if (!latestAuditLog) return null;
-		const dt = this.now - latestAuditLog.createdTimestamp;
-		if (latestAuditLog.action === auditLogEventType && (dt < 1000 || latestAuditLog.extra.count - this.count === 1)) {
-			this.count = latestAuditLog.extra.count;
-			return latestAuditLog.executor;
-		}
-		return null;
-	})
-	.set('impossibleCaseReached', function (msg) {
-		reportEventWarn(this.eventName, 'impossible case reached:', msg);
-		const module = require(eventToPath(this.event));
-		module.event = this.event;
-		module.callback(this.oldState, this.newState);
-	})
-	.listen();
+		.set('count', latestAuditLogCount)
+		.set('now', undefined)
+		.set('getExecutor', async function getExecutor(auditLogEventType) {
+			const latestAuditLog = this.latestAuditLog;
+			if (!latestAuditLog) return null;
+			const dt = this.now - latestAuditLog.createdTimestamp;
+			if (latestAuditLog.action === auditLogEventType && (dt < 1000 || latestAuditLog.extra.count - this.count === 1)) {
+				this.count = latestAuditLog.extra.count;
+				return latestAuditLog.executor;
+			}
+			return null;
+		})
+		.set('impossibleCaseReached', function (msg) {
+			reportEventWarn(this.eventName, 'impossible case reached:', msg);
+			const module = require(eventToPath(this.event));
+			module.event = this.event;
+			module.callback(this.oldState, this.newState);
+		})
+		.listen();
 
 	// TODO: Warn
 

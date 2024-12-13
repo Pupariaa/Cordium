@@ -172,7 +172,7 @@ const { walkDir, toCamelCase, loadEnvPath, getOrNull, setReportFunctions } = req
 
 			// Load API
 			if (global.apiEnable) {
-				const ApiManager = require(global.apiManagerPath);
+				const { ApiManager } = require(global.apiManagerPath);
 				global.apiManager = new ApiManager();
 				global.apiManager.loadAll();
 				global.apiManager.listen();
