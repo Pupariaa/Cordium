@@ -6,6 +6,8 @@ const http = require('http');
 const bodyParser = require('body-parser');
 const { Collection } = require('discord.js');
 const { set, getSet } = require(global.utilsPath);
+const spectraget = require('spectraget');
+const { config: { colors } } = require('extend-console');
 
 let reportEndpoint;
 let reportEndpointWarn;
@@ -15,49 +17,32 @@ function setReportEndpointFunctions() {
 	const { defaultLogFormat, defaultFormatArgsForWarn, defaultFormatArgsForError, defaultShouldLog } = require('extend-console');
 
 	function logFormat(logContext, ...args) {
-		logContext.functionName = `${args[0]}/${args[1]}`;
-		return defaultLogFormat(logContext, ...args.slice(2));
+		const endpoint = args[0].endpoint;
+		logContext.functionName = `${endpoint.type}/${endpoint.name}`;
+		return defaultLogFormat(logContext, ...args.slice(1));
 	}
 
-	function formatArgs(logContext, endpoint) {
-		let formattedArgs = `\n ${colors['FgCyan']}name${colors['Reset']}="${colors['FgYellow']}${endpoint.name}${colors.Reset}"`;
-		formattedArgs += `\n ${colors['FgCyan']}type${colors['Reset']}="${colors['FgYellow']}${endpoint.type}${colors.Reset}"`;
-
-		endpoint.params.forEach(param => {
-			formattedArgs += `\n ${colors['FgCyan']}param${colors['Reset']}="${colors['FgYellow']}name: ${param.name}, type: ${param.type}, mandatory: ${param.mandatory}`;
-			if (param.length) {
-				formattedArgs += `, length: ${param.length}`;
+	function formatArgs(logContext, ...args) {
+		const endpoint = args[0].endpoint;
+		let formattedArgs = '';
+		
+		const params = args[0].request.query;
+		if (params && typeof params === 'object' && Object.keys(params).length > 0) {
+			for (const [key, value] of Object.entries(params)) {
+				formattedArgs += `\n ${colors['FgCyan']}${key}${colors['Reset']}="${colors['FgYellow']}${value}${colors.Reset}"`;
 			}
-			if (param.range) {
-				formattedArgs += `, range: [${param.range.join(', ')}]`;
-			}
-			formattedArgs += `${colors.Reset}"`;
-		});
+		}
 
 		return console.fitOnTerm(formattedArgs);
 	}
 
-	function shouldLog(logContext, ...args) {
-		// TODO: always report all for now
-		// return defaultShouldLog(logContext, ...args) && global.reportEndpoints && global.configReportEndpoints[`${args[0]}/${args[1]}`];
-		return defaultShouldLog(logContext, ...args) && true && true;
-	}
-
-	reportEndpoint = console.createReport(logFormat, formatArgs, shouldLog);
-	reportEndpointWarn = console.createReportWarn(logFormat, defaultFormatArgsForWarn, shouldLog);
-	reportEndpointError = console.createReportError(logFormat, defaultFormatArgsForError, shouldLog);
+	reportEndpoint = console.createReport(logFormat, formatArgs, defaultShouldLog);
+	reportEndpointWarn = console.createReportWarn(logFormat, defaultFormatArgsForWarn, defaultShouldLog);
+	reportEndpointError = console.createReportError(logFormat, defaultFormatArgsForError, defaultShouldLog);
 }
 
-function shouldListen(type, name) {
-	// TODO: listen to all for now
-	// return global.apiEnable && global.configListenEndpoints[`${args[0]}/${args[1]}`];
-	return global.apiEnable && true;
-}
-
-class ApiManager {
+class EndpointsManager {
 	constructor() {
-		this.endpoints = require(global.endpointsFolder);
-
 		this.server = null;
 
 		const app = express();
@@ -66,7 +51,7 @@ class ApiManager {
 		app.use((req, res, next) => {
 			next();
 		});
-		
+
 		app.get('/api/private/*', this.requestTrigger.bind(this));
 		app.get('/api/public/*', this.requestTrigger.bind(this));
 		this.server = http.createServer(app);
@@ -78,22 +63,42 @@ class ApiManager {
 		try {
 			const type = path.basename(path.dirname(filePath));
 			const name = path.basename(filePath, '.js');
-			const endpoint = this.endpoints.find(e => e.type === type && e.name === name);
-			if (!endpoint) {
-				console.reportWarn(`The endpoint at ${filePath} is missing a required endpoint info entry in ${global.endpointsFolder}.js`);
-				return;
-			}
-			const { handler } = require(filePath);
-			if (!handler || typeof handler !== 'function') {
+			const registerEndpoint = (scope) => this.endpointScopes.set(`${type}/${name}`, scope);
+			const endpoint = require(filePath);
+			const { listen, report, params, handler } = require(filePath);
+			if (!handler) {
 				console.reportWarn(`The endpoint at ${filePath} is missing a required "handler" function`);
+				registerEndpoint(null);
 				return;
 			}
-			if (!shouldListen(type, name)) return;
+			if (typeof handler !== 'function') {
+				console.reportWarn(`The endpoint at ${filePath} has a "handler" attribute of type ${typeof handler}, expected function`);
+				registerEndpoint(null);
+				return;
+			}
+			if (!params) {
+				console.reportWarn(`The endpoint at ${filePath} is missing a required "params" array`);
+				registerEndpoint(null);
+				return;
+			}
+			if (!Array.isArray(params)) {
+				console.reportWarn(`The endpoint at ${filePath} has a "params" attribute of type ${typeof params}, expected array`);
+				registerEndpoint(null);
+				return;
+			}
+			if (!listen) {
+				registerEndpoint({ listen: null });
+				return;
+			}
 			const endpointScope = {};
 			set(endpointScope, 'handler', handler.bind(endpointScope));
+			set(endpoint, 'type', type);
+			set(endpoint, 'name', name);
+			set(endpoint, 'params', params);
+			set(endpointScope, 'report', report ? () => reportEndpoint(endpointScope) : () => {});
 			set(endpointScope, 'endpoint', endpoint);
-			set(endpointScope, 'set', getSet(endpointScope, true, true).bind(endpointScope));
-			this.endpointScopes.set(`${type}/${name}`, endpointScope);
+			set(endpointScope, 'set', getSet(true, true).bind(endpointScope));
+			registerEndpoint(endpointScope);
 			console.report(`Endpoint loaded: ${name}`);
 		} catch (err) {
 			console.reportError(`Error loading endpoint from file ${filePath}:`, err);
@@ -172,8 +177,6 @@ class ApiManager {
 			const type = parts[2];
 			const name = parts[3];
 			const code = `${type}/${name}`;
-			
-			if (!shouldHandle(code)) return;
 
 			const endpointScope = this.endpointScopes.get(code);
 			if (!endpointScope) {
@@ -181,8 +184,29 @@ class ApiManager {
 				return;
 			}
 
+			const endpoint = endpointScope.endpoint;
+			const params = req.query;
 
-			const resData = await endpointScope.set('request', req).handler(req.query);
+			const error = spectraget.validate(endpoint.params, params);
+			if (error) {
+				res.status(error.status_code).json(error);
+				return;
+			}
+
+			function get(params, name, key) {
+				const item = params.find(obj => obj.name === name);
+				return item ? item[key] : undefined;
+			}
+
+			if (get(endpoint.params, 'key', 'mandatory') && params?.key !== "bAhRTVpaXS4FvEeD9k2KLOI6Ho92MReU") {
+				const status_code = 401;
+				res.status(status_code).json({ status_code: status_code, error: 'Unauthorized' });
+				return;
+			}
+			endpointScope.set('request', req);
+			endpointScope.report();
+
+			const resData = await endpointScope.handler(params);
 
 			if (resData.error && resData.error === 'Unauthorized') {
 				res.status(resData.status_code || 200).json(resData.error);
@@ -190,13 +214,13 @@ class ApiManager {
 				res.status(resData.status_code || 200).json(resData || resData.error);
 			}
 		} catch (err) {
-			console.reportError('Unexpected error in routing:', err);
+			console.reportError('Unexpected error in handling request:', err);
 			res.status(500).json('Internal Server Error');
 		}
 	}
 }
 
 module.exports = {
-	ApiManager,
+	EndpointsManager,
 	setReportEndpointFunctions
 };

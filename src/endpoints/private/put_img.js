@@ -1,15 +1,17 @@
 'use strict';
 
-const spectraget = require('spectraget');
 const { waitForFile } = require(global.utilsPath);
 
 module.exports = {
+	listen: true,
+	report: true,
+	params: [
+		{ name: "key", type: "string", mandatory: false, length: 32 },
+		{ name: "channelAlias", type: "string", mandatory: true },
+		{ name: "imgPath", type: "string", mandatory: true },
+		{ name: "message", type: "string", mandatory: true },
+	],
 	handler: async function (params) {
-		const validationError = spectraget.validate(this.endpoint.params, params);
-		if (validationError) {
-			return validationError;
-		}
-
 		try {
 			if (!(await waitForFile(params.imgPath))) {
 				return { status_code: 404, error: 'file does not exists' };

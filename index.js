@@ -38,24 +38,6 @@ const { walkDir, toCamelCase, loadEnvPath, getOrNull, setReportFunctions } = req
 	global.originalConsole = { ...console }; // must run once
 	setReportFunctions();
 
-	(function loadPrototypes() {
-		try {
-			const prototypesFolder = path.join(global.projectRoot, 'internals/prototypes');
-			fs.readdirSync(prototypesFolder)
-				.filter((filename) => filename !== 'Logs.js')
-				.forEach((filename) => require(path.join(prototypesFolder, filename)));
-
-			const defaultPrototypesFolder = './src/prototypes';
-
-			global.prototypesFolder = loadEnvPath('prototypes_folder', defaultPrototypesFolder);
-			if (!fs.existsSync(global.prototypesFolder)) fs.mkdirSync(global.prototypesFolder);
-			fs.readdirSync(global.prototypesFolder)
-				.forEach((filename) => require(path.join(global.prototypesFolder, filename)));
-		} catch (err) {
-			console.reportError(err);
-		}
-	})();
-
 	async function initGlobal() {
 		try {
 			// Load config
@@ -166,18 +148,20 @@ const { walkDir, toCamelCase, loadEnvPath, getOrNull, setReportFunctions } = req
 			global.attachmentsManager.loadIndex();
 
 			// Dispatch events
-			console.report('Dispatching events...');
-			const { dispatchEvents } = require(global.eventsPath);
-			dispatchEvents();
+			if (global.listenEvents) {
+				console.report('Dispatching events...');
+				const { dispatchEvents } = require(global.eventsPath);
+				dispatchEvents();
+			}
 
-			// Load API
-			if (global.apiEnable) {
-				const { ApiManager } = require(global.apiManagerPath);
-				global.apiManager = new ApiManager();
-				global.apiManager.loadAll();
-				global.apiManager.listen();
+			// Load endpoints
+			if (global.listenEndpoints) {
+				const { EndpointsManager } = require(global.endpointsManagerPath);
+				global.endpointsManager = new EndpointsManager();
+				global.endpointsManager.loadAll();
+				global.endpointsManager.listen();
 				if (global.dev) {
-					global.apiManager.watch();
+					global.endpointsManager.watch();
 				}
 			}
 

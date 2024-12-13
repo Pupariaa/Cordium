@@ -15,16 +15,13 @@ let reportEventError;
 function setReportEventFunctions() {
 	const { defaultLogFormat, defaultFormatArgsForWarn, defaultFormatArgsForError, defaultShouldLog } = require('extend-console');
 	function logFormat(logContext, ...args) {
-		// replace functionName with eventName
-		logContext.functionName = args[0];
+		logContext.functionName = args[0].eventName;
 		return defaultLogFormat(logContext, ...args.slice(1));
 	}
 
 	function formatArgs(logContext, ...args) {
-		let i = 1;
 		let formattedArgs = '';
-		const mustEndWith = `${colors.Reset}"`;
-		while (i < args.length) {
+		for (let i = 1; i < args.length; i += 2) {
 			const common = `\n ${colors['FgCyan']}${args[i]}${colors['Reset']}=`;
 			if (i + 2 < args.length && args[i + 2] === '->') {
 				let arrow = '->';
@@ -33,23 +30,18 @@ function setReportEventFunctions() {
 					arrow = '\n->\n';
 					sep = '\n';
 				}
-				formattedArgs += `${common}${sep}"${colors['FgYellow']}${args[i + 1]}${colors['Reset']}"${arrow}"${colors['FgYellow']}${args[i + 3]}${mustEndWith}`;
+				formattedArgs += `${common}${sep}"${colors['FgYellow']}${args[i + 1]}${colors['Reset']}"${arrow}"${colors['FgYellow']}${args[i + 3]}${colors.Reset}"`;
 				i += 2;
 			} else {
-				formattedArgs += `${common}"${colors['FgYellow']}${args[i + 1]}${mustEndWith}`;
+				formattedArgs += `${common}"${colors['FgYellow']}${args[i + 1]}${colors.Reset}"`;
 			}
-			i += 2;
 		}
 		return console.fitOnTerm(formattedArgs);
 	}
 
-	function shouldLog(logContext, ...args) {
-		return defaultShouldLog(logContext, ...args) && global.reportEvents && global.configReportEvents[args[0].split('.')[0]];
-	}
-
-	reportEvent = console.createReport(logFormat, formatArgs, shouldLog);
-	reportEventWarn = console.createReportWarn(logFormat, defaultFormatArgsForWarn, shouldLog);
-	reportEventError = console.createReportError(logFormat, defaultFormatArgsForError, shouldLog);
+	reportEvent = console.createReport(logFormat, formatArgs, defaultShouldLog);
+	reportEventWarn = console.createReportWarn(logFormat, defaultFormatArgsForWarn, defaultShouldLog);
+	reportEventError = console.createReportError(logFormat, defaultFormatArgsForError, defaultShouldLog);
 }
 
 function compareOldAndNew(oldObj, newObj) {
@@ -62,32 +54,24 @@ function compareOldAndNew(oldObj, newObj) {
 	return reportEventArgs;
 }
 
-function shouldListen(event) {
-	return global.listenEvents && global.configListenEvents[event];
-}
-
-function eventToPath(event) {
-	let category;
+function categoryFromEvent(event) {
 	switch (String(event)) {
 		case Events.AutoModerationActionExecution:
 		case Events.AutoModerationRuleCreate:
 		case Events.AutoModerationRuleDelete:
 		case Events.AutoModerationRuleUpdate:
-			category = 'AutoModeration';
-			break;
+			return 'AutoModeration';
 
 		case Events.ChannelCreate:
 		case Events.ChannelDelete:
 		case Events.ChannelPinsUpdate:
 		case Events.ChannelUpdate:
-			category = 'Channel';
-			break;
+			return 'Channel';
 
 		case Events.EntitlementCreate:
 		case Events.EntitlementDelete:
 		case Events.EntitlementUpdate:
-			category = 'Entitlement';
-			break;
+			return 'Entitlement';
 
 		case Events.GuildAuditLogEntryCreate:
 		case Events.GuildAvailable:
@@ -117,13 +101,11 @@ function eventToPath(event) {
 		case Events.GuildStickerUpdate:
 		case Events.GuildUnavailable:
 		case Events.GuildUpdate:
-			category = 'Guild';
-			break;
+			return 'Guild';
 
 		case Events.InviteCreate:
 		case Events.InviteDelete:
-			category = 'Invite';
-			break;
+			return 'Invite';
 
 		case Events.MessageBulkDelete:
 		case Events.MessageCreate:
@@ -135,8 +117,7 @@ function eventToPath(event) {
 		case Events.MessageReactionRemoveAll:
 		case Events.MessageReactionRemoveEmoji:
 		case Events.MessageUpdate:
-			category = 'Message';
-			break;
+			return 'Message';
 
 		case Events.ApplicationCommandPermissionsUpdate:
 		case Events.CacheSweep:
@@ -152,22 +133,19 @@ function eventToPath(event) {
 		case Events.VoiceStateUpdate:
 		case Events.Warn:
 		case Events.WebhooksUpdate:
-			category = 'Other';
-			break;
+			return 'Other';
 
 		case Events.ShardDisconnect:
 		case Events.ShardError:
 		case Events.ShardReady:
 		case Events.ShardReconnecting:
 		case Events.ShardResume:
-			category = 'Shard';
-			break;
+			return 'Shard';
 
 		case Events.StageInstanceCreate:
 		case Events.StageInstanceDelete:
 		case Events.StageInstanceUpdate:
-			category = 'Stage';
-			break;
+			return 'Stage';
 
 		case Events.ThreadCreate:
 		case Events.ThreadDelete:
@@ -175,35 +153,37 @@ function eventToPath(event) {
 		case Events.ThreadMembersUpdate:
 		case Events.ThreadMemberUpdate:
 		case Events.ThreadUpdate:
-			category = 'Thread';
-			break;
+			return 'Thread';
+		
 		default:
-			category = 'Unknown';
-			break;
+			return 'Unknown';
 	}
-
-	return path.join(global.eventsFolder, category, `${event}.js`);
 }
 
 function dispatchEvent(event, guildId, trigger) {
-	const filePath = eventToPath(event);
-	const { callback } = require(filePath);
-
-	if (!callback || typeof callback !== 'function') {
+	const filePath = path.join(global.eventsFolder, categoryFromEvent(event), `${event}.js`);
+	const { listen: shouldListen, report, callback } = require(filePath);
+	if (!callback) {
 		console.reportWarn(`The event at ${filePath} is missing a required "callback" function`);
 		return;
 	}
-
+	if (typeof callback !== 'function') {
+		console.reportWarn(`The event at ${filePath} has a "callback" attribute of type ${typeof callback}, expected function`);
+		return;
+	}
+	if (!shouldListen) {
+		console.reportWarn(`The event at ${filePath} has a "callback" attribute of type ${typeof callback}, expected function`);
+		return;
+	}
 	const eventScope = {};
 	const listen = function () {
-		if (!shouldListen(eventScope.event)) return;
 		global.client.on(eventScope.event, async function (...args) {
 			try {
 				if (global.guild.id !== eventScope.guildId(...args)) return;
-				set(eventScope
-						.set('eventName', String(eventScope.event))
-						.set('args', []),
-					'latestAuditLog', await global.guild.latestAuditLog());
+				eventScope
+					.set('eventName', String(eventScope.event))
+					.set('args', [])
+					.set('latestAuditLog', await global.guild.latestAuditLog());
 				await eventScope.trigger(...args);
 				eventScope.callback(...args, ...(eventScope.args || []));
 			} catch (err) {
@@ -216,8 +196,9 @@ function dispatchEvent(event, guildId, trigger) {
 	set(eventScope, 'event', event);
 	set(eventScope, 'guildId', guildId.bind(eventScope));
 	set(eventScope, 'trigger', trigger.bind(eventScope));
+	set(eventScope, 'report', report ? (...args) => reportEvent(eventScope, ...args) : (...args) => {});
 	set(eventScope, 'listen', listen.bind(eventScope));
-	set(eventScope, 'set', getSet(eventScope, true, true).bind(eventScope));
+	set(eventScope, 'set', getSet(true, true).bind(eventScope));
 	return eventScope;
 }
 
@@ -249,8 +230,8 @@ async function dispatchEvents() {
 		//	 executorId: executor.id,
 		// });
 
-		reportEvent(this.eventName, 'channel.name', channel.name, 'executor.tag', executor.tag, 'channel.type', global.guild.channelTypeStr(channel.type));
-	}).listen();
+		this.report('channel.name', channel.name, 'executor.tag', executor.tag, 'channel.type', global.guild.channelTypeStr(channel.type));
+	})?.listen();
 
 	dispatchEvent(Events.ChannelDelete, (channel) => channel.guild.id, async function (channel) {
 		const executor = this.latestAuditLog.executor;
@@ -266,8 +247,8 @@ async function dispatchEvents() {
 
 		global.messagesDatabase.bulkDelete(channel.id);
 
-		reportEvent(this.eventName, 'channel.name', channel.name, 'executor.tag', executor.tag, 'channel.type', global.guild.channelTypeStr(channel.type));
-	}).listen();
+		this.report('channel.name', channel.name, 'executor.tag', executor.tag, 'channel.type', global.guild.channelTypeStr(channel.type));
+	})?.listen();
 
 	dispatchEvent(Events.ChannelPinsUpdate, (channel) => channel.guild.id, async function (channel, date) {
 		const executor = this.latestAuditLog.executor;
@@ -283,8 +264,8 @@ async function dispatchEvents() {
 		// console.log(r);
 		const pinnedMessage = await channel.messages.fetch(messageId);
 		this.args = [channel, date, pinnedMessage];
-		reportEvent(this.eventName, 'channel.name', channel.name, 'executor.tag', executor.globalName, 'author.tag', pinnedMessage.author.tag, 'pinnedMessage.content', pinnedMessage.content);
-	}).listen();
+		this.report('channel.name', channel.name, 'executor.tag', executor.globalName, 'author.tag', pinnedMessage.author.tag, 'pinnedMessage.content', pinnedMessage.content);
+	})?.listen();
 
 	dispatchEvent(Events.ChannelUpdate, (oldChannel, newChannel) => newChannel.guild.id, async function (oldChannel, newChannel) {
 		const executor = this.latestAuditLog.executor;
@@ -299,8 +280,8 @@ async function dispatchEvents() {
 		//	 executorId: executor.id,
 		// });
 
-		reportEvent(this.eventName, 'channel.name', oldChannel.name, '->', newChannel.name, 'executor.tag', executor.tag, 'channel.type', global.guild.channelTypeStr(newChannel.type));
-	}).listen();
+		this.report('channel.name', oldChannel.name, '->', newChannel.name, 'executor.tag', executor.tag, 'channel.type', global.guild.channelTypeStr(newChannel.type));
+	})?.listen();
 
 	// DONE: ClientReady
 
@@ -329,8 +310,8 @@ async function dispatchEvents() {
 		//	 executorId: executor.id,
 		// });
 
-		reportEvent(this.eventName, 'user.tag', user.tag, 'executor.tag', executor.tag, 'reason', ban.reason);
-	}).listen();
+		this.report('user.tag', user.tag, 'executor.tag', executor.tag, 'reason', ban.reason);
+	})?.listen();
 
 	dispatchEvent(Events.GuildBanRemove, (ban) => ban.guild.id, async function (ban) {
 		const user = ban.user;
@@ -343,8 +324,8 @@ async function dispatchEvents() {
 		//	 executorId: executor.id,
 		// });
 
-		reportEvent(this.eventName, 'user.tag', user.tag, 'executor.tag', executor.tag);
-	}).listen();
+		this.report('user.tag', user.tag, 'executor.tag', executor.tag);
+	})?.listen();
 
 	// TODO: GuildCreate
 
@@ -360,8 +341,8 @@ async function dispatchEvents() {
 		//	 executorId: executor.id,
 		// });
 
-		reportEvent(this.eventName, 'executor.tag', executor.tag, 'emoji.name', oldEmoji.name, '->', newEmoji.name, 'emoji.url', oldEmoji.url, '->', newEmoji.url);
-	}).listen();
+		this.report('executor.tag', executor.tag, 'emoji.name', oldEmoji.name, '->', newEmoji.name, 'emoji.url', oldEmoji.url, '->', newEmoji.url);
+	})?.listen();
 
 	dispatchEvent(Events.GuildEmojiDelete, (emoji) => emoji.guild.id, async function (emoji) {
 		const executor = this.latestAuditLog.executor;
@@ -374,8 +355,8 @@ async function dispatchEvents() {
 		//	 executorId: executor.id,
 		// });
 
-		reportEvent(this.eventName, 'executor.tag', executor.tag, 'emoji.name', emoji.name, 'emoji.url', emoji.url);
-	}).listen();
+		this.report('executor.tag', executor.tag, 'emoji.name', emoji.name, 'emoji.url', emoji.url);
+	})?.listen();
 
 	dispatchEvent(Events.GuildEmojiUpdate, (oldEmoji, newEmoji) => newEmoji.guild.id, async function (oldEmoji, newEmoji) {
 		const executor = this.latestAuditLog.executor;
@@ -388,8 +369,8 @@ async function dispatchEvents() {
 		//	 executorId: executor.id,
 		// });
 
-		reportEvent(this.eventName, 'executor.tag', executor.tag, 'emoji.name', oldEmoji.name, '->', newEmoji.name, 'emoji.url', oldEmoji.url, '->', newEmoji.url);
-	}).listen();
+		this.report('executor.tag', executor.tag, 'emoji.name', oldEmoji.name, '->', newEmoji.name, 'emoji.url', oldEmoji.url, '->', newEmoji.url);
+	})?.listen();
 
 	// TODO: GuildIntegrationsUpdate
 
@@ -402,14 +383,14 @@ async function dispatchEvents() {
 		//	 nickname: member.nickname || '',
 		// });
 
-		reportEvent(this.eventName, 'user.tag', user.tag);
-	}).listen();
+		this.report('user.tag', user.tag);
+	})?.listen();
 
 	dispatchEvent(Events.GuildMemberAvailable, (oldMember, newMember) => newMember.guild.id, async function (oldMember, newMember) {
 		// TODO
 
-		reportEvent(this.eventName, 'member.user.tag', member.user.tag);
-	}).listen();
+		this.report('member.user.tag', member.user.tag);
+	})?.listen();
 
 	dispatchEvent(Events.GuildMemberRemove, (member) => member.guild.id, async function (member) {
 		const user = member.user;
@@ -423,14 +404,14 @@ async function dispatchEvents() {
 		//	 leftAt: Date.now(),
 		// });
 
-		reportEvent(this.eventName, 'user.tag', user.tag);
-	}).listen();
+		this.report('user.tag', user.tag);
+	})?.listen();
 
 	// TODO: GuildMembersChunk
 
 	dispatchEvent(Events.GuildMemberUpdate, (oldMember, newMember) => newMember.guild.id, async function (oldMember, newMember) {
-		reportEvent(this.eventName, 'user.tag', oldMember.user.tag, '->', newMember.user.tag);
-	}).listen();
+		this.report('user.tag', oldMember.user.tag, '->', newMember.user.tag);
+	})?.listen();
 
 	dispatchEvent(Events.GuildRoleCreate, (role) => role.guild.id, async function (role) {
 		const executor = this.latestAuditLog.executor;
@@ -444,8 +425,8 @@ async function dispatchEvents() {
 		//	 executorId: executor.id,
 		// });
 
-		reportEvent(this.eventName, 'executor.tag', executor.tag, 'role.name', role.name);
-	}).listen();
+		this.report('executor.tag', executor.tag, 'role.name', role.name);
+	})?.listen();
 
 	dispatchEvent(Events.GuildRoleDelete, (role) => role.guild.id, async function (role) {
 		const executor = this.latestAuditLog.executor;
@@ -458,8 +439,8 @@ async function dispatchEvents() {
 		//	 executorId: executor.id,
 		// });
 
-		reportEvent(this.eventName, 'executor.tag', executor.tag, 'role.name', role.name);
-	}).listen();
+		this.report('executor.tag', executor.tag, 'role.name', role.name);
+	})?.listen();
 
 	dispatchEvent(Events.GuildRoleUpdate, (oldRole, newRole) => newRole.guild.id, async function (oldRole, newRole) {
 		const executor = this.latestAuditLog.executor;
@@ -471,8 +452,8 @@ async function dispatchEvents() {
 		//	 executorId: executor.id,
 		// });
 
-		reportEvent(this.eventName, 'executor.tag', executor.tag, 'role.name', oldRole.name, '->', newRole.name, 'role.color', oldRole.hexColor, '->', newRole.hexColor);
-	}).listen();
+		this.report('executor.tag', executor.tag, 'role.name', oldRole.name, '->', newRole.name, 'role.color', oldRole.hexColor, '->', newRole.hexColor);
+	})?.listen();
 
 	// TODO: GuildScheduledEventCreate
 
@@ -494,8 +475,8 @@ async function dispatchEvents() {
 		//	 executorId: executor.id,
 		// });
 
-		reportEvent(this.eventName, 'executor.tag', executor.tag, 'sticker.name', sticker.name);
-	}).listen();
+		this.report('executor.tag', executor.tag, 'sticker.name', sticker.name);
+	})?.listen();
 
 	dispatchEvent(Events.GuildStickerDelete, (sticker) => sticker.guild.id, async function (sticker) {
 		const executor = this.latestAuditLog.executor;
@@ -508,8 +489,8 @@ async function dispatchEvents() {
 		//	 executorId: executor.id,
 		// });
 
-		reportEvent(this.eventName, 'executor.tag', executor.tag, 'sticker.name', sticker.name);
-	}).listen();
+		this.report('executor.tag', executor.tag, 'sticker.name', sticker.name);
+	})?.listen();
 
 	dispatchEvent(Events.GuildStickerUpdate, (oldSticker, newSticker) => newSticker.guild.id, async function (oldSticker, newSticker) {
 		const executor = this.latestAuditLog.executor;
@@ -522,8 +503,8 @@ async function dispatchEvents() {
 		//	 executorId: executor.id,
 		// });
 
-		reportEvent(this.eventName, 'executor.tag', executor.tag, 'sticker.name', oldSticker.name, '->', newSticker.name);
-	}).listen();
+		this.report('executor.tag', executor.tag, 'sticker.name', oldSticker.name, '->', newSticker.name);
+	})?.listen();
 
 	// TODO: GuildUnavailable
 
@@ -585,7 +566,7 @@ async function dispatchEvents() {
 	)
 		.set('reportDefault', function (interaction) {
 			try {
-				reportEvent(this.eventName, 'executor.tag', interaction.user.tag, 'client.tag', interaction.client.user.tag, 'channel.name', interaction.channel.name);
+				this.report('executor.tag', interaction.user.tag, 'client.tag', interaction.client.user.tag, 'channel.name', interaction.channel.name);
 			} catch (err) {
 				reportEventError(this.eventName, err);
 			}
@@ -608,12 +589,12 @@ async function dispatchEvents() {
 							break;
 					}
 				}
-				reportEvent(this.eventName, 'executor.tag', interaction.user.tag, 'client.tag', interaction.client.user.tag, 'channel.name', interaction.channel.name, 'command', cmd);
+				this.report('executor.tag', interaction.user.tag, 'client.tag', interaction.client.user.tag, 'channel.name', interaction.channel.name, 'command', cmd);
 			} catch (err) {
 				reportEventError(this.eventName, err);
 			}
 		})
-		.listen();
+		?.listen();
 
 	// TODO: Invalidated
 
@@ -632,8 +613,8 @@ async function dispatchEvents() {
 		//	 datetime: Date.now(),
 		// });
 
-		reportEvent(this.eventName, 'executor.tag', executor.tag, 'url', invite.url);
-	}).listen();
+		this.report('executor.tag', executor.tag, 'url', invite.url);
+	})?.listen();
 
 	dispatchEvent(Events.InviteDelete, (invite) => invite.guild.id, async function (invite) {
 		const executor =
@@ -646,8 +627,8 @@ async function dispatchEvents() {
 		//	 datetime: Date.now(),
 		// });
 
-		reportEvent(this.eventName, 'executor.tag', executor.tag, 'url', invite.url);
-	}).listen();
+		this.report('executor.tag', executor.tag, 'url', invite.url);
+	})?.listen();
 
 	dispatchEvent(Events.MessageBulkDelete, (messages, channel) => channel.guild.id, async function (messages, channel) {
 		const executor = this.latestAuditLog.executor;
@@ -659,8 +640,8 @@ async function dispatchEvents() {
 		//	 executorId: executor.id,
 		// });
 
-		reportEvent(this.eventName, 'channel.name', channel.name, 'executor.tag', executor.tag, 'messages.size', messages.size);
-	}).listen();
+		this.report('channel.name', channel.name, 'executor.tag', executor.tag, 'messages.size', messages.size);
+	})?.listen();
 
 	dispatchEvent(Events.MessageCreate, (message) => message.guild.id, async function (message) {
 		const executor = message.author;
@@ -684,8 +665,8 @@ async function dispatchEvents() {
 
 		global.messagesDatabase.set(message);
 
-		reportEvent(this.eventName, 'channel.name', channel.name, 'executor.tag', executor.tag, 'content', content);
-	}).listen();
+		this.report('channel.name', channel.name, 'executor.tag', executor.tag, 'content', content);
+	})?.listen();
 
 	dispatchEvent(Events.MessageDelete, (message) => message.guild.id, async function (message) {
 		const executor = this.latestAuditLog.executor;
@@ -696,8 +677,8 @@ async function dispatchEvents() {
 		//	 executorId: executor.id,
 		// });
 
-		reportEvent(this.eventName, 'channel.name', message.channel.name, 'executor.tag', executor.tag, 'content', message.content);
-	}).listen();
+		this.report('channel.name', message.channel.name, 'executor.tag', executor.tag, 'content', message.content);
+	})?.listen();
 
 	// TODO: MessagePollVoteAdd
 
@@ -719,8 +700,8 @@ async function dispatchEvents() {
 		//	 name: emoji.name,
 		// });
 
-		// reportEvent(this.eventName, 'executor.tag', executor.tag, 'emoji.name', emoji.name, 'message.author.tag', user.tag);
-	}).listen();
+		// this.report('executor.tag', executor.tag, 'emoji.name', emoji.name, 'message.author.tag', user.tag);
+	})?.listen();
 
 	dispatchEvent(Events.MessageReactionRemove, (reaction, executor, details) => reaction.message.guild.id, async function (reaction, executor, details) {
 		console.log('MessageReactionRemove');
@@ -736,12 +717,12 @@ async function dispatchEvents() {
 		//	 name: emoji.name,
 		// });
 
-		// reportEvent(this.eventName, 'executor.tag', executor.tag, 'emoji.name', emoji.name, 'message.author.tag', user.tag);
-	}).listen();
+		// this.report('executor.tag', executor.tag, 'emoji.name', emoji.name, 'message.author.tag', user.tag);
+	})?.listen();
 
 	dispatchEvent(Events.MessageReactionRemoveEmoji, (reaction) => reaction.message.guild.id, async function (reaction) {
 		console.log('MessageReactionRemoveEmoji');
-	}).listen();
+	})?.listen();
 
 	dispatchEvent(Events.MessageUpdate, (oldMessage, newMessage) => newMessage.guild.id, async function (oldMessage, newMessage) {
 		const author = oldMessage?.author || newMessage?.author;
@@ -760,8 +741,8 @@ async function dispatchEvents() {
 
 		if (reportEventArgs.length === 0 || (reportEventArgs.length === 4 && reportEventArgs[0] === 'pinned')) return;
 
-		reportEvent(this.eventName, 'channel.name', newMessage.channel.name, 'author.tag', author.tag, ...reportEventArgs);
-	}).listen();
+		this.report('channel.name', newMessage.channel.name, 'author.tag', author.tag, ...reportEventArgs);
+	})?.listen();
 
 	// TODO: PresenceUpdate
 
@@ -794,8 +775,8 @@ async function dispatchEvents() {
 		//	 executorId: executor.id,
 		// });
 
-		reportEvent(this.eventName, 'executor.tag', executor.tag, 'thread.name', thread.name);
-	}).listen();
+		this.report('executor.tag', executor.tag, 'thread.name', thread.name);
+	})?.listen();
 
 	dispatchEvent(Events.ThreadDelete, (thread) => thread.guild.id, async function (thread) {
 		const executor = this.latestAuditLog.executor;
@@ -808,8 +789,8 @@ async function dispatchEvents() {
 		//	 executorId: executor.id,
 		// });
 
-		reportEvent(this.eventName, 'executor.tag', executor.tag, 'thread.name', thread.name);
-	}).listen();
+		this.report('executor.tag', executor.tag, 'thread.name', thread.name);
+	})?.listen();
 
 	// TODO: ThreadListSync
 
@@ -822,9 +803,9 @@ async function dispatchEvents() {
 
 		// global.eventsDatabase.addEntry(this.event, { channelId: newThread.id, oldName: oldThread.name, newName: newThread.name, datetime: Date.now(), executorId: executor.id, });
 
-		reportEvent(this.eventName, 'executor.tag', executor.tag, 'thread.name', oldThread.name, '->', newThread.name
+		this.report('executor.tag', executor.tag, 'thread.name', oldThread.name, '->', newThread.name
 		);
-	}).listen();
+	})?.listen();
 
 	// TODO: TypingStart
 
@@ -836,7 +817,7 @@ async function dispatchEvents() {
 		this.oldState = oldState;
 		this.newState = newState;
 		if (!oldState.channelId && !newState.channelId) {
-			this.impossibleCaseReached('old and new states are null');
+			reportEventWarn(this.eventName, 'impossible case reached: old and new states are null');
 			return;
 		}
 
@@ -894,7 +875,7 @@ async function dispatchEvents() {
 					if (oldState.selfVideo !== newState.selfVideo) updates.push('user.selfVideo', oldState.selfVideo, '->', newState.selfVideo);
 
 					if (updates.length === 0) {
-						this.impossibleCaseReached('old and new states are equal with no update');
+						reportEventWarn(this.eventName, 'impossible case reached: old and new states are equal with no update');
 						return;
 					}
 
@@ -918,7 +899,7 @@ async function dispatchEvents() {
 
 		const args = ['user.tag', user.tag, 'channel.name', channel.name,];
 		if (executor) args.push('executor.tag', executor.tag);
-		reportEvent(this.eventName, 'user.tag', user.tag, 'channel.name', channel.name);
+		this.report('user.tag', user.tag, 'channel.name', channel.name);
 	})
 		.set('count', latestAuditLogCount)
 		.set('now', undefined)
@@ -931,14 +912,7 @@ async function dispatchEvents() {
 				return latestAuditLog.executor;
 			}
 			return null;
-		})
-		.set('impossibleCaseReached', function (msg) {
-			reportEventWarn(this.eventName, 'impossible case reached:', msg);
-			const module = require(eventToPath(this.event));
-			module.event = this.event;
-			module.callback(this.oldState, this.newState);
-		})
-		.listen();
+		})?.listen();
 
 	// TODO: Warn
 

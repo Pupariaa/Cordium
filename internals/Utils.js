@@ -7,13 +7,16 @@ const wait = require('node:timers/promises').setTimeout;
 const chokidar = require('chokidar');
 
 function set(o, k, v, w = false, e = true) {
+	if (typeof o !== 'object' || o === null) {
+		throw new TypeError('The first argument must be an object');
+	}
 	Object.defineProperty(o, k, { value: v, writable: w, enumerable: e });
 }
 
-function getSet(o, defaultW = false, defaultE = false) {
+function getSet(defaultW = false, defaultE = false) {
 	return function (key, value) {
-		set(o, key, value, defaultW, defaultE);
-		return o;
+		set(this, key, value, defaultW, defaultE);
+		return this;
 	};
 }
 
@@ -130,7 +133,7 @@ function setReportFunctions() {
 	console = global.originalConsole; // forget the old console object and all of its reports from the previous require
 	const { defaultLogFormat } = require('extend-console');
 	const { setReportEventFunctions } = require(global.eventsPath);
-	const { setReportEndpointFunctions } = require(global.apiManagerPath);
+	const { setReportEndpointFunctions } = require(global.endpointsManagerPath);
 
 	// Add logic to a default behavior of reports from extend-console
 	function extendLogFormat(logFormat) {
