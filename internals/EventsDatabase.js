@@ -46,7 +46,6 @@ class EventsDatabase {
 				})
 
 		})
-
 	}
 
 	#defineEventModel(event, columns, tableMetadata) {

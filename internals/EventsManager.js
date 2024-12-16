@@ -172,65 +172,14 @@ class EventsManager extends FilesManager {
 		this.latestAuditLogCount = getOrNull(await global.guild.latestAuditLog(), 'extra.count') || 0;
 	}
 
-	getFilePath(event) {
-		return path.join(global.eventsFolder, categoryFromEvent(event), `${event}.js`);
-	}
-
-	register(event, guildId, trigger) {
-		if (this.listeningEvents.has(event)) {
-			console.reportWarn(`The event ${event} is already listening`);
-			return;
+	unload(event) {
+		const oldScope = this.listeningEvents.get(event);
+		const oldOnEventFunction = oldScope?.onEventFunction;
+		if (oldOnEventFunction) {
+			global.client.off(event, oldOnEventFunction);
+			delete require.cache[require.resolve(this.getFilePath(event))];
+			this.listeningEvents.delete(event);
 		}
-		const filePath = this.getFilePath(event);
-		try {
-			const { listen: shouldListen, report, callback } = require(filePath);
-			if (!shouldListen) {
-				console.reportWarn(`The event ${event} is not listening`);
-				return;
-			}
-			if (!callback) {
-				console.reportWarn(`The event at ${filePath} is missing a required "callback" function`);
-				return;
-			}
-			if (typeof callback !== 'function') {
-				console.reportWarn(`The event at ${filePath} has a "callback" attribute of type ${typeof callback}, expected function`);
-				return;
-			}
-			const scope = {};
-			async function onEventFunction(...args) {
-				try {
-					if (global.guild.id !== guildId(...args)) return;
-					scope
-						.set('eventName', String(event))
-						.set('args', [])
-						.set('latestAuditLog', await global.guild.latestAuditLog());
-					await scope.trigger(...args);
-					scope.callback(...args, ...(scope.args || []));
-				} catch (err) {
-					reportEventError(scope.eventName, err);
-				}
-			}
-			function listen() {
-				global.client.on(scope.event, onEventFunction);
-				console.report('listening to event', event);
-				this.listeningEvents.set(event, scope);
-			}
-			set(scope, 'onEventFunction', onEventFunction);
-			set(scope, 'filePath', filePath);
-			set(scope, 'event', event);
-			set(scope, 'report', report ? (...args) => reportEvent(scope, ...args) : (...args) => {});
-			set(scope, 'listen', listen.bind(this));
-			set(scope, 'set', getSet(true, true, true).bind(scope));
-			set(scope, 'trigger', trigger.bind(scope));
-			set(scope, 'callback', callback.bind(scope));
-			return scope;
-		} catch (err) {
-			console.reportError(`Failed to register event at ${filePath}:`, err);
-		}
-	}
-
-	runAll(callback) {
-		Object.values(Events).forEach(callback.bind(this));
 	}
 
 	load(event) {
@@ -950,14 +899,65 @@ class EventsManager extends FilesManager {
 		}
 	}
 
-	unload(event) {
-		const oldScope = this.listeningEvents.get(event);
-		const oldOnEventFunction = oldScope?.onEventFunction;
-		if (oldOnEventFunction) {
-			global.client.off(event, oldOnEventFunction);
-			delete require.cache[require.resolve(this.getFilePath(event))];
-			this.listeningEvents.delete(event);
+	getFilePath(event) {
+		return path.join(global.eventsFolder, categoryFromEvent(event), `${event}.js`);
+	}
+
+	register(event, guildId, trigger) {
+		if (this.listeningEvents.has(event)) {
+			console.reportWarn(`The event ${event} is already listening`);
+			return;
 		}
+		const filePath = this.getFilePath(event);
+		try {
+			const { listen: shouldListen, report, callback } = require(filePath);
+			if (!shouldListen) {
+				console.reportWarn(`The event ${event} is not listening`);
+				return;
+			}
+			if (!callback) {
+				console.reportWarn(`The event at ${filePath} is missing a required "callback" function`);
+				return;
+			}
+			if (typeof callback !== 'function') {
+				console.reportWarn(`The event at ${filePath} has a "callback" attribute of type ${typeof callback}, expected function`);
+				return;
+			}
+			const scope = {};
+			async function onEventFunction(...args) {
+				try {
+					if (global.guild.id !== guildId(...args)) return;
+					scope
+						.set('eventName', String(event))
+						.set('args', [])
+						.set('latestAuditLog', await global.guild.latestAuditLog());
+					await scope.trigger(...args);
+					scope.callback(...args, ...(scope.args || []));
+				} catch (err) {
+					reportEventError(scope.eventName, err);
+				}
+			}
+			function listen() {
+				global.client.on(scope.event, onEventFunction);
+				console.report('listening to event', event);
+				this.listeningEvents.set(event, scope);
+			}
+			set(scope, 'onEventFunction', onEventFunction);
+			set(scope, 'filePath', filePath);
+			set(scope, 'event', event);
+			set(scope, 'report', report ? (...args) => reportEvent(scope, ...args) : (...args) => {});
+			set(scope, 'listen', listen.bind(this));
+			set(scope, 'set', getSet(true, true, true).bind(scope));
+			set(scope, 'trigger', trigger.bind(scope));
+			set(scope, 'callback', callback.bind(scope));
+			return scope;
+		} catch (err) {
+			console.reportError(`Failed to register event at ${filePath}:`, err);
+		}
+	}
+
+	runAll(callback) {
+		Object.values(Events).forEach(callback.bind(this));
 	}
 
 	onChange(filePath) {

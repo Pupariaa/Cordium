@@ -158,4 +158,6 @@ class Channels {
 	}
 }
 
-module.exports = Channels;
+module.exports = {
+	Channels
+};

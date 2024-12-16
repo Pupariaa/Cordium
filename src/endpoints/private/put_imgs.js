@@ -1,5 +1,6 @@
 'use strict';
 
+const path = require('path');
 const { waitForFile } = require(global.utilsPath);
 
 module.exports = {
@@ -13,7 +14,7 @@ module.exports = {
 	],
 	handler: async function (params) {
 		try {
-			const imgPaths = params.imgPaths.split(',');
+			const imgPaths = params.imgPaths.split(',').map(imgPath => path.join(global.downloadsFolder, imgPath));
 
 			for (const imgPath of imgPaths) {
 				if (!(await waitForFile(imgPath))) {
@@ -21,7 +22,7 @@ module.exports = {
 				}
 			}
 
-			const channel = await global.channels.getByAlias(params.channelAlias);
+			const channel = await global.channels.text.getByAlias(params.channelAlias);
 
 			await channel.send({
 				content: params.message,

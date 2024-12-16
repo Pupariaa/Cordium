@@ -100,7 +100,7 @@ const { set, walkDirSync, toCamelCase, loadEnvPath, getOrNull, setReportFunction
 			]
 		});
 
-		const Channels = require(global.channelsPath);
+		const { Channels } = require(global.channelsPath);
 		global.channels = new Channels();
 
 		const { CommandsManager } = require(global.commandsManagerPath);
