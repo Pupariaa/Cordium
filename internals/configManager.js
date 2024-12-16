@@ -4,114 +4,100 @@ const chokidar = require('chokidar');
 const fs = require('fs');
 const path = require('path');
 const dotenv = require('dotenv');
-const { getSet, validPort, validChannelId, capitalize, toCamelCase, loadEnvPath, getLoadEnvBool, setReportFunctions } = require(global.utilsPath);
+const { getSet, capitalize, toCamelCase, setReportFunctions } = require(global.utilsPath);
 const { Events } = require('discord.js');
 
-const looseSet = getSet(true, true).bind(global);
+const set = getSet().bind(global);
 
 class ConfigManager {
-	constructor() {
-		this.envFilename = 'config.env';
-		this.envPath = path.join(global.projectRoot, 'config', this.envFilename);
-	}
-
-	load(envPath = this.envPath) {
-		const defaultPort = 3000;
-
+	constructor(envPath) {
+		if (new.target === ConfigManager) {
+			throw new TypeError('Abstract class ConfigManager cannot be instantiated directly.');
+		}
+		this.envPath = envPath;
 		const envConfig = dotenv.config({ path: envPath });
-		const env = envConfig.parsed;
-
 		if (envConfig.error) {
-			console.reportError(`Error loading ${envPath} file:`, envConfig.error);
+			console.reportError(`Error parsing ${envPath}:`, envConfig.error);
 			process.exit(1);
 		}
-
-		(function loadPrototypes() {
-			try {
-				global.prototypesFolder = loadEnvPath(env.prototypes_folder, 'src/prototypes');
-				[path.join(global.projectRoot, 'internals/prototypes'), global.prototypesFolder].forEach(folder => {
-					if (!fs.existsSync(folder)) {
-						fs.mkdirSync(folder);
-					}
-					fs.readdirSync(folder).forEach((filename) => {
-						const filePath = path.join(folder, filename)
-						delete require.cache[require.resolve(filePath)];
-						require(filePath);
-					});
-				});
-			} catch (err) {
-				console.reportError(err);
-			}
-		})();
-
-		const missingVars = [];
-		for (const requiredVar of ['client_token', 'client_id', 'discord_guild_id']) {
-			if (!env[requiredVar]) missingVars.push(requiredVar);
-			if (missingVars.length > 0) break;
-			looseSet(toCamelCase(requiredVar), env[requiredVar]);
-		}
-		if (missingVars.length > 0) {
-			console.reportError('Missing required environment variables:', ...missingVars);
-			process.exit(1);
-		}
-		const loadEnvBool = getLoadEnvBool.bind(env);
-
-		global.listenEvents = loadEnvBool('listen_events', true);
-		global.reportEvents = loadEnvBool('report_events', true);
-		global.eventsFolder = loadEnvPath(env.events_folder, 'src/events');
-
-		global.listenEndpoints = loadEnvBool('listen_endpoints', true);
-		global.reportEndpoints = loadEnvBool('report_endpoints', true);
-		global.endpointsFolder = loadEnvPath(env.endpoints_folder, 'src/endpoints');
-
-		global.commandsFolder = loadEnvPath(env.commands_folder, 'src/commands');
-		global.filesFolder = loadEnvPath(env.files_folder, 'src/files');
-		global.sandboxFolder = loadEnvPath(env.sandbox_folder, 'src/sandbox');
-
-		global.apiPort = env.api_port ? (validPort(env.api_port) ? env.api_port : defaultPort) : defaultPort;
-		global.timezone = ('timezone' in env) ? env.timezone : 'UTC';
-		global.locale = ('locale' in env) ? env.locale : 'en-US';
-
-		const configChannelsPath = path.join(global.projectRoot, 'config', 'channels.json');
-		try {
-			global.configChannels = JSON.parse(fs.readFileSync(configChannelsPath, 'utf-8'));
-		} catch (err) {
-			console.reportError(`Error loading ${configChannelsPath}:`, err);
-			process.exit(1);
-		}
-		if (Object.values(global.configChannels).every((channels) => Object.keys(channels).length === 0)) {
-			console.reportWarn('No channels in config/channels.json.');
-		}
-
-		global.dev = loadEnvBool('dev', false);
-
-		console.report('Config loaded');
+		this.env = envConfig?.parsed || {};
 	}
 
-	reload() {
-		this.onFileChange(this.envPath);
-	}
-
-	onFileChange(filePath) {
-		try {
-			this.load(filePath);
-			setReportFunctions();
-		} catch (err) {
-			console.reportError(`failed to reload config at ${filePath}:`, err);
-		}
+	load() {
+		throw new Error('Method "load" must be implemented in subclass.');
 	}
 
 	watch() {
-		const watcher = chokidar.watch(this.path, {
+		const watcher = chokidar.watch(this.envPath, {
 			persistent: true,
 			ignored: /(^|[\/\\])\../,
 			ignoreInitial: true,
 		});
 
-		watcher.on('change', this.onFileChange.bind(this));
-		watcher.on('add', this.onFileChange.bind(this));
+		watcher.on('change', this.onChange.bind(this));
+		watcher.on('add', this.onChange.bind(this));
 
-		console.report(`Watching config...`);
+		console.report(`Watching ${this.envPath}...`);
+	}
+
+	loadEnvAny(key, defaultValue, validate, transform = v => v) {
+		const value = key in this.env ? this.env[key] : defaultValue;
+		return set(toCamelCase(key), transform(validate ? (validate(value, key, defaultValue) ? value : defaultValue) : value));
+	}
+
+	loadEnvPath(key, defaultValue, validate) {
+		return this.loadEnvAny(key, defaultValue, validate, v => path.join(global.projectRoot, v));
+	}
+
+	loadEnvBool(key, defaultValue) {
+		return this.loadEnvAny(key, defaultValue, v => v === 'true');
+	}
+
+	loadEnvString(key, defaultValue, validate) {
+		return this.loadEnvAny(key, defaultValue, validate);
+	}
+
+	loadEnvJsonObject(key, defaultValue, validate) {
+		return this.loadEnvAny(key, defaultValue, validate, v => JSON.parse(v));
+	}
+
+	loadJsonConfig(filePath, defaultValue, validate) {
+		try {
+			const file = fs.existsSync(filePath) ? JSON.parse(fs.readFileSync(filePath, 'utf-8')) : defaultValue;
+			const filename = path.basename(filePath, '.json');
+			if (validate && !validate(file, filePath, defaultValue, filename)) {
+				throw new Error("not valid");
+			}
+			set(`config${capitalize(toCamelCase(filename))}`, file);
+			return { filePath, file };
+		} catch (err) {
+			console.reportError(`Error loading ${filePath}:`, err);
+			process.exit(1);
+		}
+	}
+
+	loadRequiredAny(keys, loader) {
+		const missingVars = keys.filter(key => loader.call(this, key, null) === null);
+		if (missingVars.length > 0) {
+			console.reportError(`Missing required config in ${this.envPath}:`, ...missingVars);
+			process.exit(1);
+		}
+	}
+
+	loadRequiredStrings(keys) {
+		this.loadRequiredAny(keys, this.loadEnvString);
+	}
+
+	loadRequiredBools(keys) {
+		this.loadRequiredAny(keys, this.loadEnvBool);
+	}
+
+	loadRequiredPaths(keys) {
+		this.loadRequiredAny(keys, this.loadEnvPath);
+	}
+
+	loadRequiredJsonObjects(keys) {
+		this.loadRequiredAny(keys, this.loadEnvJsonObject);
 	}
 }
 

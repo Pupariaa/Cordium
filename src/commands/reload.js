@@ -22,13 +22,13 @@ module.exports = {
 			ephemeral: false,
 			content: 'Reloading...'
 		});
-		const commandsPromise = global.commandsManager.reload();
-		global.configManager.reload();
+		const commandsPromise = global.commandsManager.reloadAll();
+		global.configManagers.forEach(configManager => configManager.reloadAll());
 		if (global.listenEndpoints) {
-			global.endpointsManager.reload();
+			global.endpointsManager.reloadAll();
 		}
 		if (global.listenEvents) {
-			global.eventsManager.reload();
+			global.eventsManager.reloadAll();
 		}
 		await commandsPromise;
 		return interaction.editReply({

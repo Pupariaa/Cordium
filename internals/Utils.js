@@ -13,13 +13,20 @@ function set(o, k, v, w = false, e = true) {
 		throw new TypeError('The first argument must be an object');
 	}
 	Object.defineProperty(o, k, { value: v, writable: w, enumerable: e });
+	return v;
 }
 
-function getSet(defaultW = false, defaultE = false) {
-	return function (key, value) {
-		set(this, key, value, defaultW, defaultE);
-		return this;
-	};
+function getSet(defaultWritable = false, defaultEnumerable = true, chain = false) {
+	if (chain) {
+		return function (key, value) {
+			set(this, key, value, defaultWritable, defaultEnumerable);
+			return this;
+		};
+	} else {
+		return function (key, value) {
+			return set(this, key, value, defaultWritable, defaultEnumerable);
+		};
+	}
 }
 
 function downloadFile(url, filePath) {
@@ -40,15 +47,6 @@ function getOrNull(obj, ...args) {
 	return (args.length === 1 && typeof args[0] === 'string' ? args[0].split('.') : args).reduce((acc, key) => acc?.[key] ?? null, obj);
 }
 
-function validPort(port) {
-	return Number.isInteger(port) && port >= 1 && port <= 65535;
-}
-
-function validChannelId(channelId) {
-	const regex = /^[0-9]{17,19}$/;
-	return regex.test(channelId);
-}
-
 function capitalize(word) {
 	return word[0].toUpperCase() + word.slice(1);
 }
@@ -59,14 +57,6 @@ function decapitalize(word) {
 
 function toCamelCase(varname) {
 	return decapitalize(varname).replace(/_(.)/g, (_, chr) => chr.toUpperCase());
-}
-
-function loadEnvPath(envValue, defaultValue) {
-	return path.join(global.projectRoot, envValue ? (fs.existsSync(envValue) ? envValue : defaultValue) : defaultValue);
-}
-
-function getLoadEnvBool(key, defaultValue) {
-	return (key in this) ? this[key].toLowerCase() === 'true' : defaultValue;
 }
 
 function compareObjects(obj1, obj2, path = '', seen = new WeakMap()) {
@@ -157,7 +147,7 @@ function setReportFunctions() {
 	delete require.cache[require.resolve('extend-console')]; // not enough
 	console = global.originalConsole; // forget the old console object and all of its reports from the previous require
 	const { defaultLogFormat } = require('extend-console');
-	const { setReportEventFunctions } = require(global.eventsPath);
+	const { setReportEventFunctions } = require(global.eventsManagerPath);
 	const { setReportEndpointFunctions } = require(global.endpointsManagerPath);
 
 	// Add logic to a default behavior of reports from extend-console
@@ -187,22 +177,61 @@ function setReportFunctions() {
 	setReportEndpointFunctions();
 }
 
+function validPort(port) {
+	return Number.isInteger(port) && port >= 1 && port <= 65535;
+}
+
+function abstractClassBuilder(className, construct, methods = []) {
+	const AbstractClass = class {
+		constructor() {
+			if (new.target === AbstractClass) {
+				throw new TypeError(`Abstract class ${className} cannot be instantiated directly.`);
+			}
+			construct.call(this);
+		}
+	};
+
+	methods.forEach(({ name, isAsync = false, args = [] }) => {
+		AbstractClass.prototype[name] = isAsync
+			? async function (...receivedArgs) {
+				if (receivedArgs.length !== args.length) {
+					throw new Error(
+						`Method "${name}" expects ${args.length} arguments but received ${receivedArgs.length}`
+					);
+				}
+				throw new Error(
+					`Abstract method "${name}(${args.join(', ')})" must be implemented in subclass`
+				);
+			}
+			: function (...receivedArgs) {
+				if (receivedArgs.length !== args.length) {
+					throw new Error(
+						`Method "${name}" expects ${args.length} arguments but received ${receivedArgs.length}`
+					);
+				}
+				throw new Error(
+					`Abstract method "${name}(${args.join(', ')})" must be implemented in subclass`
+				);
+			};
+	});
+
+	return AbstractClass;
+}
+
 module.exports = {
 	wait,
 	set,
 	getSet,
 	downloadFile,
 	getOrNull,
-	validPort,
-	validChannelId,
 	capitalize,
 	decapitalize,
 	toCamelCase,
-	loadEnvPath,
-	getLoadEnvBool,
 	compareObjects,
 	walkDirSync,
 	walkDirAsync,
 	waitForFile,
-	setReportFunctions
+	setReportFunctions,
+	validPort,
+	abstractClassBuilder
 };

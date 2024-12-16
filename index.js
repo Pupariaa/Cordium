@@ -31,12 +31,13 @@ const { set, walkDirSync, toCamelCase, loadEnvPath, getOrNull, setReportFunction
 
 	async function initGlobal() {
 		// Load config
-		const { ConfigManager } = require(global.configManagerPath);
-		global.configManager = new ConfigManager();
-		configManager.load();
+		const { DefaultConfigManager } = require(global.defaultConfigManagerPath);
+		global.defaultConfigManager = new DefaultConfigManager();
+		defaultConfigManager.load();
 		if (global.dev) {
-			configManager.watch();
+			defaultConfigManager.watch();
 		}
+		global.configManagers = [global.defaultConfigManager];
 
 		// mkdir gitignored folders
 		global.cacheFolder = path.join(global.projectRoot, 'internals', 'cache');
@@ -142,10 +143,10 @@ const { set, walkDirSync, toCamelCase, loadEnvPath, getOrNull, setReportFunction
 		// Dispatch events
 		if (global.listenEvents) {
 			console.report('Dispatching events...');
-			const { EventsManager } = require(global.eventsPath);
+			const { EventsManager } = require(global.eventsManagerPath);
 			global.eventsManager = new EventsManager();
 			await global.eventsManager.init();
-			global.eventsManager.listenAll();
+			global.eventsManager.loadAll();
 			if (global.dev) {
 				global.eventsManager.watch();
 			}
@@ -221,4 +222,5 @@ const { set, walkDirSync, toCamelCase, loadEnvPath, getOrNull, setReportFunction
 
 	// Login client
 	await global.client.login(global.clientToken);
+	require(path.join(global.projectRoot, 'src/index'));
 });

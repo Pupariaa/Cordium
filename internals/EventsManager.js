@@ -2,12 +2,12 @@
 
 const path = require('path');
 const { AuditLogEvent, Events, MessageType, Collection } = require('discord.js');
-const chokidar = require('chokidar');
 
 const AuditLogEntry = require(global.auditLogEntryPath);
 const { set, getSet, getOrNull, compareObjects } = require(global.utilsPath);
 
 const { config: { colors } } = require('extend-console');
+const { FilesManager } = require(global.filesManagerPath);
 
 let reportEvent;
 let reportEventWarn;
@@ -161,9 +161,9 @@ function categoryFromEvent(event) {
 	}
 }
 
-class EventsManager {
+class EventsManager extends FilesManager {
 	constructor() {
-		this.listeningEvents = new Collection();
+		super();
 	}
 
 	async init() {
@@ -175,18 +175,8 @@ class EventsManager {
 		return path.join(global.eventsFolder, categoryFromEvent(event), `${event}.js`);
 	}
 
-	dismiss(event) {
-		const oldScope = this.listeningEvents.get(event);
-		const oldOnEventFunction = oldScope?.onEventFunction;
-		if (oldOnEventFunction) {
-			global.client.off(event, oldOnEventFunction);
-			delete require.cache[require.resolve(this.getFilePath(event))];
-			this.listeningEvents.delete(event);
-		}
-	}
-
 	register(event, guildId, trigger) {
-		if (this.listeningEvents.has(event)) {
+		if (this.ressources.has(event)) {
 			console.reportWarn(`The event ${event} is already listening`);
 			return;
 		}
@@ -222,14 +212,14 @@ class EventsManager {
 			function listen() {
 				global.client.on(scope.event, onEventFunction);
 				console.report('listening to event', event);
-				this.listeningEvents.set(event, scope);
+				this.ressources.set(event, scope);
 			}
 			set(scope, 'onEventFunction', onEventFunction);
 			set(scope, 'filePath', filePath);
 			set(scope, 'event', event);
 			set(scope, 'report', report ? (...args) => reportEvent(scope, ...args) : (...args) => {});
 			set(scope, 'listen', listen.bind(this));
-			set(scope, 'set', getSet(true, true).bind(scope));
+			set(scope, 'set', getSet(true, true, true).bind(scope));
 			set(scope, 'trigger', trigger.bind(scope));
 			set(scope, 'callback', callback.bind(scope));
 			return scope;
@@ -238,7 +228,11 @@ class EventsManager {
 		}
 	}
 
-	listen(event) {
+	runAll(callback) {
+		Object.values(Events).forEach(callback.bind(this));
+	}
+
+	load(event) {
 		const latestAuditLogCount = this.latestAuditLogCount;
 		switch (event) {
 		
@@ -955,44 +949,24 @@ class EventsManager {
 		}
 	}
 
-	runAll(callback) {
-		Object.values(Events).forEach(callback.bind(this));
-	}
-
-	dismissAll() {
-		this.runAll(event => this.dismiss(event));
-	}
-
-	listenAll() {
-		this.runAll(event => this.listen(event));
-	}
-
-	reload() {
-		this.dismissAll();
-		this.listenAll();
-	}
-
-	onFileChange(filePath) {
-		try {
-			const event = path.basename(filePath, '.js');
-			this.dismiss(event);
-			this.listen(event);
-		} catch (err) {
-			console.reportError(`Failed to reload event at ${filePath}:`, err);
+	unload(event) {
+		const oldScope = this.ressources.get(event);
+		const oldOnEventFunction = oldScope?.onEventFunction;
+		if (oldOnEventFunction) {
+			global.client.off(event, oldOnEventFunction);
+			delete require.cache[require.resolve(this.getFilePath(event))];
+			this.ressources.delete(event);
 		}
 	}
 
+	onChange(filePath) {
+		const event = path.basename(filePath, '.js');
+		this.unload(event);
+		this.load(event);
+	}
+
 	watch() {
-		const watcher = chokidar.watch(this.listeningEvents.map(scope => scope.filePath), {
-			persistent: true,
-			ignored: /(^|[\/\\])\../,
-			ignoreInitial: true,
-		});
-
-		watcher.on('change', this.onFileChange.bind(this));
-		watcher.on('add', this.onFileChange.bind(this))
-
-		console.report(`Watching events...`);;
+		this.watchFilePaths(this.ressources.map(scope => scope.filePath), 'Watching events...');
 	}
 }
 

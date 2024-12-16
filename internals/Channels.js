@@ -1,8 +1,13 @@
 'use-strict';
 
-const { set, validChannelId, getOrNull } = require(global.utilsPath);
+const { set, getOrNull } = require(global.utilsPath);
 
 const cache = {};
+
+function validChannelId(channelId) {
+	const regex = /^[0-9]{17,19}$/;
+	return regex.test(channelId);
+}
 
 function _getById(channelId) {
 	return cache[channelId];
