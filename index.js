@@ -39,6 +39,20 @@ const { set, walkDirSync, toCamelCase, loadEnvPath, getOrNull, setReportFunction
 		}
 		global.configManagers = [global.defaultConfigManager];
 
+		// Load prototypes
+
+		[path.join(global.projectRoot, 'internals/prototypes'), global.prototypesFolder].forEach(folder => {
+			if (!fs.existsSync(folder)) {
+				fs.mkdirSync(folder);
+				return;
+			}
+			fs.readdirSync(folder).forEach((filename) => {
+				const filePath = path.join(folder, filename);
+				delete require.cache[require.resolve(filePath)];
+				require(filePath);
+			});
+		});
+
 		// mkdir gitignored folders
 		global.cacheFolder = path.join(global.projectRoot, 'internals', 'cache');
 		if (!fs.existsSync(global.cacheFolder)) fs.mkdirSync(global.cacheFolder);

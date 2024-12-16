@@ -164,6 +164,7 @@ function categoryFromEvent(event) {
 class EventsManager extends FilesManager {
 	constructor() {
 		super();
+		this.listeningEvents = new Collection();
 	}
 
 	async init() {
@@ -176,7 +177,7 @@ class EventsManager extends FilesManager {
 	}
 
 	register(event, guildId, trigger) {
-		if (this.ressources.has(event)) {
+		if (this.listeningEvents.has(event)) {
 			console.reportWarn(`The event ${event} is already listening`);
 			return;
 		}
@@ -212,7 +213,7 @@ class EventsManager extends FilesManager {
 			function listen() {
 				global.client.on(scope.event, onEventFunction);
 				console.report('listening to event', event);
-				this.ressources.set(event, scope);
+				this.listeningEvents.set(event, scope);
 			}
 			set(scope, 'onEventFunction', onEventFunction);
 			set(scope, 'filePath', filePath);
@@ -950,12 +951,12 @@ class EventsManager extends FilesManager {
 	}
 
 	unload(event) {
-		const oldScope = this.ressources.get(event);
+		const oldScope = this.listeningEvents.get(event);
 		const oldOnEventFunction = oldScope?.onEventFunction;
 		if (oldOnEventFunction) {
 			global.client.off(event, oldOnEventFunction);
 			delete require.cache[require.resolve(this.getFilePath(event))];
-			this.ressources.delete(event);
+			this.listeningEvents.delete(event);
 		}
 	}
 
@@ -966,7 +967,8 @@ class EventsManager extends FilesManager {
 	}
 
 	watch() {
-		this.watchFilePaths(this.ressources.map(scope => scope.filePath), 'Watching events...');
+		this.filePaths = this.listeningEvents.map(scope => scope.filePath);
+		this.watchFilePaths('Watching events...');
 	}
 }
 

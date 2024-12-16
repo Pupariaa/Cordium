@@ -4,17 +4,16 @@ const chokidar = require('chokidar');
 const fs = require('fs');
 const path = require('path');
 const dotenv = require('dotenv');
-const { getSet, capitalize, toCamelCase, setReportFunctions } = require(global.utilsPath);
+const { FilesManager } = require(global.filesManagerPath);
+const { getSet, capitalize, toCamelCase } = require(global.utilsPath);
 const { Events } = require('discord.js');
 
 const set = getSet().bind(global);
 
-class ConfigManager {
+class ConfigManager extends FilesManager {
 	constructor(envPath) {
-		if (new.target === ConfigManager) {
-			throw new TypeError('Abstract class ConfigManager cannot be instantiated directly.');
-		}
-		this.envPath = envPath;
+		super();
+		this.filePaths.push(envPath);
 		const envConfig = dotenv.config({ path: envPath });
 		if (envConfig.error) {
 			console.reportError(`Error parsing ${envPath}:`, envConfig.error);
@@ -28,16 +27,7 @@ class ConfigManager {
 	}
 
 	watch() {
-		const watcher = chokidar.watch(this.envPath, {
-			persistent: true,
-			ignored: /(^|[\/\\])\../,
-			ignoreInitial: true,
-		});
-
-		watcher.on('change', this.onChange.bind(this));
-		watcher.on('add', this.onChange.bind(this));
-
-		console.report(`Watching ${this.envPath}...`);
+		this.watchFilePaths(`Watching ${this.filePaths[0]}...`);
 	}
 
 	loadEnvAny(key, defaultValue, validate, transform = v => v) {
@@ -59,21 +49,6 @@ class ConfigManager {
 
 	loadEnvJsonObject(key, defaultValue, validate) {
 		return this.loadEnvAny(key, defaultValue, validate, v => JSON.parse(v));
-	}
-
-	loadJsonConfig(filePath, defaultValue, validate) {
-		try {
-			const file = fs.existsSync(filePath) ? JSON.parse(fs.readFileSync(filePath, 'utf-8')) : defaultValue;
-			const filename = path.basename(filePath, '.json');
-			if (validate && !validate(file, filePath, defaultValue, filename)) {
-				throw new Error("not valid");
-			}
-			set(`config${capitalize(toCamelCase(filename))}`, file);
-			return { filePath, file };
-		} catch (err) {
-			console.reportError(`Error loading ${filePath}:`, err);
-			process.exit(1);
-		}
 	}
 
 	loadRequiredAny(keys, loader) {
@@ -101,6 +76,22 @@ class ConfigManager {
 	}
 }
 
+function loadJsonConfig(filePath, defaultValue, validate) {
+	try {
+		const file = fs.existsSync(filePath) ? JSON.parse(fs.readFileSync(filePath, 'utf-8')) : defaultValue;
+		const filename = path.basename(filePath, '.json');
+		if (validate && !validate(file, filePath, defaultValue, filename)) {
+			throw new Error("not valid");
+		}
+		set(`config${capitalize(toCamelCase(filename))}`, file);
+		return { filePath, file };
+	} catch (err) {
+		console.reportError(`Error loading ${filePath}:`, err);
+		process.exit(1);
+	}
+}
+
 module.exports = {
-	ConfigManager
+	ConfigManager,
+	loadJsonConfig
 };

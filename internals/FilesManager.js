@@ -1,38 +1,37 @@
 'use strict';
 
 const chokidar = require('chokidar');
-const { Collection } = require('discord.js');
 const { abstractClassBuilder } = require(global.utilsPath);
 
 function construct() {
-	this.ressources = new Collection();
+	this.filePaths = [];
 }
 
 const FilesManager = abstractClassBuilder('FilesManager', construct, [
 	{ name: 'init', isAsync: true },
-	{ name: 'unload', args: ['ressource'] },
-	{ name: 'load', args: ['ressource'] }
+	{ name: 'unload', args: ['filePath'] },
+	{ name: 'load', args: ['filePath'] }
 ]);
 
-FilesManager.prototype.reload = function (ressource) {
-	this.unload(ressource);
-	this.load(ressource);
+FilesManager.prototype.reload = function (filePath) {
+	this.unload(filePath);
+	this.load(filePath);
 }
 
-FilesManager.prototype.onChange = function (ressource) {
-	this.reload(ressource);
+FilesManager.prototype.onChange = function (filePath) {
+	this.reload(filePath);
 }
 
 FilesManager.prototype.runAll = function (callback) {
-	this.ressources.forEach(callback.bind(this));
+	this.filePaths.forEach(callback.bind(this));
 }
 
 FilesManager.prototype.unloadAll = function () {
-	this.runAll(ressource => this.unload(ressource));
+	this.runAll(filePath => this.unload(filePath));
 }
 
 FilesManager.prototype.loadAll = function () {
-	this.runAll(ressource => this.load(ressource));
+	this.runAll(filePath => this.load(filePath));
 }
 
 FilesManager.prototype.reloadAll = function () {
@@ -40,12 +39,12 @@ FilesManager.prototype.reloadAll = function () {
 	this.loadAll();
 }
 
-FilesManager.prototype.watchFilePaths = function (filePaths, msg = null, watchOptions = {
+FilesManager.prototype.watchFilePaths = function (msg = null, watchOptions = {
 		persistent: true,
 		ignored: /(^|[\/\\])\../,
 		ignoreInitial: true,
 	}) {
-	const watcher = chokidar.watch(filePaths, watchOptions);
+	const watcher = chokidar.watch(this.filePaths, watchOptions);
 
 	watcher.on('change', this.onChange.bind(this));
 	watcher.on('add', this.onChange.bind(this))

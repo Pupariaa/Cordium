@@ -2,8 +2,8 @@
 
 const fs = require('fs');
 const path = require('path');
-const { validPort } = require(global.utilsPath);
-const { ConfigManager, setReportFunctions } = require(global.configManagerPath);
+const { validPort, setReportFunctions } = require(global.utilsPath);
+const { ConfigManager, loadJsonConfig } = require(global.configManagerPath);
 
 class DefaultConfigManager extends ConfigManager {
 	constructor() {
@@ -11,21 +11,7 @@ class DefaultConfigManager extends ConfigManager {
 	}
 
 	load() {
-		[
-			path.join(global.projectRoot, 'internals/prototypes'),
-			this.loadEnvPath('prototypes_folder', 'src/prototypes')
-		]
-		.forEach(folder => {
-			if (!fs.existsSync(folder)) {
-				fs.mkdirSync(folder);
-				return;
-			}
-			fs.readdirSync(folder).forEach((filename) => {
-				const filePath = path.join(folder, filename);
-				delete require.cache[require.resolve(filePath)];
-				require(filePath);
-			});
-		});
+		this.loadEnvPath('prototypes_folder', 'src/prototypes');
 
 		this.loadRequiredStrings(['client_token', 'client_id', 'discord_guild_id']);
 
@@ -47,18 +33,17 @@ class DefaultConfigManager extends ConfigManager {
 
 		this.loadEnvBool('dev', false);
 
-		function validateChannels(file, filePath) {
+		loadJsonConfig(path.join(global.projectRoot, `config/channels.json`), (file, filePath) => {
 			if (Object.values(file).every(channels => Object.keys(channels).length === 0)) {
 				console.reportWarn(`No channels in ${filePath}`);
 			}
 			return true;
-		}
-		this.loadJsonConfig(path.join(global.projectRoot, `config/channels.json`), validateChannels);
+		});
 
 		console.report('Default config loaded');
 	}
 
-	onChange() {
+	reload() {
 		this.load();
 		setReportFunctions();
 	}
