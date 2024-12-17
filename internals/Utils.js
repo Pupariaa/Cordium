@@ -12,7 +12,7 @@ function set(o, k, v, w = false, e = true) {
 	if (typeof o !== 'object' || o === null) {
 		throw new TypeError('The first argument must be an object');
 	}
-	Object.defineProperty(o, k, { value: v, writable: w, enumerable: e });
+	Object.defineProperty(o, k, { value: v, writable: w, enumerable: e, configurable: false });
 	return v;
 }
 
@@ -43,8 +43,23 @@ function downloadFile(url, filePath) {
 	});
 }
 
-function getOrNull(obj, ...args) {
-	return (args.length === 1 && typeof args[0] === 'string' ? args[0].split('.') : args).reduce((acc, key) => acc?.[key] ?? null, obj);
+function getOtherwise(obj, args, otherwise) {
+	const keys = typeof args === 'string' ? args.split('.') : args;
+
+	let current = obj;
+	for (const key of keys) {
+		if (current && key in current) {
+			current = current[key];
+		} else {
+			return arguments.length < 3 ? [false, undefined] : otherwise;
+		}
+	}
+
+	return arguments.length < 3 ? [true, current] : current;
+}
+
+function getOrNull(obj, args) {
+	return getOtherwise(obj, args, null);
 }
 
 function capitalize(word) {
@@ -97,15 +112,40 @@ function compareObjects(obj1, obj2, path = '', seen = new WeakMap()) {
 }
 
 // Because apparently javascript doesn't have a built-in way to do this
-async function walkDirSync(dirPath, callback) {
+async function walkDir(dirPath, callback) {
 	const files = fs.readdirSync(dirPath);
 	for (const file of files) {
 		const filePath = path.join(dirPath, file);
-		const stats = fs.statSync(filePath);
+		let stats;
+		try {
+			stats = fs.statSync(filePath);
+		} catch (err) {
+			console.reportError(err);
+			continue;
+		}
 		if (stats.isDirectory()) {
-			await walkDirSync(filePath, callback);
+			await walkDir(filePath, callback);
 		} else {
 			await callback(filePath, stats);
+		}
+	}
+}
+
+function walkDirSync(dirPath, callback) {
+	const files = fs.readdirSync(dirPath);
+	for (const file of files) {
+		const filePath = path.join(dirPath, file);
+		let stats;
+		try {
+			stats = fs.statSync(filePath);
+		} catch (err) {
+			console.reportError(err);
+			continue;
+		}
+		if (stats.isDirectory()) {
+			walkDirSync(filePath, callback);
+		} else {
+			callback(filePath, stats);
 		}
 	}
 }
@@ -116,8 +156,13 @@ async function walkDirAsync(dirPath, callback) {
 
 	for (const file of files) {
 		const filePath = path.join(dirPath, file);
-		const stats = fs.statSync(filePath);
-
+		let stats;
+		try {
+			stats = fs.statSync(filePath);
+		} catch (err) {
+			console.reportError(err);
+			continue;
+		}
 		if (stats.isDirectory()) {
 			promises.push(walkDirAsync(filePath, callback));
 		} else {
@@ -181,40 +226,20 @@ function validPort(port) {
 	return Number.isInteger(port) && port >= 1 && port <= 65535;
 }
 
-function abstractClassBuilder(className, construct, methods = []) {
+function abstractClassBuilder(className, construct, methods) {
 	const AbstractClass = class {
-		constructor() {
+		constructor(...args) {
 			if (new.target === AbstractClass) {
-				throw new TypeError(`Abstract class ${className} cannot be instantiated directly.`);
+				throw new TypeError(`Abstract class ${className} cannot be instantiated directly`);
 			}
-			construct.call(this);
+			construct?.call(this, ...args);
+			methods.forEach(({ name, mandatory = false }) => {
+				if (mandatory && typeof this[name] !== 'function') {
+					console.reportWarn(`Mandatory method "${name}" is not implemented in ${this.constructor.name} at the time of creation`);
+				}
+			});
 		}
 	};
-
-	methods.forEach(({ name, isAsync = false, args = [] }) => {
-		AbstractClass.prototype[name] = isAsync
-			? async function (...receivedArgs) {
-				if (receivedArgs.length !== args.length) {
-					throw new Error(
-						`Method "${name}" expects ${args.length} arguments but received ${receivedArgs.length}`
-					);
-				}
-				throw new Error(
-					`Abstract method "${name}(${args.join(', ')})" must be implemented in subclass`
-				);
-			}
-			: function (...receivedArgs) {
-				if (receivedArgs.length !== args.length) {
-					throw new Error(
-						`Method "${name}" expects ${args.length} arguments but received ${receivedArgs.length}`
-					);
-				}
-				throw new Error(
-					`Abstract method "${name}(${args.join(', ')})" must be implemented in subclass`
-				);
-			};
-	});
-
 	return AbstractClass;
 }
 
@@ -223,11 +248,13 @@ module.exports = {
 	set,
 	getSet,
 	downloadFile,
+	getOtherwise,
 	getOrNull,
 	capitalize,
 	decapitalize,
 	toCamelCase,
 	compareObjects,
+	walkDir,
 	walkDirSync,
 	walkDirAsync,
 	waitForFile,

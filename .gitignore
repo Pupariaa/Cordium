@@ -1,9 +1,9 @@
-node_modules
+node_modules/
 package-lock.json
 
 config/*.env
 config/*.json
 
-internals/cache
-src/files
-src/sandbox
+internals/cache/
+src/files/
+src/sandbox/

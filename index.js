@@ -4,19 +4,14 @@ const fs = require('fs');
 const path = require('path');
 const { Client, Events, GatewayIntentBits, Partials } = require('discord.js');
 
-// Fix discord.js inconsistencies
-Object.keys(Events).forEach((key) => {
-	Events[key] = key;
-});
-
 // Must haves
 global.projectRoot = __dirname;
 global.utilsPath = path.join(global.projectRoot, 'internals', 'Utils.js');
-const { set, walkDirSync, toCamelCase, loadEnvPath, getOrNull, setReportFunctions } = require(global.utilsPath);
+const { set, walkDirSync, toCamelCase, setReportFunctions } = require(global.utilsPath);
 
 // Nice to have, avoids path.join with relative paths everywhere
 (async function initGlobalPaths() {
-	return walkDirSync(path.join(global.projectRoot, 'internals'), function (filePath, stats) {
+	walkDirSync(path.join(global.projectRoot, 'internals'), function (filePath, stats) {
 		if (!stats.isFile() || path.extname(filePath) !== '.js') return;
 		const propertyName = toCamelCase(path.basename(filePath, '.js')) + 'Path';
 		if (propertyName in global) return;
@@ -33,10 +28,7 @@ const { set, walkDirSync, toCamelCase, loadEnvPath, getOrNull, setReportFunction
 		// Load config
 		const { DefaultConfigManager } = require(global.defaultConfigManagerPath);
 		global.defaultConfigManager = new DefaultConfigManager();
-		defaultConfigManager.load();
-		if (global.dev) {
-			defaultConfigManager.watch();
-		}
+		global.defaultConfigManager.loadAll();
 		global.configManagers = [global.defaultConfigManager];
 
 		// Load prototypes
@@ -48,7 +40,7 @@ const { set, walkDirSync, toCamelCase, loadEnvPath, getOrNull, setReportFunction
 			}
 			fs.readdirSync(folder).forEach((filename) => {
 				const filePath = path.join(folder, filename);
-				delete require.cache[require.resolve(filePath)];
+				// delete require.cache[require.resolve(filePath)];
 				require(filePath);
 			});
 		});
@@ -112,8 +104,8 @@ const { set, walkDirSync, toCamelCase, loadEnvPath, getOrNull, setReportFunction
 		// const EventsDatabase = require(global.eventsDatabasePath);
 		// global.eventsDatabase = new EventsDatabase();
 
-		const MessagesDatabase = require(global.messagesDatabasePath);
-		global.messagesDatabase = new MessagesDatabase();
+		// const MessagesDatabase = require(global.messagesDatabasePath);
+		// global.messagesDatabase = new MessagesDatabase();
 
 		// TODO:
 		// require(global.getDatabasePath);
@@ -141,12 +133,12 @@ const { set, walkDirSync, toCamelCase, loadEnvPath, getOrNull, setReportFunction
 
 		// Init databases
 		// await Promise.all([global.eventsDatabase.init(), global.messagesDatabase.init()]);
-		await global.messagesDatabase.init();
+		// await global.messagesDatabase.init();
 
 		// Feed discord.js with old messages
-		console.report('Feeding Discord.js old messages...');
-		await global.messagesDatabase.feedDiscordjs();
-		console.report('Done feeding Discord.js old messages');
+		// console.report('Feeding Discord.js old messages...');
+		// await global.messagesDatabase.feedDiscordjs();
+		// console.report('Done feeding Discord.js old messages');
 
 		// Init caches
 		// const invites = await global.guild.invites.fetch();
@@ -161,9 +153,6 @@ const { set, walkDirSync, toCamelCase, loadEnvPath, getOrNull, setReportFunction
 			global.eventsManager = new EventsManager();
 			await global.eventsManager.init();
 			global.eventsManager.loadAll();
-			if (global.dev) {
-				global.eventsManager.watch();
-			}
 		}
 
 		// Load endpoints
@@ -172,9 +161,6 @@ const { set, walkDirSync, toCamelCase, loadEnvPath, getOrNull, setReportFunction
 			global.endpointsManager = new EndpointsManager();
 			global.endpointsManager.loadAll();
 			global.endpointsManager.listen();
-			if (global.dev) {
-				global.endpointsManager.watch();
-			}
 		}
 
 		// Interaction handler
@@ -207,9 +193,6 @@ const { set, walkDirSync, toCamelCase, loadEnvPath, getOrNull, setReportFunction
 		// Deploy commands
 		global.commandsManager.loadAll();
 		await global.commandsManager.deployAll();
-		if (global.dev) {
-			global.commandsManager.watch();
-		}
 	}
 
 	(async function dispatchHandlers() {

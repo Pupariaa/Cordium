@@ -1,6 +1,8 @@
 'use-strict';
 
-const { set, getOrNull } = require(global.utilsPath);
+const path = require('path');
+const { set, getOtherwise } = require(global.utilsPath);
+const { loadJsonConfig } = require(global.configManagerPath);
 
 const cache = {};
 
@@ -14,8 +16,8 @@ function _getById(channelId) {
 }
 
 function _getByAlias(category, channelName) {
-	const id = getOrNull(global.configChannels, category, channelName, 'id');
-	return id ? _getById(id) : null;
+	const [hasId, id] = getOtherwise(global.configChannels, [category, channelName, 'id']);
+	return hasId && id ? _getById(id) : null;
 }
 
 function _getByTags(category, ...tags) {
@@ -34,6 +36,20 @@ function _getByTags(category, ...tags) {
 
 class Channels {
 	constructor() {
+		if (global.channels) {
+			console.reportError('Redefining global.channels');
+			process.exit(1);
+		}
+		loadJsonConfig(path.join(global.projectRoot, `config/channels.json`), {}, (content, filePath) => {
+			if (Object.keys(content).length === 0) {
+				console.reportError(`${filePath} is empty`);
+				return false;
+			}
+			if (Object.values(content).every(channels => Object.keys(channels).length === 0)) {
+				console.reportWarn(`No channels in ${filePath}`);
+			}
+			return true;
+		});
 		this.categories = Array.from(Object.keys(global.configChannels));
 		for (const category of this.categories) {
 			cache[category] = {};

@@ -1,50 +1,46 @@
 'use strict';
 
-const fs = require('fs');
 const path = require('path');
 const { validPort, setReportFunctions } = require(global.utilsPath);
-const { ConfigManager, loadJsonConfig } = require(global.configManagerPath);
+const { ConfigManager } = require(global.configManagerPath);
+
+function transformValue(p) {
+	return path.join(global.projectRoot, p);
+}
+
+const defaultConfig = {
+	prototypes_folder: { defaultValue: 'src/prototypes', transformValue: transformValue },
+
+	client_token: { required: true },
+	client_id: { required: true },
+	discord_guild_id: { required: true },
+	
+	listen_events: { defaultValue: true },
+	report_events: { defaultValue: true },
+	events_folder: { defaultValue: 'src/events', transformValue },
+	
+	listen_endpoints: { defaultValue: true },
+	report_endpoints: { defaultValue: true },
+	endpoints_folder: { defaultValue: 'src/endpoints', transformValue },
+	
+	commands_folder: { defaultValue: 'src/commands', transformValue },
+	files_folder: { defaultValue: 'src/files, transformValue' },
+	sandbox_folder: { defaultValue: 'src/sandbox', transformValue },
+	
+	api_port: { type: 'int', defaultValue: 3000, validate: validPort },
+	timezone: { defaultValue: 'UTC' },
+	locale: { defaultValue: 'en-US' },
+	
+	dev: { defaultValue: false },
+};
 
 class DefaultConfigManager extends ConfigManager {
 	constructor() {
-		super(path.join(global.projectRoot, 'config/config.env'));
+		super(path.join(global.projectRoot, 'config/config.env'), defaultConfig);
 	}
 
-	load() {
-		this.loadEnvPath('prototypes_folder', 'src/prototypes');
-
-		this.loadRequiredStrings(['client_token', 'client_id', 'discord_guild_id']);
-
-		this.loadEnvBool('listen_events', true);
-		this.loadEnvBool('report_events', true);
-		this.loadEnvPath('events_folder', 'src/events');
-
-		this.loadEnvBool('listen_endpoints', true);
-		this.loadEnvBool('report_endpoints', true);
-		this.loadEnvPath('endpoints_folder', 'src/endpoints');
-
-		this.loadEnvPath('commands_folder', 'src/commands');
-		this.loadEnvPath('files_folder', 'src/files');
-		this.loadEnvPath('sandbox_folder', 'src/sandbox');
-
-		this.loadEnvString('api_port', 3000, validPort);
-		this.loadEnvString('timezone', 'UTC');
-		this.loadEnvString('locale', 'en-US');
-
-		this.loadEnvBool('dev', false);
-
-		loadJsonConfig(path.join(global.projectRoot, `config/channels.json`), (file, filePath) => {
-			if (Object.values(file).every(channels => Object.keys(channels).length === 0)) {
-				console.reportWarn(`No channels in ${filePath}`);
-			}
-			return true;
-		});
-
-		console.report('Default config loaded');
-	}
-
-	reload() {
-		this.load();
+	_reload(file) {
+		super._reload(file);
 		setReportFunctions();
 	}
 }

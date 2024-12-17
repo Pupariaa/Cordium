@@ -1,15 +1,14 @@
 'use strict';
 
-const chokidar = require('chokidar');
 const fs = require('fs');
 const path = require('path');
 const express = require('express');
 const http = require('http');
 const bodyParser = require('body-parser');
-const { Collection } = require('discord.js');
-const { set, getSet, walkDirSync } = require(global.utilsPath);
+const { set, getSet } = require(global.utilsPath);
 const spectraget = require('spectraget');
 const { config: { colors } } = require('extend-console');
+const { FilesManager } = require(global.filesManagerPath);
 
 let reportEndpoint;
 let reportEndpointWarn;
@@ -43,44 +42,41 @@ function setReportEndpointFunctions() {
 	reportEndpointError = console.createReportError(logFormat, defaultFormatArgsForError, defaultShouldLog);
 }
 
-class EndpointsManager {
+class EndpointsManager extends FilesManager {
 	constructor() {
-		this.server = null;
-
+		super([]);
 		const app = express();
 		app.use(bodyParser.json());
 		app.use(bodyParser.urlencoded({ extended: true }));
-		app.use((req, res, next) => {
-			next();
+		app.use((req, res, next) => next());
+		['public', 'private'].forEach(folder => {
+			app.get(`/api/${folder}/*`, this.requestTrigger.bind(this));
+			const endpointsFolder = path.join(global.endpointsFolder, folder);
+			fs.readdirSync(endpointsFolder).forEach(name => this.add(path.join(endpointsFolder, name)));
 		});
-
-		app.get('/api/private/*', this.requestTrigger.bind(this));
-		app.get('/api/public/*', this.requestTrigger.bind(this));
 		this.server = http.createServer(app);
-
-		this.listeningEndpoints = new Collection();
 	}
 
-	load(filePath) {
+	_load(file) {
 		try {
-			const type = path.basename(path.dirname(filePath));
-			const name = path.basename(filePath, '.js');
-			const endpoint = require(filePath);
-			const { listen, report, params, handler } = require(filePath);
+			const type = path.basename(path.dirname(file));
+			const name = path.basename(file, '.js');
+			const endpoint = require(file);
+			const { listen, report, params, handler } = require(file);
 			if (!handler) {
-				console.reportWarn(`The endpoint at ${filePath} is missing a required "handler" function`);
+				console.reportWarn(`The endpoint at ${file} is missing a required "handler" function`);
 				return;
 			}
 			if (typeof handler !== 'function') {
-				console.reportWarn(`The endpoint at ${filePath} has a "handler" attribute of type ${typeof handler}, expected function`);
+				console.reportWarn(`The endpoint at ${file} has a "handler" attribute of type ${typeof handler}, expected function`);
 				return;
 			}
 			if (!params) {
-				console.reportWarn(`The endpoint at ${filePath} is missing a required "params" array`);
+				console.reportWarn(`The endpoint at ${file} is missing a required "params" array`);
 				return;
 			}
 			if (!Array.isArray(params)) {
-				console.reportWarn(`The endpoint at ${filePath} has a "params" attribute of type ${typeof params}, expected array`);
+				console.reportWarn(`The endpoint at ${file} has a "params" attribute of type ${typeof params}, expected array`);
 				return;
 			}
 			if (!listen) {
@@ -98,34 +94,19 @@ class EndpointsManager {
 			this.listeningEndpoints.set(`${type}/${name}`, scope);
 			console.report(`Endpoint loaded: ${name}`);
 		} catch (err) {
-			console.reportError(`Error loading endpoint from file ${filePath}:`, err);
+			console.reportError(`Error loading endpoint from file ${file}:`, err);
 		}
 	}
 
-	loadAll() {
-		try {
-			console.report('Loading all endpoints...');
-			['public', 'private'].forEach(folder => {
-				const endpointsFolder = path.join(global.endpointsFolder, folder);
-				const commandFiles = fs.readdirSync(endpointsFolder);
-				for (const name of commandFiles) {
-					const filePath = path.join(endpointsFolder, name);
-					this.load(filePath);
-				}
-			});
-			console.report('All endpoints loaded');
-		} catch (err) {
-			console.reportError('Error loading endpoints:', err);
-		}
+	_unload(file) {
+		delete require.cache[require.resolve(file)];
 	}
 
 	listen() {
 		if (global.apiPort) {
-			this.server.listen(global.apiPort, () => {
-				console.report(`API is running on port ${global.apiPort}`);
-			});
+			this.server.listen(global.apiPort, () => console.report(`API is running on port ${global.apiPort}`));
 		} else {
-			console.reportError('API could not start, API port not defined.');
+			console.reportError('API could not start, API port not defined');
 		}
 	}
 
@@ -172,31 +153,6 @@ class EndpointsManager {
 			const status_code = 500;
 			res.status(status_code).json({ status_code: status_code, error: 'Internal Server Error' });
 		}
-	}
-
-	reload() {
-		walkDirSync(global.endpointsFolder, (filePath, stats) => this.onFileChange(filePath));
-	}
-
-	onFileChange(filePath) {
-		try {
-			delete require.cache[require.resolve(filePath)];
-			this.load(filePath);
-		} catch (err) {
-			console.reportError(`Failed to reload endpoint at ${filePath}:`, err);
-		}
-	}
-
-	watch() {
-		const watcher = chokidar.watch([global.endpointsFolder, global.endpointsFolder + '.js'], {
-			persistent: true,
-			ignored: /(^|[\/\\])\../,
-			ignoreInitial: true,
-		});
-		watcher.on('change', this.onFileChange.bind(this));
-		watcher.on('add', this.onFileChange.bind(this));
-
-		console.report(`Watching endpoints...`);
 	}
 }
 
