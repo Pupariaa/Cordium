@@ -16,15 +16,15 @@ function set(o, k, v, w = false, e = true, c = false) {
 	return v;
 }
 
-function getSet(defaultWritable = false, defaultEnumerable = true, chain = false) {
+function getSet(chain = false, defaultWritable = true, defaultEnumerable = true, defaultConfigurable = true) {
 	if (chain) {
-		return function (key, value) {
-			set(this, key, value, defaultWritable, defaultEnumerable);
+		return function (key, value, w, e, c) {
+			set(this, key, value, w ?? defaultWritable, e ?? defaultEnumerable, c ?? defaultConfigurable);
 			return this;
 		};
 	} else {
-		return function (key, value) {
-			return set(this, key, value, defaultWritable, defaultEnumerable);
+		return function (key, value, w, e, c) {
+			return set(this, key, value, w ?? defaultWritable, e ?? defaultEnumerable, c ?? defaultConfigurable);
 		};
 	}
 }
@@ -241,18 +241,18 @@ function abstractClassBuilder(className, construct, attributes, methods) {
 				set(this, valueKey, defaultValue, true, false);
 
 				Object.defineProperty(this, name, {
-					set: hasSetter 
+					set: hasSetter
 						? function (value) {
 							setter.call(this, valueKey, value);
-						} 
-						: function (value) { 
-							this[valueKey] = value; 
+						}
+						: function (value) {
+							this[valueKey] = value;
 						},
-					get: hasGetter 
-						? function () { 
+					get: hasGetter
+						? function () {
 							return getter.call(this, valueKey);
-						} 
-						: function () { 
+						}
+						: function () {
 							return this[valueKey];
 						},
 					enumerable: true,
@@ -272,7 +272,7 @@ function abstractClassBuilder(className, construct, attributes, methods) {
 		}
 	};
 
-	methods.forEach(({ name, impl = null }) => {
+	methods.forEach(({ name, impl = () => { } }) => {
 		if (impl) {
 			AbstractClass.prototype[name] = impl;
 		}

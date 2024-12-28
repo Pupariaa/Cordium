@@ -69,7 +69,7 @@ function fileFromEvent(event) {
 
 class EventsManager extends FilesManager {
 	constructor() {
-		super(Object.keys(Events).map(fileFromEvent), false);
+		super(Object.keys(Events).map(fileFromEvent));
 	}
 
 	async init() {
@@ -543,7 +543,7 @@ class EventsManager extends FilesManager {
 					//	 replyToMessageId: message.reference ? message.reference.messageId : null,
 					// });
 
-					global.messagesDatabase.set(message);
+					// global.messagesDatabase.set(message);
 
 					this.report('channel.name', channel.name, 'executor.tag', executor.tag, 'content', content);
 				})?.listen();
@@ -565,11 +565,11 @@ class EventsManager extends FilesManager {
 
 			// TODO: MessagePollVoteRemove
 
-			// TODO: ALL REACTIONS ARE NOT WORKING BRUH
+			// TODO: ALL REACTIONS ARE NOT WORKING BRUH (my bad, it seems that MessageReactionAdd is when someone is pinged in a newly created message?)
 
 			case 'MessageReactionAdd':
 				return this.register(event, file, (reaction, executor, details) => reaction.message.guild.id, async function (reaction, executor, details) {
-					console.log('MessageReactionAdd');
+					// console.log('MessageReactionAdd');
 					// const emoji = reaction.emoji;
 					// const message = reaction.message;
 					// const user = message.author;
@@ -795,29 +795,36 @@ class EventsManager extends FilesManager {
 		}
 	}
 
+	reportLoad(file) {
+		console.report(`Listening to event ${this.formatFile(file)}...`);
+	}
+
 	_unload(file, scope) {
 		global.client.off(scope.event, scope.onEventFunction);
 		delete require.cache[require.resolve(file)];
-		console.report('Stopped listening to event', event);
 	}
 
-	register(event, filePath, guildId, trigger) {
-		if (this.loaded.has(filePath)) {
-			console.reportWarn(`${event} is already being listened`);
+	reportUnload(file) {
+		console.report(`Stopped listening to event ${this.formatFile(file)}`);
+	}
+
+	register(event, file, guildId, trigger) {
+		if (this.loaded.has(event)) {
+			console.reportWarn(`The event ${event} is already being listened`);
 			return;
 		}
 		try {
-			const { listen: shouldListen, report, callback } = require(filePath);
+			const { listen: shouldListen, report, callback } = require(file);
 			if (!shouldListen) {
-				console.reportWarn(`The event ${event} is not listening`);
+				console.reportWarn(`Tried to listen to the event ${event} which should not be listened`);
 				return;
 			}
 			if (!callback) {
-				console.reportWarn(`The event at ${filePath} is missing a required "callback" function`);
+				console.reportWarn(`The event ${event} is missing a required "callback" function`);
 				return;
 			}
 			if (typeof callback !== 'function') {
-				console.reportWarn(`The event at ${filePath} has a "callback" attribute of type ${typeof callback}, expected function`);
+				console.reportWarn(`The event ${event} has a "callback" attribute of type ${typeof callback}, expected function`);
 				return;
 			}
 			const scope = {};
@@ -825,7 +832,7 @@ class EventsManager extends FilesManager {
 				try {
 					if (global.guild.id !== guildId(...args)) return;
 					scope
-						.set('eventName', String(event))
+						.set('eventName', event)
 						.set('args', [])
 						.set('latestAuditLog', await global.guild.latestAuditLog());
 					await scope.trigger(...args);
@@ -835,16 +842,15 @@ class EventsManager extends FilesManager {
 				}
 			}
 			function listen() {
-				global.client.on(scope.event, onEventFunction);
-				console.report('Listening to event', event);
+				global.client.on(Events[scope.event], onEventFunction);
 				return scope;
 			}
 			set(scope, 'onEventFunction', onEventFunction);
-			set(scope, 'filePath', filePath);
+			set(scope, 'filePath', file);
 			set(scope, 'event', event);
 			set(scope, 'report', report ? (...args) => reportEvent(scope, ...args) : (...args) => { });
 			set(scope, 'listen', listen.bind(this));
-			set(scope, 'set', getSet(true, true, true).bind(scope));
+			set(scope, 'set', getSet(true).bind(scope));
 			set(scope, 'trigger', trigger.bind(scope));
 			set(scope, 'callback', callback.bind(scope));
 			return scope;

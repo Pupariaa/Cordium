@@ -98,7 +98,7 @@ class EndpointsManager extends FilesManager {
 			set(endpoint, 'params', params);
 			set(scope, 'report', report ? () => reportEndpoint(scope) : () => { });
 			set(scope, 'endpoint', endpoint);
-			set(scope, 'set', getSet(true, true).bind(scope));
+			set(scope, 'set', getSet(true).bind(scope));
 			set(scope, 'handler', handler.bind(scope));
 		} catch (err) {
 			console.reportError(`Error loading endpoint from file ${file}:`, err);
@@ -106,7 +106,7 @@ class EndpointsManager extends FilesManager {
 	}
 
 	reportLoad(file) {
-		console.report(`Listening to ${this.formatFile(file)}...`);
+		console.report(`Listening to endpoint ${this.formatFile(file)}...`);
 	}
 
 	_unload(file) {
@@ -114,7 +114,7 @@ class EndpointsManager extends FilesManager {
 	}
 
 	reportUnload(file) {
-		console.report(`Stopped listening to ${this.formatFile(file)}`);
+		console.report(`Stopped listening to endpoint ${this.formatFile(file)}`);
 	}
 
 	listen() {
@@ -157,7 +157,7 @@ class EndpointsManager extends FilesManager {
 				res.status(status_code).json({ status_code: status_code, error: 'Unauthorized' });
 				return;
 			}
-			scope.set('request', req);
+			scope.set('request', req, false, true, false);
 			scope.report();
 
 			const resData = await scope.handler(params);

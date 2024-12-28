@@ -15,12 +15,12 @@ const defaultConfig = {
 	client_id: { required: true },
 	discord_guild_id: { required: true },
 	
-	listen_events: { defaultValue: true },
-	report_events: { defaultValue: true },
+	listen_events: { type: 'bool', defaultValue: true },
+	report_events: { type: 'bool', defaultValue: true },
 	events_folder: { defaultValue: 'src/events', transformValue },
 	
-	listen_endpoints: { defaultValue: true },
-	report_endpoints: { defaultValue: true },
+	listen_endpoints: { type: 'bool', defaultValue: true },
+	report_endpoints: { type: 'bool', defaultValue: true },
 	endpoints_folder: { defaultValue: 'src/endpoints', transformValue },
 	
 	commands_folder: { defaultValue: 'src/commands', transformValue },
@@ -31,7 +31,7 @@ const defaultConfig = {
 	timezone: { defaultValue: 'UTC' },
 	locale: { defaultValue: 'en-US' },
 	
-	dev: { defaultValue: false },
+	dev: { type: 'bool', defaultValue: false },
 };
 
 class DefaultConfigManager extends ConfigManager {

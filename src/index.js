@@ -21,5 +21,5 @@ module.exports = {
 	MyConfigManager,
 };
 
-
-new MyConfigManager();
+const myConfigManager = new MyConfigManager();
+global.configManagers.push(myConfigManager);

@@ -7,7 +7,7 @@ const dotenv = require('dotenv');
 const { FilesManager } = require(global.filesManagerPath);
 const { getSet, getOtherwise, capitalize, toCamelCase } = require(global.utilsPath);
 
-const set = getSet().bind(global);
+const set = getSet(false, false, true, false).bind(global);
 
 function reportIssue(issueList, message, reportFunction) {
 	if (issueList.length > 0) {

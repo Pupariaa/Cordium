@@ -17,11 +17,11 @@ const defaultWatchOptions = {
 	ignoreInitial: true
 };
 
-function construct(paths, report = true, watch = global.dev, watchOptions = defaultWatchOptions) {
-	this.paths = paths;
-	this.report = report;
-	this.watch = watch;
-	this.watchOptions = watchOptions;
+function construct(paths, shouldWatch, watchOptions) {
+	this.paths = paths ?? [];
+	this.shouldWatch = (shouldWatch ?? global.dev) ?? true;
+	this.watchOptions = watchOptions ?? defaultWatchOptions;
+	// console.log(this.paths, this.shouldWatch, this.watchOptions)
 }
 
 set(module, 'FilesManager', undefined, true, true, true);
@@ -31,6 +31,7 @@ function setWatcher(valueKey, newWatcher) {
 		console.reportWarn('To change the watcher behavior, please modify the watchOptions instead');
 		return;
 	}
+
 	this[valueKey] = newWatcher;
 	this.watcher.on('add', this.onAdd.bind(this));
 	this.watcher.on('change', this.onChange.bind(this));
@@ -39,8 +40,8 @@ function setWatcher(valueKey, newWatcher) {
 	this.watcher.on('unlinkDir', this.onUnlinkDir.bind(this));
 }
 
-function setWatch(valueKey, value) {
-	if (value === this.watch) {
+function setShouldWatch(valueKey, value) {
+	if (value === this.shouldWatch) {
 		return;
 	}
 
@@ -48,9 +49,10 @@ function setWatch(valueKey, value) {
 		if (this.watcher) {
 			this.watcher.close();
 			this.watcher = null;
+			this.watched = [];
 		}
 	} else if (value === true && !this.watcher) {
-		this.watcher = chokidar.watch([...this.watched], this.watchOptions);
+		this.watcher = chokidar.watch([], this.watchOptions);
 	}
 
 	this[valueKey] = value;
@@ -61,7 +63,7 @@ function setWatchOptions(valueKey, newWatchOptions) {
 		return;
 	}
 	this[valueKey] = { ...this.watchOptions, ...newWatchOptions };
-	if (!this.watch) {
+	if (!this.shouldWatch) {
 		return;
 	}
 	if (this.watcher) {
@@ -73,12 +75,11 @@ function setWatchOptions(valueKey, newWatchOptions) {
 module.FilesManager = abstractClassBuilder('FilesManager', construct,
 [
 	{ name: 'paths', defaultValue: [] }, // paths to take action on if a XAll method is called
-	{ name: 'report', defaultValue: true }, // if should report at all
 	{ name: 'loaded', defaultValue: new Map() }, // currently loaded files, it maps paths to their loaded value
 	{ name: 'watched', defaultValue: new Set() }, // actively watched files
 	{ name: 'watcher', setter: setWatcher },
 	{ name: 'watchOptions', setter: setWatchOptions, defaultValue: defaultWatchOptions }, // updates the watcher if the options are changed
-	{ name: 'watch', setter: setWatch, defaultValue: false }, // starts or closes the watcher automatically accordingly
+	{ name: 'shouldWatch', setter: setShouldWatch, defaultValue: false }, // starts or closes the watcher automatically accordingly
 ],
 [
 	// How to format file to a key in the loaded map
@@ -87,15 +88,17 @@ module.FilesManager = abstractClassBuilder('FilesManager', construct,
 		return path.basename(file, '.js');
 	}},
 
+	// callback called after the corresponding operation is done
+
 	// What loading and unloading a file means
+	// The return value of _load will be the value assigned in this.load at the corresponding key
 	
 	{ name: '_load', mandatory: true }, { name: '_unload', mandatory: true },
 
-	// callbacks to be called after the corresponding operation is done
-	// reload will simply call unload then load then call _reload
-	// and watch will add it to the watcher then call _watch
+	// reload will simply call unload then load then _reload for optinal additional behavior
+	// watch and unwatch should not need any additional behavior
 	
-	{ name: '_reload' }, { name: '_watch' },
+	{ name: '_reload' },
 
 	// Updates this.paths
 
@@ -123,19 +126,17 @@ module.FilesManager = abstractClassBuilder('FilesManager', construct,
 
 	// File operations
 
-	{ name: 'load', impl: function (file, stats) {
+	{ name: 'load', impl: function (file) {
 		const fileKey = this.fileToKey(file);
 		if (this.loaded.has(fileKey)) {
 			console.reportWarn(`${this.constructor.name} tried ot load '"${file}"' but it's already loaded`);
 			return;
 		}
 		this.loaded.set(fileKey, this._load(file));
-		if (this.report) {
-			this.reportLoad(file);
-		}
+		this.reportLoad(file);
 	}},
 
-	{ name: 'unload', impl: function (file, stats) {
+	{ name: 'unload', impl: function (file) {
 		const fileKey = this.fileToKey(file);
 		if (!this.loaded.has(fileKey)) {
 			console.reportWarn(`${this.constructor.name} tried ot unload "${file}" but it's already unloaded or has never been`);
@@ -144,44 +145,40 @@ module.FilesManager = abstractClassBuilder('FilesManager', construct,
 		const content = this.loaded.get(fileKey);
 		this.loaded.delete(fileKey);
 		this._unload(file, content);
-		if (this.report) {
-			this.reportUnload(file);
-		}
+		this.reportUnload(file);
 	}},
 
-	{ name: 'reload', impl: function (file, stats) {
-		const oldReport = this.report;
-		this.report = false;
+	{ name: 'reload', impl: function (file) {
+		const reportUnloadBackup = this.reportUnload;
+		const reportLoadBackup = this.reportLoad;
+		this.reportUnload = () => { };
+		this.reportLoad = () => { };
 		this.unload(file);
 		this.load(file);
-		this.report = oldReport;
+		this.reportUnload = reportUnloadBackup;
+		this.reportLoad = reportLoadBackup;
 		this._reload(file);
-		if (this.report) {
-			this.reportReload(file);
-		}
+		this.reportReload(file);
 	}},
 
-	{ name: 'watch', impl: function (file, stats) {
-		if (!this.watch) {
-			console.reportWarn(`${this.constructor.name} tried ot watch "${file}" but watch is set to false`);
+	{ name: 'watch', impl: function (file) {
+		if (!this.shouldWatch) {
+			console.reportWarn(`${this.constructor.name} tried to watch "${file}" but shouldWatch is set to false`);
 			return;
 		}
 		if (this.watched.has(file)) {
-			console.reportWarn(`${this.constructor.name} tried ot watch "${file}" but it's already being watched`);
+			console.reportWarn(`${this.constructor.name} tried to watch "${file}" but it's already being watched`);
 			return;
 		}
 		console.assert(this.watcher, '');
 		this.watcher.add(file);
 		this.watched.add(file);
-		this._watch(file);
-		if (this.report) {
-			this.reportWatch(file);
-		}
+		this.reportWatch(file);
 	}},
 
-	{ name: 'unwatch', impl: function (file, stats) {
-		if (!this.watch) {
-			console.reportWarn(`${this.constructor.name} tried ot unwatch "${file}" but watch is set to false`);
+	{ name: 'unwatch', impl: function (file) {
+		if (!this.shouldWatch) {
+			console.reportWarn(`${this.constructor.name} tried to unwatch "${file}" but shouldWatch is set to false`);
 			return;
 		}
 		if (!this.watched.has(file)) {
@@ -191,34 +188,32 @@ module.FilesManager = abstractClassBuilder('FilesManager', construct,
 		console.assert(this.watcher, '');
 		this.watcher.unwatch(file);
 		this.watched.delete(file);
-		if (this.report) {
-			this.reportUnwatch(file);
-		}
+		this.reportUnwatch(file);
 	}},
 
 	// Folder operations
 
-	{ name: 'loadFolder', impl: function (folder) { walkDirSync(folder, file => this.load(file)); }},
-	{ name: 'unloadFolder', impl: function (folder) { walkDirSync(folder, file => this.unload(file)); }},
-	{ name: 'reloadFolder', impl: function (folder) { walkDirSync(folder, file => this.reload(file)); }},
-	{ name: 'watchFolder', impl: function (folder) { walkDirSync(folder, file => this.watch(file)); }},
-	{ name: 'unwatchFolder', impl: function (folder) { walkDirSync(folder, file => this.unwatch(file)); }},
+	{ name: 'loadFolder', impl: function (folder) 		{ walkDirSync(folder, this.load.bind(this)); 	}},
+	{ name: 'unloadFolder', impl: function (folder) 	{ walkDirSync(folder, this.unload.bind(this)); 	}},
+	{ name: 'reloadFolder', impl: function (folder) 	{ walkDirSync(folder, this.reload.bind(this)); 	}},
+	{ name: 'watchFolder', impl: function (folder) 		{ walkDirSync(folder, this.watch.bind(this)); 	}},
+	{ name: 'unwatchFolder', impl: function (folder) 	{ walkDirSync(folder, this.unwatch.bind(this)); }},
 
 	// Bulk operations
 
-	{ name: 'loadAll', impl: function () { this.paths.forEach(this.load.bind(this)); }},
-	{ name: 'unloadAll', impl: function () { this.paths.forEach(this.unload.bind(this)); }},
-	{ name: 'reloadAll', impl: function () { this.paths.forEach(this.reload.bind(this)); }},
-	{ name: 'watchAll', impl: function () { this.paths.forEach(this.watch.bind(this)); }},
-	{ name: 'unwatchAll', impl: function () { this.paths.forEach(this.unwatch.bind(this)); }},
+	{ name: 'loadAll', impl: function () 	{ this.paths.forEach(this.load.bind(this)); 	}},
+	{ name: 'unloadAll', impl: function () 	{ this.paths.forEach(this.unload.bind(this)); 	}},
+	{ name: 'reloadAll', impl: function () 	{ this.paths.forEach(this.reload.bind(this)); 	}},
+	{ name: 'watchAll', impl: function () 	{ this.paths.forEach(this.watch.bind(this)); 	}},
+	{ name: 'unwatchAll', impl: function () { this.paths.forEach(this.unwatch.bind(this)); 	}},
 
 	// Chokidar
 
-	{ name: 'onAdd', impl: function (file) { this.load(file); }},
-	{ name: 'onChange', impl: function (file) { this.reload(file); }},
-	{ name: 'onUnlink', impl: function (file) { this.unload(file); }},
-	{ name: 'onAddDir', impl: function (folder) { this.loadFolder(folder); }},
-	{ name: 'onUnlinkDir', impl: function (folder) { this.unloadFolder(folder); }},
+	{ name: 'onAdd', impl: function (file) 			{ this.load(file); 				}},
+	{ name: 'onChange', impl: function (file) 		{ this.reload(file); 			}},
+	{ name: 'onUnlink', impl: function (file) 		{ this.unload(file); 			}},
+	{ name: 'onAddDir', impl: function (folder) 	{ this.loadFolder(folder); 		}},
+	{ name: 'onUnlinkDir', impl: function (folder) 	{ this.unloadFolder(folder); 	}},
 
 	// Some utils
 
@@ -248,11 +243,11 @@ module.FilesManager = abstractClassBuilder('FilesManager', construct,
 
 	// Self explanatory, these will be called at the end of each operation if this.report is true
 	
-	{ name: 'reportLoad', impl: function (file) { console.report(`${this.formatFile(file)} loaded`); }},
-	{ name: 'reportUnload', impl: function (file) { console.report(`${this.formatFile(file)} unloaded`); }},
-	{ name: 'reportReload', impl: function (file) { console.report(`${this.formatFile(file)} reloaded`); }},
-	{ name: 'reportWatch', impl: function (file) { console.report(`Watching ${this.formatFile(file)}...`); }},
-	{ name: 'reportUnwatch', impl: function (file) { console.report(`Stopped watching ${this.formatFile(file)}`); }},
+	{ name: 'reportLoad', impl: function (file) 	{ console.report(`${this.formatFile(file)} loaded`); 	}},
+	{ name: 'reportUnload', impl: function (file) 	{ console.report(`${this.formatFile(file)} unloaded`); 	}},
+	{ name: 'reportReload', impl: function (file) 	{ console.report(`${this.formatFile(file)} reloaded`); 	}},
+	{ name: 'reportWatch', impl: function (file) 	{ console.report(`Watching ${file}...`); 				}},
+	{ name: 'reportUnwatch', impl: function (file) 	{ console.report(`Stopped watching ${file}`); 			}},
 ]);
 
 Object.defineProperty(module, 'FilesManager', { writable: false, enumerable: true, configurable: false });

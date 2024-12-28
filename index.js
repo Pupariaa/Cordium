@@ -4,12 +4,14 @@ const fs = require('fs');
 const path = require('path');
 const { Client, Events, GatewayIntentBits, Partials } = require('discord.js');
 
-// Must haves
+// Must haves ASAP
+
 global.projectRoot = __dirname;
 global.utilsPath = path.join(global.projectRoot, 'internals', 'Utils.js');
 const { set, walkDirSync, toCamelCase, setReportFunctions } = require(global.utilsPath);
 
 // Nice to have, avoids path.join with relative paths everywhere
+
 (async function initGlobalPaths() {
 	walkDirSync(path.join(global.projectRoot, 'internals'), function (filePath, stats) {
 		if (!stats.isFile() || path.extname(filePath) !== '.js') return;
@@ -25,13 +27,14 @@ const { set, walkDirSync, toCamelCase, setReportFunctions } = require(global.uti
 	setReportFunctions();
 
 	async function initGlobal() {
-		// Load config
+		
+		// Config
+		
 		const { DefaultConfigManager } = require(global.defaultConfigManagerPath);
 		global.defaultConfigManager = new DefaultConfigManager();
 		global.defaultConfigManager.loadAll();
-		global.configManagers = [global.defaultConfigManager];
 
-		// Load prototypes
+		// Prototypes
 
 		[path.join(global.projectRoot, 'internals/prototypes'), global.prototypesFolder].forEach(folder => {
 			if (!fs.existsSync(folder)) {
@@ -46,17 +49,21 @@ const { set, walkDirSync, toCamelCase, setReportFunctions } = require(global.uti
 		});
 
 		// mkdir gitignored folders
+		
 		global.cacheFolder = path.join(global.projectRoot, 'internals', 'cache');
 		if (!fs.existsSync(global.cacheFolder)) fs.mkdirSync(global.cacheFolder);
 		if (!fs.existsSync(global.filesFolder)) fs.mkdirSync(global.filesFolder);
 		if (!fs.existsSync(global.sandboxFolder)) fs.mkdirSync(global.sandboxFolder);
 
-		// Empty collections
+		// Collections
+		
 		// global.client.invitesCache = new Map();
 		// global.databaseCache = {};
 		global.sigintSubscribers = [];
+		global.configManagers = [global.defaultConfigManager];
 
-		// Create global modules
+		// Discord
+
 		global.client = new Client({
 			intents: [
 				GatewayIntentBits.Guilds,
@@ -95,11 +102,21 @@ const { set, walkDirSync, toCamelCase, setReportFunctions } = require(global.uti
 		const { Channels } = require(global.channelsPath);
 		global.channels = new Channels();
 
+		// Managers
+
 		const { CommandsManager } = require(global.commandsManagerPath);
 		global.commandsManager = new CommandsManager();
+		
+		const { EventsManager } = require(global.eventsManagerPath);
+		global.eventsManager = new EventsManager();
+
+		const { EndpointsManager } = require(global.endpointsManagerPath);
+		global.endpointsManager = new EndpointsManager();
 
 		const AttachmentsManager = require(global.attachmentsManagerPath);
 		global.attachmentsManager = new AttachmentsManager();
+
+		// Databases
 
 		// const EventsDatabase = require(global.eventsDatabasePath);
 		// global.eventsDatabase = new EventsDatabase();
@@ -109,14 +126,12 @@ const { set, walkDirSync, toCamelCase, setReportFunctions } = require(global.uti
 
 		// TODO:
 		// require(global.getDatabasePath);
-
-		console.report('global modules created');
 	}
 
+	// just for pretty error hihi
 	try {
 		await initGlobal();
 	} catch (err) {
-		// just for pretty error hihi
 		console.reportError(err);
 		process.exit(1);
 	}
@@ -149,18 +164,21 @@ const { set, walkDirSync, toCamelCase, setReportFunctions } = require(global.uti
 		// Dispatch events
 		if (global.listenEvents) {
 			console.report('Dispatching events...');
-			const { EventsManager } = require(global.eventsManagerPath);
-			global.eventsManager = new EventsManager();
 			await global.eventsManager.init();
 			global.eventsManager.loadAll();
+			if (global.dev) {
+				global.eventsManager.watchAll();
+			}
 		}
 
 		// Load endpoints
 		if (global.listenEndpoints) {
-			const { EndpointsManager } = require(global.endpointsManagerPath);
-			global.endpointsManager = new EndpointsManager();
+			console.report('Dispatching endpoints...');
 			global.endpointsManager.loadAll();
 			global.endpointsManager.listen();
+			if (global.dev) {
+				global.endpointsManager.watchAll();
+			}
 		}
 
 		// Interaction handler
@@ -195,7 +213,7 @@ const { set, walkDirSync, toCamelCase, setReportFunctions } = require(global.uti
 		await global.commandsManager.deployAll();
 	}
 
-	(async function dispatchHandlers() {
+	async function dispatchHandlers() {
 		global.client.on(Events.ClientReady, onReady);
 
 		process.on('uncaughtException', (err) => {
@@ -215,9 +233,19 @@ const { set, walkDirSync, toCamelCase, setReportFunctions } = require(global.uti
 			}
 			process.exit(0);
 		});
-	})();
+	}
+
+	// just for pretty error again hihi
+	try {
+		await dispatchHandlers();
+	} catch (err) {
+		console.reportError(err);
+		process.exit(1);
+	}
 
 	// Login client
 	await global.client.login(global.clientToken);
+
+	// Execute the user's index once the client is logged in
 	require(path.join(global.projectRoot, 'src/index'));
 });
