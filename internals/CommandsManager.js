@@ -7,97 +7,87 @@ const { Collection } = require('discord.js');
 const { Routes } = require('discord-api-types/v10');
 const chokidar = require('chokidar');
 const { walkDirSync } = require(global.utilsPath);
+const { FilesManager } = require(global.filesManagerPath);
 
-class CommandsManager {
+async function deployCommands(rest, commands, clientId, guildId) {
+	try {
+		await rest.put(
+			Routes.applicationGuildCommands(clientId, guildId),
+			{ body: commands }
+		);
+	} catch (err) {
+		console.reportError('Error deploying commands:', err);
+	}
+}
+
+async function undeployCommands(rest, commands, clientId, guildId) {
+	try {
+		const deletePromises = commands.map(command =>
+			rest.delete(
+				Routes.applicationGuildCommand(clientId, guildId, command.id)
+			)
+		);
+		await Promise.all(deletePromises);
+	} catch (err) {
+		console.reportError('Error undeploying commands:', err);
+	}
+}
+
+class CommandsManager extends FilesManager {
 	constructor() {
+		super(fs.readdirSync(global.commandsFolder).map(file => path.resolve(path.join(global.commandsFolder, file))));
 		this.rest = new REST({ version: '10' }).setToken(global.clientToken);
-		if (!global.client.commands) global.client.commands = new Collection();
 	}
 
-	load(filePath) {
-		try {
-			const command = require(filePath);
-			if ('data' in command && 'execute' in command) {
-				global.client.commands.set(command.data.name, command);
-				console.report(`Command loaded: ${command.data.name}`);
-			} else {
-				// TODO: improve this error checking
-				console.reportWarn(`The command at ${filePath} is missing a required "data" and/or "execute" property`);
-			}
-		} catch (err) {
-			console.reportError(`Error loading command from file ${filePath}:`, err);
+	_load(file) {
+		const command = require(file);
+		// TODO: improve this error checking
+		if (!('data' in command) || !('execute' in command)) {
+			console.reportWarn(`The command at ${file} is missing a required "data" and/or "execute" property`);
+			return [ false, null ];
 		}
+		// do not deploy here to avoid spamming this.rest with requests when calling loadAll
+		return [ true, command ];
 	}
 
-	async deploy(filePath) {
-		const command = require(filePath);
-		const commands = [command.data.toJSON()];
-		try {
-			console.report(`Deploying command ${command.data.name}...`);
-			await this.rest.put(
-				Routes.applicationGuildCommands(global.clientId, global.discordGuildId),
-				{ body: commands }
-			);
-			console.report(`Command deployed: ${command.data.name}`);
-		} catch (err) {
-			console.reportError(`Error deploying command from file ${filePath}:`, err);
-		}
+	reportLoad(file) {
+		console.report(`Command loaded: ${this.formatFile(file)}`);
 	}
 
-	loadAll() {
-		try {
-			console.report('Loading all commands...');
-			fs.readdirSync(global.commandsFolder).forEach(filename => this.load(path.join(global.commandsFolder, filename)));
-			console.report('All commands loaded');
-		} catch (err) {
-			console.reportError('Error loading commands:', err);
-		}
+	_unload(file, content) {
+		this.undeploy(file);
+		delete require.cache[file];
 	}
+
+	reportUnload(file) {
+		console.report(`Command unloaded: ${this.formatFile(file)}`);
+	}
+
+	_reload(file) {
+		this.deploy(file);
+	}
+
+	reportReload(file) {
+		console.report(`Command reloaded: ${this.formatFile(file)}`);
+	}
+
+	deploy(file) { deployCommands(this.rest, [require(file).data.toJSON()], global.clientId, global.discordGuildId); }
+	undeploy(file) { undeployCommands(this.rest, [require(file)], global.clientId, global.discordGuildId); }
 
 	async deployAll() {
-		const commands = [];
-		global.client.commands.forEach(cmd => commands.push(cmd.data.toJSON()));
-		try {
-			console.report('Deploying all commands at once...');
-			await this.rest.put(
-				Routes.applicationGuildCommands(global.clientId, global.discordGuildId),
-				{ body: commands }
-			);
-			console.report('All commands deployed');
-		} catch (err) {
-			console.reportError('Error deploying commands:', err);
-		}
+		const commands = Array.from(this.loaded.values()).map(cmd => cmd.data.toJSON());
+		console.report('Deploying all commands...');
+		await deployCommands(this.rest, commands, global.clientId, global.discordGuildId);
+		console.report('All commands deployed');
 	}
 
-	async reload() {
-		walkDirSync(global.commandsFolder, (filePath, stats) => {
-			delete require.cache[require.resolve(filePath)];
-			this.load(filePath);
-		});
-		return this.deployAll();
-	}
-
-	async onFileChange(filePath) {
-		try {
-			delete require.cache[require.resolve(filePath)];
-			this.load(filePath);
-			return this.deploy(filePath);
-		} catch (err) {
-			console.reportError(`Failed to reload command at ${filePath}:`, err);
-		}
-	}
-
-	watch() {
-		const watcher = chokidar.watch(global.commandsFolder, {
-			persistent: true,
-			ignored: /(^|[\/\\])\../,
-			ignoreInitial: true,
-		});
-
-		watcher.on('add', this.onFileChange.bind(this));
-		watcher.on('change', this.onFileChange.bind(this));
-
-		console.report('Watching commands...');
+	async undeployAll() {
+		console.report('Undeploying all commands...');
+		const commands = await this.rest.get(
+			Routes.applicationGuildCommands(global.clientId, global.discordGuildId)
+		);
+		await undeployCommands(this.rest, commands, global.clientId, global.discordGuildId);
+		console.report('All commands undeployed');
 	}
 }
 

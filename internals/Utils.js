@@ -281,7 +281,6 @@ function abstractClassBuilder(className, construct, attributes, methods) {
 	return AbstractClass;
 }
 
-
 module.exports = {
 	wait,
 	set,

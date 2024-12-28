@@ -24,7 +24,7 @@ const defaultConfig = {
 	endpoints_folder: { defaultValue: 'src/endpoints', transformValue },
 	
 	commands_folder: { defaultValue: 'src/commands', transformValue },
-	files_folder: { defaultValue: 'src/files, transformValue' },
+	files_folder: { defaultValue: 'src/files', transformValue },
 	sandbox_folder: { defaultValue: 'src/sandbox', transformValue },
 	
 	api_port: { type: 'int', defaultValue: 3000, validate: validPort },

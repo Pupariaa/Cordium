@@ -27,12 +27,19 @@ const { set, walkDirSync, toCamelCase, setReportFunctions } = require(global.uti
 	setReportFunctions();
 
 	async function initGlobal() {
-		
+
 		// Config
-		
+
 		const { DefaultConfigManager } = require(global.defaultConfigManagerPath);
 		global.defaultConfigManager = new DefaultConfigManager();
-		global.defaultConfigManager.loadAll();
+		await global.defaultConfigManager.loadAll();
+
+		// mkdir gitignored folders
+
+		global.cacheFolder = path.join(global.projectRoot, 'internals', 'cache');
+		if (!fs.existsSync(global.cacheFolder)) fs.mkdirSync(global.cacheFolder);
+		if (!fs.existsSync(global.filesFolder)) fs.mkdirSync(global.filesFolder);
+		if (!fs.existsSync(global.sandboxFolder)) fs.mkdirSync(global.sandboxFolder);
 
 		// Prototypes
 
@@ -48,15 +55,8 @@ const { set, walkDirSync, toCamelCase, setReportFunctions } = require(global.uti
 			});
 		});
 
-		// mkdir gitignored folders
-		
-		global.cacheFolder = path.join(global.projectRoot, 'internals', 'cache');
-		if (!fs.existsSync(global.cacheFolder)) fs.mkdirSync(global.cacheFolder);
-		if (!fs.existsSync(global.filesFolder)) fs.mkdirSync(global.filesFolder);
-		if (!fs.existsSync(global.sandboxFolder)) fs.mkdirSync(global.sandboxFolder);
-
 		// Collections
-		
+
 		// global.client.invitesCache = new Map();
 		// global.databaseCache = {};
 		global.sigintSubscribers = [];
@@ -106,7 +106,7 @@ const { set, walkDirSync, toCamelCase, setReportFunctions } = require(global.uti
 
 		const { CommandsManager } = require(global.commandsManagerPath);
 		global.commandsManager = new CommandsManager();
-		
+
 		const { EventsManager } = require(global.eventsManagerPath);
 		global.eventsManager = new EventsManager();
 
@@ -137,7 +137,7 @@ const { set, walkDirSync, toCamelCase, setReportFunctions } = require(global.uti
 	}
 
 	async function onReady() {
-		console.report(`Client ready`);
+		console.report('Client ready');
 
 		// Get guild
 		global.guild = global.client.guilds.cache.get(global.discordGuildId);
@@ -161,24 +161,29 @@ const { set, walkDirSync, toCamelCase, setReportFunctions } = require(global.uti
 		global.channels.initCache();
 		global.attachmentsManager.loadIndex();
 
-		// Dispatch events
 		if (global.listenEvents) {
 			console.report('Dispatching events...');
 			await global.eventsManager.init();
-			global.eventsManager.loadAll();
+			await global.eventsManager.loadAll();
 			if (global.dev) {
 				global.eventsManager.watchAll();
 			}
 		}
 
-		// Load endpoints
 		if (global.listenEndpoints) {
 			console.report('Dispatching endpoints...');
-			global.endpointsManager.loadAll();
+			await global.endpointsManager.loadAll();
 			global.endpointsManager.listen();
 			if (global.dev) {
 				global.endpointsManager.watchAll();
 			}
+		}
+
+		console.report('Dispatching commands...');
+		await global.commandsManager.loadAll();
+		await global.commandsManager.deployAll();
+		if (global.dev) {
+			global.commandsManager.watchAll();
 		}
 
 		// Interaction handler
@@ -207,10 +212,6 @@ const { set, walkDirSync, toCamelCase, setReportFunctions } = require(global.uti
 		} catch (err) {
 			console.reportError(err);
 		}
-
-		// Deploy commands
-		global.commandsManager.loadAll();
-		await global.commandsManager.deployAll();
 	}
 
 	async function dispatchHandlers() {

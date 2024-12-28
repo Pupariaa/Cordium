@@ -9,7 +9,7 @@ const { getSet, getOtherwise, capitalize, toCamelCase } = require(global.utilsPa
 
 const set = getSet(false, false, true, false).bind(global);
 
-function reportIssue(issueList, message, reportFunction) {
+function reportIssue(reportFunction, issueList, message) {
 	if (issueList.length > 0) {
 		console[reportFunction](`${message}:`, ...issueList);
 		return true;
@@ -49,21 +49,21 @@ class ConfigManager extends FilesManager {
 			process.exit(1);
 		}
 
-		return setKeys;
+		return [ true, setKeys ];
 	}
 
-	_unload(file, loaded) {
-		loaded.forEach((key) => delete global[key]);
+	_unload(file, setKeys) {
+		setKeys.forEach(key => delete global[key]);
 	}
 
 	reportEnvironmentIssues() {
-		reportIssue(this.defaultedRequired, 'The following keys are marked as required but also have default values', 'reportWarn');
-		reportIssue(this.lacking, 'The following keys are optional but lack both a value and a default', 'reportWarn');
-		reportIssue(this.nonMatchingType, 'The following keys\' defaultValue do not match their type', 'reportWarn');
-		return reportIssue(this.missing, 'The following required keys are missing from the environment file', 'reportError')
-			|| reportIssue(this.unvalidated, 'The following keys failed validation', 'reportError')
-			|| reportIssue(this.unsupportedType, 'The following keys have unsupported types', 'reportError')
-			|| reportIssue(this.failedParsing, 'The following keys do not match their supposed types or are ill-formed', 'reportError');
+		reportIssue('reportWarn', this.defaultedRequired, 'The following keys are marked as required but also have default values');
+		reportIssue('reportWarn', this.lacking, 'The following keys are optional but lack both a value and a default');
+		reportIssue('reportWarn', this.nonMatchingType, 'The following keys\' defaultValue do not match their type');
+		return reportIssue('reportError', this.missing, 'The following required keys are missing from the environment file')
+			|| reportIssue('reportError', this.unvalidated, 'The following keys failed validation')
+			|| reportIssue('reportError', this.unsupportedType, 'The following keys have unsupported types')
+			|| reportIssue('reportError', this.failedParsing, 'The following keys do not match their supposed types or are ill-formed');
 	}
 
 	loadEnv(env, key, info) {

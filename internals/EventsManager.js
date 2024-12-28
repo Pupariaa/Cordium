@@ -80,6 +80,7 @@ class EventsManager extends FilesManager {
 	_load(file) {
 		const latestAuditLogCount = this.latestAuditLogCount;
 		const event = this.fileToKey(file);
+		let scope;
 		switch (event) {
 
 			// TODO: ApplicationCommandPermissionsUpdate
@@ -90,7 +91,7 @@ class EventsManager extends FilesManager {
 			// TODO: CacheSweep
 
 			case 'ChannelCreate':
-				return this.register(event, file, (channel) => channel.guild.id, async function (channel) {
+				scope = this.register(event, file, (channel) => channel.guild.id, async function (channel) {
 					const executor = this.latestAuditLog.executor;
 
 					// global.eventsDatabase.addEntry(this.event, {
@@ -103,9 +104,10 @@ class EventsManager extends FilesManager {
 
 					this.report('channel.name', channel.name, 'executor.tag', executor.tag, 'channel.type', global.guild.channelTypeStr(channel.type));
 				})?.listen();
+				break;
 
 			case 'ChannelDelete':
-				return this.register(event, file, (channel) => channel.guild.id, async function (channel) {
+				scope = this.register(event, file, (channel) => channel.guild.id, async function (channel) {
 					const executor = this.latestAuditLog.executor;
 
 					// global.eventsDatabase.addEntry(this.event, {
@@ -121,9 +123,10 @@ class EventsManager extends FilesManager {
 
 					this.report('channel.name', channel.name, 'executor.tag', executor.tag, 'channel.type', global.guild.channelTypeStr(channel.type));
 				})?.listen();
+				break;
 
 			case 'ChannelPinsUpdate':
-				return this.register(event, file, (channel) => channel.guild.id, async function (channel, date) {
+				scope = this.register(event, file, (channel) => channel.guild.id, async function (channel, date) {
 					const executor = this.latestAuditLog.executor;
 					const messageId = this.latestAuditLog.extra.messageId;
 					if (this.latestAuditLog.action === AuditLogEntry.MessagePin) {
@@ -139,9 +142,10 @@ class EventsManager extends FilesManager {
 					this.args = [channel, date, pinnedMessage];
 					this.report('channel.name', channel.name, 'executor.tag', executor.globalName, 'author.tag', pinnedMessage.author.tag, 'pinnedMessage.content', pinnedMessage.content);
 				})?.listen();
+				break;
 
 			case 'ChannelUpdate':
-				return this.register(event, file, (oldChannel, newChannel) => newChannel.guild.id, async function (oldChannel, newChannel) {
+				scope = this.register(event, file, (oldChannel, newChannel) => newChannel.guild.id, async function (oldChannel, newChannel) {
 					const executor = this.latestAuditLog.executor;
 
 					// global.eventsDatabase.addEntry(this.event, {
@@ -156,6 +160,7 @@ class EventsManager extends FilesManager {
 
 					this.report('channel.name', oldChannel.name, '->', newChannel.name, 'executor.tag', executor.tag, 'channel.type', global.guild.channelTypeStr(newChannel.type));
 				})?.listen();
+				break;
 
 			// DONE: ClientReady
 			// TODO: Debug
@@ -167,7 +172,7 @@ class EventsManager extends FilesManager {
 			// TODO: GuildAvailable
 
 			case 'GuildBanAdd':
-				return this.register(event, file, (ban) => ban.guild.id, async function (ban) {
+				scope = this.register(event, file, (ban) => ban.guild.id, async function (ban) {
 					const user = ban.user;
 					const executor = this.latestAuditLog.executor;
 
@@ -180,9 +185,10 @@ class EventsManager extends FilesManager {
 
 					this.report('user.tag', user.tag, 'executor.tag', executor.tag, 'reason', ban.reason);
 				})?.listen();
+				break;
 
 			case 'GuildBanRemove':
-				return this.register(event, file, (ban) => ban.guild.id, async function (ban) {
+				scope = this.register(event, file, (ban) => ban.guild.id, async function (ban) {
 					const user = ban.user;
 					const executor = this.latestAuditLog.executor;
 
@@ -195,12 +201,13 @@ class EventsManager extends FilesManager {
 
 					this.report('user.tag', user.tag, 'executor.tag', executor.tag);
 				})?.listen();
+				break;
 
 			// TODO: GuildCreate
 			// TODO: GuildDelete
 
 			case 'GuildEmojiUpdate':
-				return this.register(event, file, (oldEmoji, newEmoji) => newEmoji.guild.id, async function (oldEmoji, newEmoji) {
+				scope = this.register(event, file, (oldEmoji, newEmoji) => newEmoji.guild.id, async function (oldEmoji, newEmoji) {
 					const executor = this.latestAuditLog.executor;
 
 					// global.eventsDatabase.addEntry(this.event, {
@@ -212,9 +219,10 @@ class EventsManager extends FilesManager {
 
 					this.report('executor.tag', executor.tag, 'emoji.name', oldEmoji.name, '->', newEmoji.name, 'emoji.url', oldEmoji.url, '->', newEmoji.url);
 				})?.listen();
+				break;
 
 			case 'GuildEmojiDelete':
-				return this.register(event, file, (emoji) => emoji.guild.id, async function (emoji) {
+				scope = this.register(event, file, (emoji) => emoji.guild.id, async function (emoji) {
 					const executor = this.latestAuditLog.executor;
 
 					// TODO: add 'addEmojiDelete' to DB
@@ -227,9 +235,10 @@ class EventsManager extends FilesManager {
 
 					this.report('executor.tag', executor.tag, 'emoji.name', emoji.name, 'emoji.url', emoji.url);
 				})?.listen();
+				break;
 
 			case 'GuildEmojiUpdate':
-				return this.register(event, file, (oldEmoji, newEmoji) => newEmoji.guild.id, async function (oldEmoji, newEmoji) {
+				scope = this.register(event, file, (oldEmoji, newEmoji) => newEmoji.guild.id, async function (oldEmoji, newEmoji) {
 					const executor = this.latestAuditLog.executor;
 
 					// global.eventsDatabase.addEntry(this.event, {
@@ -242,11 +251,12 @@ class EventsManager extends FilesManager {
 
 					this.report('executor.tag', executor.tag, 'emoji.name', oldEmoji.name, '->', newEmoji.name, 'emoji.url', oldEmoji.url, '->', newEmoji.url);
 				})?.listen();
+				break;
 
 			// TODO: GuildIntegrationsUpdate
 
 			case 'GuildMemberAdd':
-				return this.register(event, file, (member) => member.guild.id, async function (member) {
+				scope = this.register(event, file, (member) => member.guild.id, async function (member) {
 					const user = member.user;
 
 					// global.eventsDatabase.addEntry(this.event, {
@@ -257,16 +267,18 @@ class EventsManager extends FilesManager {
 
 					this.report('user.tag', user.tag);
 				})?.listen();
+				break;
 
 			case 'GuildMemberAvailable':
-				return this.register(event, file, (oldMember, newMember) => newMember.guild.id, async function (oldMember, newMember) {
+				scope = this.register(event, file, (oldMember, newMember) => newMember.guild.id, async function (oldMember, newMember) {
 					// TODO
 
 					this.report('member.user.tag', member.user.tag);
 				})?.listen();
+				break;
 
 			case 'GuildMemberRemove':
-				return this.register(event, file, (member) => member.guild.id, async function (member) {
+				scope = this.register(event, file, (member) => member.guild.id, async function (member) {
 					const user = member.user;
 
 					if (this.latestAuditLog?.action === AuditLogEvent.GuildBanAdd && this.latestAuditLog?.target.id === user.id)
@@ -280,16 +292,18 @@ class EventsManager extends FilesManager {
 
 					this.report('user.tag', user.tag);
 				})?.listen();
+				break;
 
 			// TODO: GuildMembersChunk
 
 			case 'GuildMemberUpdate':
-				return this.register(event, file, (oldMember, newMember) => newMember.guild.id, async function (oldMember, newMember) {
+				scope = this.register(event, file, (oldMember, newMember) => newMember.guild.id, async function (oldMember, newMember) {
 					this.report('user.tag', oldMember.user.tag, '->', newMember.user.tag);
 				})?.listen();
+				break;
 
 			case 'GuildRoleCreate':
-				return this.register(event, file, (role) => role.guild.id, async function (role) {
+				scope = this.register(event, file, (role) => role.guild.id, async function (role) {
 					const executor = this.latestAuditLog.executor;
 
 					// global.eventsDatabase.addEntry(this.event, {
@@ -303,9 +317,10 @@ class EventsManager extends FilesManager {
 
 					this.report('executor.tag', executor.tag, 'role.name', role.name);
 				})?.listen();
+				break;
 
 			case 'GuildRoleDelete':
-				return this.register(event, file, (role) => role.guild.id, async function (role) {
+				scope = this.register(event, file, (role) => role.guild.id, async function (role) {
 					const executor = this.latestAuditLog.executor;
 
 					// global.eventsDatabase.addEntry(this.event, {
@@ -318,9 +333,10 @@ class EventsManager extends FilesManager {
 
 					this.report('executor.tag', executor.tag, 'role.name', role.name);
 				})?.listen();
+				break;
 
 			case 'GuildRoleUpdate':
-				return this.register(event, file, (oldRole, newRole) => newRole.guild.id, async function (oldRole, newRole) {
+				scope = this.register(event, file, (oldRole, newRole) => newRole.guild.id, async function (oldRole, newRole) {
 					const executor = this.latestAuditLog.executor;
 
 					// global.eventsDatabase.addEntry(this.event, {
@@ -332,6 +348,7 @@ class EventsManager extends FilesManager {
 
 					this.report('executor.tag', executor.tag, 'role.name', oldRole.name, '->', newRole.name, 'role.color', oldRole.hexColor, '->', newRole.hexColor);
 				})?.listen();
+				break;
 
 			// TODO: GuildScheduledEventCreate
 			// TODO: GuildScheduledEventDelete
@@ -340,7 +357,7 @@ class EventsManager extends FilesManager {
 			// TODO: GuildScheduledEventUserRemove
 
 			case 'GuildStickerCreate':
-				return this.register(event, file, (oldSticker, newSticker) => newSticker.guild.id, async function (oldSticker, newSticker) {
+				scope = this.register(event, file, (oldSticker, newSticker) => newSticker.guild.id, async function (oldSticker, newSticker) {
 					const executor = this.latestAuditLog.executor;
 
 					// global.eventsDatabase.addEntry(this.event, {
@@ -352,9 +369,10 @@ class EventsManager extends FilesManager {
 
 					this.report('executor.tag', executor.tag, 'sticker.name', sticker.name);
 				})?.listen();
+				break;
 
 			case 'GuildStickerDelete':
-				return this.register(event, file, (sticker) => sticker.guild.id, async function (sticker) {
+				scope = this.register(event, file, (sticker) => sticker.guild.id, async function (sticker) {
 					const executor = this.latestAuditLog.executor;
 
 					// TODO: isDelete?
@@ -367,9 +385,10 @@ class EventsManager extends FilesManager {
 
 					this.report('executor.tag', executor.tag, 'sticker.name', sticker.name);
 				})?.listen();
+				break;
 
 			case 'GuildStickerUpdate':
-				return this.register(event, file, (oldSticker, newSticker) => newSticker.guild.id, async function (oldSticker, newSticker) {
+				scope = this.register(event, file, (oldSticker, newSticker) => newSticker.guild.id, async function (oldSticker, newSticker) {
 					const executor = this.latestAuditLog.executor;
 
 					// TODO: isDelete? add addStickerUpdate to the DB
@@ -382,12 +401,13 @@ class EventsManager extends FilesManager {
 
 					this.report('executor.tag', executor.tag, 'sticker.name', oldSticker.name, '->', newSticker.name);
 				})?.listen();
+				break;
 
 			// TODO: GuildUnavailable
 			// TODO: GuildUpdate
 
 			case 'InteractionCreate':
-				return this.register(event, file, (interaction) => interaction.guildId, async function (interaction) {
+				scope = this.register(event, file, (interaction) => interaction.guildId, async function (interaction) {
 					const executor = interaction.user;
 
 					// global.eventsDatabase.addEntry(this.event, {
@@ -471,11 +491,12 @@ class EventsManager extends FilesManager {
 							reportEventError(this.eventName, err);
 						}
 					}).listen();
+				break;
 
 			// TODO: Invalidated
 
 			case 'InviteCreate':
-				return this.register(event, file, (invite) => invite.guild.id, async function (invite) {
+				scope = this.register(event, file, (invite) => invite.guild.id, async function (invite) {
 					const executor =
 						invite.inviter || this.latestAuditLog.executor;
 
@@ -492,9 +513,10 @@ class EventsManager extends FilesManager {
 
 					this.report('executor.tag', executor.tag, 'url', invite.url);
 				})?.listen();
+				break;
 
 			case 'InviteDelete':
-				return this.register(event, file, (invite) => invite.guild.id, async function (invite) {
+				scope = this.register(event, file, (invite) => invite.guild.id, async function (invite) {
 					const executor =
 						invite.inviter || this.latestAuditLog.executor;
 
@@ -507,9 +529,10 @@ class EventsManager extends FilesManager {
 
 					this.report('executor.tag', executor.tag, 'url', invite.url);
 				})?.listen();
+				break;
 
 			case 'MessageBulkDelete':
-				return this.register(event, file, (messages, channel) => channel.guild.id, async function (messages, channel) {
+				scope = this.register(event, file, (messages, channel) => channel.guild.id, async function (messages, channel) {
 					const executor = this.latestAuditLog.executor;
 
 					// global.eventsDatabase.addEntry(this.event, {
@@ -521,9 +544,10 @@ class EventsManager extends FilesManager {
 
 					this.report('channel.name', channel.name, 'executor.tag', executor.tag, 'messages.size', messages.size);
 				})?.listen();
+				break;
 
 			case 'MessageCreate':
-				return this.register(event, file, (message) => message.guild.id, async function (message) {
+				scope = this.register(event, file, (message) => message.guild.id, async function (message) {
 					const executor = message.author;
 					const channel = message.channel;
 					const content = message.content;
@@ -547,9 +571,10 @@ class EventsManager extends FilesManager {
 
 					this.report('channel.name', channel.name, 'executor.tag', executor.tag, 'content', content);
 				})?.listen();
+				break;
 
 			case 'MessageDelete':
-				return this.register(event, file, (message) => message.guild.id, async function (message) {
+				scope = this.register(event, file, (message) => message.guild.id, async function (message) {
 					const executor = this.latestAuditLog.executor;
 
 					// global.eventsDatabase.addEntry(this.event, {
@@ -560,6 +585,7 @@ class EventsManager extends FilesManager {
 
 					this.report('channel.name', message.channel.name, 'executor.tag', executor.tag, 'content', message.content);
 				})?.listen();
+				break;
 
 			// TODO: MessagePollVoteAdd
 
@@ -568,7 +594,7 @@ class EventsManager extends FilesManager {
 			// TODO: ALL REACTIONS ARE NOT WORKING BRUH (my bad, it seems that MessageReactionAdd is when someone is pinged in a newly created message?)
 
 			case 'MessageReactionAdd':
-				return this.register(event, file, (reaction, executor, details) => reaction.message.guild.id, async function (reaction, executor, details) {
+				scope = this.register(event, file, (reaction, executor, details) => reaction.message.guild.id, async function (reaction, executor, details) {
 					// console.log('MessageReactionAdd');
 					// const emoji = reaction.emoji;
 					// const message = reaction.message;
@@ -584,9 +610,10 @@ class EventsManager extends FilesManager {
 
 					// this.report('executor.tag', executor.tag, 'emoji.name', emoji.name, 'message.author.tag', user.tag);
 				})?.listen();
+				break;
 
 			case 'MessageReactionRemove':
-				return this.register(event, file, (reaction, executor, details) => reaction.message.guild.id, async function (reaction, executor, details) {
+				scope = this.register(event, file, (reaction, executor, details) => reaction.message.guild.id, async function (reaction, executor, details) {
 					console.log('MessageReactionRemove');
 					// const emoji = reaction.emoji;
 					// const message = reaction.message;
@@ -602,14 +629,16 @@ class EventsManager extends FilesManager {
 
 					// this.report('executor.tag', executor.tag, 'emoji.name', emoji.name, 'message.author.tag', user.tag);
 				})?.listen();
+				break;
 
 			case 'MessageReactionRemoveEmoji':
-				return this.register(event, file, (reaction) => reaction.message.guild.id, async function (reaction) {
+				scope = this.register(event, file, (reaction) => reaction.message.guild.id, async function (reaction) {
 					console.log('MessageReactionRemoveEmoji');
 				})?.listen();
+				break;
 
 			case 'MessageUpdate':
-				return this.register(event, file, (oldMessage, newMessage) => newMessage.guild.id, async function (oldMessage, newMessage) {
+				scope = this.register(event, file, (oldMessage, newMessage) => newMessage.guild.id, async function (oldMessage, newMessage) {
 					const author = oldMessage?.author || newMessage?.author;
 
 					// global.eventsDatabase.addEntry(this.event, {
@@ -628,6 +657,7 @@ class EventsManager extends FilesManager {
 
 					this.report('channel.name', newMessage.channel.name, 'author.tag', author.tag, ...reportEventArgs);
 				})?.listen();
+				break;
 
 			// TODO: PresenceUpdate
 			// TODO: Raw
@@ -641,7 +671,7 @@ class EventsManager extends FilesManager {
 			// TODO: StageInstanceUpdate
 
 			case 'ThreadCreate':
-				return this.register(event, file, (thread, newlyCreated) => thread.guild.id, async function (thread, newlyCreated) {
+				scope = this.register(event, file, (thread, newlyCreated) => thread.guild.id, async function (thread, newlyCreated) {
 					const executor = this.latestAuditLog.executor;
 
 					// global.eventsDatabase.addEntry(this.event, {
@@ -654,9 +684,10 @@ class EventsManager extends FilesManager {
 
 					this.report('executor.tag', executor.tag, 'thread.name', thread.name);
 				})?.listen();
+				break;
 
 			case 'ThreadDelete':
-				return this.register(event, file, (thread) => thread.guild.id, async function (thread) {
+				scope = this.register(event, file, (thread) => thread.guild.id, async function (thread) {
 					const executor = this.latestAuditLog.executor;
 
 					// global.eventsDatabase.addEntry(this.event, {
@@ -669,13 +700,14 @@ class EventsManager extends FilesManager {
 
 					this.report('executor.tag', executor.tag, 'thread.name', thread.name);
 				})?.listen();
+				break;
 
 			// TODO: ThreadListSync
 			// TODO: ThreadMembersUpdate
 			// TODO: ThreadMemberUpdate
 
 			case 'ThreadUpdate':
-				return this.register(event, file, (oldThread, newThread) => newThread.guild.id, async function (oldThread, newThread) {
+				scope = this.register(event, file, (oldThread, newThread) => newThread.guild.id, async function (oldThread, newThread) {
 					executor = this.latestAuditLog.executor;
 
 					// global.eventsDatabase.addEntry(this.event, { channelId: newThread.id, oldName: oldThread.name, newName: newThread.name, datetime: Date.now(), executorId: executor.id, });
@@ -683,13 +715,14 @@ class EventsManager extends FilesManager {
 					this.report('executor.tag', executor.tag, 'thread.name', oldThread.name, '->', newThread.name
 					);
 				})?.listen();
+				break;
 
 			// TODO: TypingStart
 			// TODO: UserUpdate
 			// TODO: VoiceServerUpdate
 
 			case 'VoiceStateUpdate':
-				return this.register(event, file, (oldState, newState) => newState.guild.id, async function (oldState, newState) {
+				scope = this.register(event, file, (oldState, newState) => newState.guild.id, async function (oldState, newState) {
 					this.oldState = oldState;
 					this.newState = newState;
 					if (!oldState.channelId && !newState.channelId) {
@@ -789,10 +822,12 @@ class EventsManager extends FilesManager {
 						}
 						return null;
 					}).listen();
+				break;
 
 			// TODO: Warn
 			// TODO: WebhooksUpdate
 		}
+		return [ !!scope, scope ];
 	}
 
 	reportLoad(file) {
@@ -808,12 +843,16 @@ class EventsManager extends FilesManager {
 		console.report(`Stopped listening to event ${this.formatFile(file)}`);
 	}
 
+	reportReload(file) {
+		console.report(`Event reloaded: ${this.formatFile(file)}`);
+	}
+
 	register(event, file, guildId, trigger) {
-		if (this.loaded.has(event)) {
-			console.reportWarn(`The event ${event} is already being listened`);
-			return;
-		}
 		try {
+			if (this.loaded.has(event)) {
+				console.reportWarn(`The event ${event} is already being listened`);
+				return;
+			}
 			const { listen: shouldListen, report, callback } = require(file);
 			if (!shouldListen) {
 				console.reportWarn(`Tried to listen to the event ${event} which should not be listened`);
@@ -842,12 +881,12 @@ class EventsManager extends FilesManager {
 				}
 			}
 			function listen() {
-				global.client.on(Events[scope.event], onEventFunction);
+				global.client.on(scope.event, onEventFunction);
 				return scope;
 			}
 			set(scope, 'onEventFunction', onEventFunction);
 			set(scope, 'filePath', file);
-			set(scope, 'event', event);
+			set(scope, 'event', Events[event]);
 			set(scope, 'report', report ? (...args) => reportEvent(scope, ...args) : (...args) => { });
 			set(scope, 'listen', listen.bind(this));
 			set(scope, 'set', getSet(true).bind(scope));

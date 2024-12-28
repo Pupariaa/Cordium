@@ -74,23 +74,23 @@ class EndpointsManager extends FilesManager {
 			const { listen, report, params, handler } = require(file);
 			if (!handler) {
 				console.reportWarn(`The endpoint at ${file} is missing a required "handler" function`);
-				return;
+				return [ false, null ];
 			}
 			if (typeof handler !== 'function') {
 				console.reportWarn(`The endpoint at ${file} has a "handler" attribute of type ${typeof handler}, expected function`);
-				return;
+				return [ false, null ];
 			}
 			if (!params) {
 				console.reportWarn(`The endpoint at ${file} is missing a required "params" array`);
-				return;
+				return [ false, null ];
 			}
 			if (!Array.isArray(params)) {
 				console.reportWarn(`The endpoint at ${file} has a "params" attribute of type ${typeof params}, expected array`);
-				return;
+				return [ false, null ];
 			}
 			if (!listen) {
 				console.reportWarn(`The endpoint ${code} is not listening`);
-				return;
+				return [ false, null ];
 			}
 			const scope = {};
 			set(endpoint, 'type', type);
@@ -100,6 +100,7 @@ class EndpointsManager extends FilesManager {
 			set(scope, 'endpoint', endpoint);
 			set(scope, 'set', getSet(true).bind(scope));
 			set(scope, 'handler', handler.bind(scope));
+			return  [ true, scope ];
 		} catch (err) {
 			console.reportError(`Error loading endpoint from file ${file}:`, err);
 		}
@@ -109,12 +110,16 @@ class EndpointsManager extends FilesManager {
 		console.report(`Listening to endpoint ${this.formatFile(file)}...`);
 	}
 
-	_unload(file) {
+	_unload(file, content) {
 		delete require.cache[require.resolve(file)];
 	}
 
 	reportUnload(file) {
 		console.report(`Stopped listening to endpoint ${this.formatFile(file)}`);
+	}
+
+	reportReload(file) {
+		console.report(`Endpoint reloaded: ${this.formatFile(file)}`);
 	}
 
 	listen() {
