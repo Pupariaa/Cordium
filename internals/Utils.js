@@ -8,11 +8,11 @@ function wait(t) {
 	return new Promise(resolve => setTimeout(resolve, t));
 }
 
-function set(o, k, v, w = false, e = true) {
+function set(o, k, v, w = false, e = true, c = false) {
 	if (typeof o !== 'object' || o === null) {
 		throw new TypeError('The first argument must be an object');
 	}
-	Object.defineProperty(o, k, { value: v, writable: w, enumerable: e, configurable: false });
+	Object.defineProperty(o, k, { value: v, writable: w, enumerable: e, configurable: c });
 	return v;
 }
 
@@ -226,22 +226,61 @@ function validPort(port) {
 	return Number.isInteger(port) && port >= 1 && port <= 65535;
 }
 
-function abstractClassBuilder(className, construct, methods) {
+function abstractClassBuilder(className, construct, attributes, methods) {
 	const AbstractClass = class {
 		constructor(...args) {
 			if (new.target === AbstractClass) {
 				throw new TypeError(`Abstract class ${className} cannot be instantiated directly`);
 			}
+
+			attributes.forEach(({ name, defaultValue = undefined, setter = undefined, getter = undefined }) => {
+				const hasSetter = setter && typeof setter === 'function';
+				const hasGetter = getter && typeof getter === 'function';
+				const valueKey = Symbol(name);
+
+				set(this, valueKey, defaultValue, true, false);
+
+				Object.defineProperty(this, name, {
+					set: hasSetter 
+						? function (value) {
+							setter.call(this, valueKey, value);
+						} 
+						: function (value) { 
+							this[valueKey] = value; 
+						},
+					get: hasGetter 
+						? function () { 
+							return getter.call(this, valueKey);
+						} 
+						: function () { 
+							return this[valueKey];
+						},
+					enumerable: true,
+					configurable: false,
+				});
+			});
+
 			construct?.call(this, ...args);
+
 			methods.forEach(({ name, mandatory = false }) => {
 				if (mandatory && typeof this[name] !== 'function') {
-					console.reportWarn(`Mandatory method "${name}" is not implemented in ${this.constructor.name} at the time of creation`);
+					console.warn(
+						`Mandatory method "${name}" is not implemented in ${this.constructor.name} at the time of creation`
+					);
 				}
 			});
 		}
 	};
+
+	methods.forEach(({ name, impl = null }) => {
+		if (impl) {
+			AbstractClass.prototype[name] = impl;
+		}
+	});
+
 	return AbstractClass;
 }
+
 
 module.exports = {
 	wait,

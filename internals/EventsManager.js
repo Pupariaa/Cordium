@@ -67,13 +67,9 @@ function fileFromEvent(event) {
 	return path.join(global.eventsFolder, categoryFromEvent(event), `${event}.js`);
 }
 
-function EventFromFile(file) {
-	return path.basename(file, '.js');
-}
-
 class EventsManager extends FilesManager {
 	constructor() {
-		super(Object.keys(Events).map(fileFromEvent));
+		super(Object.keys(Events).map(fileFromEvent), false);
 	}
 
 	async init() {
@@ -83,7 +79,7 @@ class EventsManager extends FilesManager {
 
 	_load(file) {
 		const latestAuditLogCount = this.latestAuditLogCount;
-		const event = EventFromFile(file);
+		const event = this.fileToKey(file);
 		switch (event) {
 
 			// TODO: ApplicationCommandPermissionsUpdate
@@ -802,6 +798,7 @@ class EventsManager extends FilesManager {
 	_unload(file, scope) {
 		global.client.off(scope.event, scope.onEventFunction);
 		delete require.cache[require.resolve(file)];
+		console.report('Stopped listening to event', event);
 	}
 
 	register(event, filePath, guildId, trigger) {
@@ -839,7 +836,7 @@ class EventsManager extends FilesManager {
 			}
 			function listen() {
 				global.client.on(scope.event, onEventFunction);
-				console.report('listening to event', event);
+				console.report('Listening to event', event);
 				return scope;
 			}
 			set(scope, 'onEventFunction', onEventFunction);

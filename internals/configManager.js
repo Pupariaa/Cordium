@@ -23,14 +23,8 @@ class ConfigManager extends FilesManager {
 		this.items = items;
 	}
 
-	reportEnvironmentIssues() {
-		reportIssue(this.defaultedRequired, 'The following keys are marked as required but also have default values', 'reportWarn');
-		reportIssue(this.lacking, 'The following keys are optional but lack both a value and a default', 'reportWarn');
-		reportIssue(this.nonMatchingType, 'The following keys\' defaultValue do not match their type', 'reportWarn');
-		return reportIssue(this.missing, 'The following required keys are missing from the environment file', 'reportError')
-			|| reportIssue(this.unvalidated, 'The following keys failed validation', 'reportError')
-			|| reportIssue(this.unsupportedType, 'The following keys have unsupported types', 'reportError')
-			|| reportIssue(this.failedParsing, 'The following keys do not match their supposed types or are ill-formed', 'reportError');
+	fileToKey(file) {
+		return path.basename(file, '.env');
 	}
 
 	_load(file) {
@@ -60,6 +54,16 @@ class ConfigManager extends FilesManager {
 
 	_unload(file, loaded) {
 		loaded.forEach((key) => delete global[key]);
+	}
+
+	reportEnvironmentIssues() {
+		reportIssue(this.defaultedRequired, 'The following keys are marked as required but also have default values', 'reportWarn');
+		reportIssue(this.lacking, 'The following keys are optional but lack both a value and a default', 'reportWarn');
+		reportIssue(this.nonMatchingType, 'The following keys\' defaultValue do not match their type', 'reportWarn');
+		return reportIssue(this.missing, 'The following required keys are missing from the environment file', 'reportError')
+			|| reportIssue(this.unvalidated, 'The following keys failed validation', 'reportError')
+			|| reportIssue(this.unsupportedType, 'The following keys have unsupported types', 'reportError')
+			|| reportIssue(this.failedParsing, 'The following keys do not match their supposed types or are ill-formed', 'reportError');
 	}
 
 	loadEnv(env, key, info) {

@@ -57,10 +57,19 @@ class EndpointsManager extends FilesManager {
 		this.server = http.createServer(app);
 	}
 
+	parseFile(file) {
+		return { type: path.basename(path.dirname(file)), name: path.basename(file, '.js') };
+	}
+
+	fileToKey(file) {
+		const { type, name } = this.parseFile(file);
+		return `${type}/${name}`;
+	}
+
 	_load(file) {
 		try {
-			const type = path.basename(path.dirname(file));
-			const name = path.basename(file, '.js');
+			const { type, name } = this.parseFile(file);
+			const code = `${type}/${name}`;
 			const endpoint = require(file);
 			const { listen, report, params, handler } = require(file);
 			if (!handler) {
@@ -80,7 +89,7 @@ class EndpointsManager extends FilesManager {
 				return;
 			}
 			if (!listen) {
-				console.reportWarn(`The endpoint ${type}/${name} is not listening`);
+				console.reportWarn(`The endpoint ${code} is not listening`);
 				return;
 			}
 			const scope = {};
@@ -91,15 +100,21 @@ class EndpointsManager extends FilesManager {
 			set(scope, 'endpoint', endpoint);
 			set(scope, 'set', getSet(true, true).bind(scope));
 			set(scope, 'handler', handler.bind(scope));
-			this.listeningEndpoints.set(`${type}/${name}`, scope);
-			console.report(`Endpoint loaded: ${name}`);
 		} catch (err) {
 			console.reportError(`Error loading endpoint from file ${file}:`, err);
 		}
 	}
 
+	reportLoad(file) {
+		console.report(`Listening to ${this.formatFile(file)}...`);
+	}
+
 	_unload(file) {
 		delete require.cache[require.resolve(file)];
+	}
+
+	reportUnload(file) {
+		console.report(`Stopped listening to ${this.formatFile(file)}`);
 	}
 
 	listen() {
@@ -117,7 +132,7 @@ class EndpointsManager extends FilesManager {
 			const name = parts[3];
 			const code = `${type}/${name}`;
 
-			const scope = this.listeningEndpoints.get(code);
+			const scope = this.loaded.get(code);
 			if (!scope) {
 				res.status(400).json(`cannot get /${code}`);
 				return;
