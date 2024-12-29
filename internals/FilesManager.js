@@ -30,11 +30,6 @@ function construct(files, shouldWatch, watchOptions) {
 set(module, 'FilesManager', undefined, true, true, true);
 
 function setWatcher(valueKey, newWatcher) {
-	if (!(this instanceof module.FilesManager)) {
-		console.reportWarn('To change the watcher behavior, please modify the watchOptions instead');
-		return;
-	}
-
 	this[valueKey] = newWatcher;
 	this.watcher.on('add', this.onAdd.bind(this));
 	this.watcher.on('change', this.onChange.bind(this));
@@ -77,6 +72,9 @@ function setWatchOptions(valueKey, newWatchOptions) {
 
 module.FilesManager = abstractClassBuilder('FilesManager', construct,
 	[
+		// { name: 'watcher', setter: setWatcher, isPrivate: true },
+		// { name: 'shouldWatch', setter: setShouldWatch, isProtected: true },
+		// { name: 'watchOptions', setter: setWatchOptions, isProtected: true }
 		{ name: 'watcher', setter: setWatcher },
 		{ name: 'shouldWatch', setter: setShouldWatch },
 		{ name: 'watchOptions', setter: setWatchOptions }

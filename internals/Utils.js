@@ -233,6 +233,7 @@ function abstractClassBuilder(className, construct, attributes, methods) {
 				throw new TypeError(`Abstract class ${className} cannot be instantiated directly`);
 			}
 
+			// attributes.forEach(({ name, defaultValue = undefined, setter = undefined, getter = undefined, isPrivate = false, isProtected = false }) => {
 			attributes.forEach(({ name, defaultValue = undefined, setter = undefined, getter = undefined }) => {
 				const hasSetter = setter && typeof setter === 'function';
 				const hasGetter = getter && typeof getter === 'function';
@@ -240,21 +241,53 @@ function abstractClassBuilder(className, construct, attributes, methods) {
 
 				set(this, valueKey, defaultValue, true, false);
 
+				const setFunction = hasSetter
+					? function (value) { setter.call(this, valueKey, value); }
+					: function (value) { this[valueKey] = value; };
+
+				const getFunction = hasGetter
+					? function () { return getter.call(this, valueKey); }
+					: function () { return this[valueKey]; };
+
+				function throwPrivateErr(self, name) {
+					// if (???) {
+					// 	throw new Error(`${name} is private and cannot be accessed outside of ${className}`);
+					// }
+				}
+
+				function throwProtectedErr(self, name) {
+					// if (!(self instanceof AbstractClass)) {
+					// if (???) {
+					// 	throw new Error(`${name} is protected and cannot be accessed outside of ${className} and its subclasses`);
+					// }
+				}
+
+				const isPrivate = false;
+				const isProtected = false;
+
 				Object.defineProperty(this, name, {
-					set: hasSetter
+					set: isPrivate
 						? function (value) {
-							setter.call(this, valueKey, value);
+							throwPrivateErr(this, name);
+							setFunction.call(this, value);
 						}
-						: function (value) {
-							this[valueKey] = value;
-						},
-					get: hasGetter
+						: isProtected
+							? function (value) {
+								throwProtectedErr(this, name);
+								setFunction.call(this, value);
+							}
+							: setFunction,
+					get: isPrivate
 						? function () {
-							return getter.call(this, valueKey);
+							throwPrivateErr(this, name);
+							return getFunction.call(this);
 						}
-						: function () {
-							return this[valueKey];
-						},
+						: isProtected
+							? function () {
+								throwProtectedErr(this, name);
+								return getFunction.call(this);
+							}
+							: getFunction,
 					enumerable: true,
 					configurable: false,
 				});
@@ -264,9 +297,7 @@ function abstractClassBuilder(className, construct, attributes, methods) {
 
 			methods.forEach(({ name, mandatory = false }) => {
 				if (mandatory && typeof this[name] !== 'function') {
-					console.warn(
-						`Mandatory method "${name}" is not implemented in ${this.constructor.name} at the time of creation`
-					);
+					console.reportWarn(`Mandatory method "${name}" is not implemented in ${this.constructor.name} at the time of creation`);
 				}
 			});
 		}
