@@ -103,7 +103,39 @@ class EndpointsManager extends FilesManager {
 			set(scope, 'report', report ? () => reportEndpoint(scope) : () => { });
 			set(scope, 'set', getSet(true).bind(scope));
 			set(scope, 'handler', handler.bind(scope));
-			this.app.get(route, this.requestTrigger.bind(scope));
+
+			async function requestTrigger(req, res) {
+				try {
+					const error = spectraget.validate(params, req.query);
+					if (error) {
+						res.status(error.status_code).json(error);
+						return;
+					}
+
+					function get(name, key) {
+						const item = params.find(obj => obj.name === name);
+						return item ? item[key] : false;
+					}
+
+					if (get('key', 'mandatory') && req.query?.key !== "bAhRTVpaXS4FvEeD9k2KLOI6Ho92MReU") {
+						const status_code = 401;
+						res.status(status_code).json({ status_code: status_code, error: 'Unauthorized' });
+						return;
+					}
+					scope.set('request', req, true, true, false);
+					scope.report();
+
+					const resData = await scope.handler(req.query);
+
+					res.status(resData.status_code).json(resData);
+				} catch (err) {
+					console.reportError('Unexpected error in handling request:', err);
+					const status_code = 500;
+					res.status(status_code).json({ status_code: status_code, error: 'Internal Server Error' });
+				}
+			}
+
+			this.app.get(route, requestTrigger);
 			return  [ true, scope ];
 		} catch (err) {
 			console.reportError(`Error loading endpoint from file ${file}:`, err);
@@ -125,37 +157,6 @@ class EndpointsManager extends FilesManager {
 
 	reportReload(file) {
 		console.report(`Endpoint reloaded: ${this.formatFile(file)}`);
-	}
-
-	async requestTrigger(req, res) {
-		try {
-			const error = spectraget.validate(this.endpoint.params, req.query);
-			if (error) {
-				res.status(error.status_code).json(error);
-				return;
-			}
-
-			function get(name, key) {
-				const item = this.endpoint.params.find(obj => obj.name === name);
-				return item ? item[key] : false;
-			}
-
-			if (get('key', 'mandatory') && req.query?.key !== "bAhRTVpaXS4FvEeD9k2KLOI6Ho92MReU") {
-				const status_code = 401;
-				res.status(status_code).json({ status_code: status_code, error: 'Unauthorized' });
-				return;
-			}
-			this.set('request', req, false, true, false);
-			this.report();
-
-			const resData = await this.handler(req.query);
-
-			res.status(resData.status_code).json(resData);
-		} catch (err) {
-			console.reportError('Unexpected error in handling request:', err);
-			const status_code = 500;
-			res.status(status_code).json({ status_code: status_code, error: 'Internal Server Error' });
-		}
 	}
 }
 
