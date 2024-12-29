@@ -24,7 +24,7 @@ function construct(files, shouldWatch, watchOptions) {
 	this.shouldWatch = (shouldWatch ?? global.dev) ?? true; // starts or closes the watcher automatically accordingly
 	this.watchOptions = watchOptions ?? defaultWatchOptions; // updates the watcher if the options are changed
 	this.queue = [];
-	this.processing = false;
+	this.processingPromise = Promise.resolve();
 }
 
 set(module, 'FilesManager', undefined, true, true, true);
@@ -111,29 +111,27 @@ module.FilesManager = abstractClassBuilder('FilesManager', construct,
 
 		{
 			name: 'enqueueTask', impl: async function (task) {
+				await this.processingPromise;
 				this.queue.push(task);
-				if (!this.processing) {
-					this.processing = true;
-					await this.processQueue();
-				}
+				this.processingPromise = this.processQueue();
+				return this.processingPromise;
 			}
 		},
 
 		{
 			name: 'processQueue', impl: async function () {
 				while (this.queue.length > 0) {
-					const task = this.queue.shift();
-					await task();
+					await (this.queue.shift())();
 				}
-				this.processing = false;
 			}
 		},
 
 		// File operations
 
 		{
-			name: 'load', impl: function (file, reloading = false) {
-				return this.enqueueTask(async () => {
+			name: 'load', impl: async function (file, reloading = false) {
+				let ret = true;
+				await this.enqueueTask(async () => {
 					const fileKey = this.fileToKey(file);
 					if (this.loaded.has(fileKey)) {
 						console.reportWarn(`${this.constructor.name} tried to load "${file}" but it's already loaded`);
@@ -146,7 +144,9 @@ module.FilesManager = abstractClassBuilder('FilesManager', construct,
 							this.reportLoad(file);
 						}
 					}
+					ret = success;
 				});
+				return ret;
 			}
 		},
 
@@ -172,9 +172,13 @@ module.FilesManager = abstractClassBuilder('FilesManager', construct,
 			name: 'reload', impl: function (file) {
 				return this.enqueueTask(async () => {
 					await this.unload(file, true);
-					await this.load(file, true);
-					await this._reload(file);
-					this.reportReload(file);
+					const success = await this.load(file, true);
+					if (success) {
+						await this._reload(file);
+						this.reportReload(file);
+					} else {
+						console.reportWarn(`${this.constructor.name} tred to reload "${file}" but load has failed`);
+					}
 				});
 			}
 		},

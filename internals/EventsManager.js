@@ -874,8 +874,8 @@ class EventsManager extends FilesManager {
 						.set('eventName', event)
 						.set('args', [])
 						.set('latestAuditLog', await global.guild.latestAuditLog());
-					await scope.trigger(...args);
-					scope.callback(...args, ...(scope.args || []));
+					await (trigger.bind(scope))(...args);
+					(callback.bind(scope))(...args, ...(scope.args || []));
 				} catch (err) {
 					reportEventError(scope.eventName, err);
 				}
@@ -885,13 +885,10 @@ class EventsManager extends FilesManager {
 				return scope;
 			}
 			set(scope, 'onEventFunction', onEventFunction);
-			set(scope, 'filePath', file);
 			set(scope, 'event', Events[event]);
 			set(scope, 'report', report ? (...args) => reportEvent(scope, ...args) : (...args) => { });
 			set(scope, 'listen', listen.bind(this));
 			set(scope, 'set', getSet(true).bind(scope));
-			set(scope, 'trigger', trigger.bind(scope));
-			set(scope, 'callback', callback.bind(scope));
 			return scope;
 		} catch (err) {
 			console.reportError(`Failed to register ${event}:`, err);
