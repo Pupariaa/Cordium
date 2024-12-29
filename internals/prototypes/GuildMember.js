@@ -1,4 +1,5 @@
 'use strict';
+
 const { GuildMember } = require('discord.js');
 
 GuildMember.prototype.hasRole = function (roleName) {

@@ -1,4 +1,5 @@
 'use strict';
+
 const { Guild } = require('discord.js');
 
 Guild.prototype.fetchAllAuditLogs = async function () {

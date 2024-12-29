@@ -1,4 +1,5 @@
 'use strict';
+
 const { BaseChannel } = require('discord.js');
 
 BaseChannel.prototype.getMembers = async function () {

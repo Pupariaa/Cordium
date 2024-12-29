@@ -1,4 +1,5 @@
 'use strict';
+
 const { Client } = require('discord.js');
 
 Client.prototype.getChannelByName = function (channelName) {

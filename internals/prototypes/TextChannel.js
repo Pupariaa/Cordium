@@ -1,4 +1,5 @@
 'use strict';
+
 const { TextChannel } = require('discord.js');
 
 TextChannel.prototype.fetchAllMessages = function (...args) {
