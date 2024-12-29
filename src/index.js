@@ -3,12 +3,12 @@
 const path = require('path');
 const { ConfigManager } = require(global.configManagerPath);
 
-function transformValue(p) {
-	return path.join(globa.projectRoot, p);
-}
+// function transformValue(p) {
+// 	return path.join(global.projectRoot, p);
+// }
 
 const myConfig = {
-	downloads_folder: { required: true, transformValue }
+	downloads_folder: { required: true }
 };
 
 class MyConfigManager extends ConfigManager {
@@ -22,4 +22,8 @@ module.exports = {
 };
 
 const myConfigManager = new MyConfigManager();
+myConfigManager.loadAll()
+	.then(() => {
+		myConfigManager.watchAll();
+	});
 global.configManagers.push(myConfigManager);

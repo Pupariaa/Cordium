@@ -18,15 +18,12 @@ function setReportEndpointFunctions() {
 	const { defaultLogFormat, defaultFormatArgsForWarn, defaultFormatArgsForError, defaultShouldLog } = require('extend-console');
 
 	function logFormat(logContext, ...args) {
-		const endpoint = args[0].endpoint;
-		logContext.functionName = `${endpoint.type}/${endpoint.name}`;
+		logContext.functionName = `${args[0].type}/${args[0].name}`;
 		return defaultLogFormat(logContext, ...args.slice(1));
 	}
 
 	function formatArgs(logContext, ...args) {
-		const endpoint = args[0].endpoint;
 		let formattedArgs = '';
-
 		const params = args[0].request.query;
 		if (params && typeof params === 'object' && Object.keys(params).length > 0) {
 			for (const [key, value] of Object.entries(params)) {
@@ -72,7 +69,6 @@ class EndpointsManager extends FilesManager {
 			const { type, name } = this.parseFile(file);
 			const code = `${type}/${name}`;
 			const route = `/api/${code}`;
-			const endpoint = require(file);
 			const { listen, report, params, handler } = require(file);
 			if (!handler) {
 				console.reportWarn(`The endpoint at ${file} is missing a required "handler" function`);
@@ -147,7 +143,7 @@ class EndpointsManager extends FilesManager {
 
 	_unload(file, content) {
 		delete require.cache[require.resolve(file)];
-		this.app._router.stack = this.app._router.stack.filter(layer => layer?.route?.path !== content.endpoint.route);
+		this.app._router.stack = this.app._router.stack.filter(layer => layer?.route?.path !== content.route);
 	}
 
 	reportUnload(file) {
