@@ -55,7 +55,7 @@ class CommandsManager extends FilesManager {
 		console.report(`Command unloaded: ${this.formatFile(file)}`);
 	}
 
-	async _reload(file) {
+	async _reload() {
 		this.deployedCommands = await this._deployAll();
 	}
 

@@ -128,21 +128,24 @@ module.FilesManager = abstractClassBuilder('FilesManager', construct,
 
 		{
 			name: 'load', impl: async function (file, reloading = false) {
-				let ret = true;
+				let ret;
 				await this.enqueueTask(async () => {
 					const fileKey = this.fileToKey(file);
 					if (this.loaded.has(fileKey)) {
 						console.reportWarn(`${this.constructor.name} tried to load "${file}" but it's already loaded`);
+						ret = [ true, this.loaded.get(fileKey) ];
 						return;
 					}
 					const [success, content] = await this._load(file, reloading);
-					if (success) {
-						this.loaded.set(fileKey, content);
-						if (!reloading) {
-							this.reportLoad(file);
-						}
+					if (!success) {
+						ret = [ false, null ];
+						return;
 					}
-					ret = success;
+					this.loaded.set(fileKey, content);
+					if (!reloading) {
+						this.reportLoad(file);
+					}
+					ret = [ true, content ];
 				});
 				return ret;
 			}
@@ -170,9 +173,9 @@ module.FilesManager = abstractClassBuilder('FilesManager', construct,
 			name: 'reload', impl: function (file) {
 				return this.enqueueTask(async () => {
 					await this.unload(file, true);
-					const success = await this.load(file, true);
+					const [ success, content ] = await this.load(file, true);
 					if (success) {
-						await this._reload(file);
+						await this._reload(file, content);
 						this.reportReload(file);
 					} else {
 						console.reportWarn(`${this.constructor.name} tred to reload "${file}" but load has failed`);

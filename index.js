@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const chokidar = require('chokidar');
 const { Client, Events, GatewayIntentBits, Partials } = require('discord.js');
 
 // Must haves ASAP
@@ -247,5 +248,35 @@ const { set, walkDirSync, toCamelCase, setReportFunctions } = require(global.uti
 	await global.client.login(global.clientToken);
 
 	// Execute the user's index once the client is logged in
-	require(path.join(global.projectRoot, 'src/index'));
+	
+	const { FilesManager } = require(global.filesManagerPath);
+
+	class IndexManager extends FilesManager {
+		constructor() {
+			super([path.join(global.projectRoot, 'src/index.js')]);
+		}
+
+		async _load(file, reloading) {
+			try {
+				const { init, body } = require(file);
+				if (!reloading) {
+					try { await init(); } catch (err) { console.reportError(`failed to init ${file}:`, err); }
+				}
+				try { await body(); } catch (err) { console.reportError(`failed to run ${file}:`, err); }
+				return [ true, body ];
+			} catch (err) {
+				console.reportError(`failed to load ${file}:`, err);
+				return [ false, null ];
+			}
+		}
+
+		_unload(file) {
+			delete require.cache[require.resolve(file)];
+		}
+	}
+
+	global.indexManager = new IndexManager();
+	global.indexManager.loadAll().then(() => {
+		global.indexManager.watchAll();
+	});
 });

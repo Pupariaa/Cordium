@@ -72,23 +72,23 @@ class EndpointsManager extends FilesManager {
 			const { listen, report, params, handler } = require(file);
 			if (!handler) {
 				console.reportWarn(`The endpoint at ${file} is missing a required "handler" function`);
-				return [ false, null ];
+				return [false, null];
 			}
 			if (typeof handler !== 'function') {
 				console.reportWarn(`The endpoint at ${file} has a "handler" attribute of type ${typeof handler}, expected function`);
-				return [ false, null ];
+				return [false, null];
 			}
 			if (!params) {
 				console.reportWarn(`The endpoint at ${file} is missing a required "params" array`);
-				return [ false, null ];
+				return [false, null];
 			}
 			if (!Array.isArray(params)) {
 				console.reportWarn(`The endpoint at ${file} has a "params" attribute of type ${typeof params}, expected array`);
-				return [ false, null ];
+				return [false, null];
 			}
 			if (!listen) {
 				console.reportWarn(`The endpoint ${code} is not listening`);
-				return [ false, null ];
+				return [false, null];
 			}
 			const scope = {};
 			set(scope, 'type', type);
@@ -131,7 +131,7 @@ class EndpointsManager extends FilesManager {
 			}
 
 			this.app.get(route, requestTrigger);
-			return  [ true, scope ];
+			return [true, scope];
 		} catch (err) {
 			console.reportError(`Error loading endpoint from file ${file}:`, err);
 		}
@@ -141,9 +141,9 @@ class EndpointsManager extends FilesManager {
 		console.report(`Listening to endpoint ${this.formatFile(file)}...`);
 	}
 
-	_unload(file, content) {
+	_unload(file, scope) {
 		delete require.cache[require.resolve(file)];
-		this.app._router.stack = this.app._router.stack.filter(layer => layer?.route?.path !== content.route);
+		this.app._router.stack = this.app._router.stack.filter(layer => layer?.route?.path !== scope.route);
 	}
 
 	reportUnload(file) {
