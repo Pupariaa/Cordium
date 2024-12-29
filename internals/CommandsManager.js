@@ -29,8 +29,12 @@ class CommandsManager extends FilesManager {
 	_load(file) {
 		try {
 			const command = require(file);
-			if (!command?.data?.name || typeof command.execute !== 'function') {
-				console.reportWarn(`Invalid command structure in ${file}`);
+			if (!(command?.data?.name)) {
+				console.reportError(`Invalid command.data.name in ${file}: ${command?.data?.name}`);
+				return [false, null];
+			}
+			if (typeof command.execute !== 'function') {
+				console.reportError(`Invalid typeof command.execute type in ${file}: ${typeof command.execute}`);
 				return [false, null];
 			}
 			return [true, command];
@@ -40,10 +44,6 @@ class CommandsManager extends FilesManager {
 		}
 	}
 
-	reportLoad(file) {
-		console.report(`Command loaded: ${this.formatFile(file)}`);
-	}
-
 	async _unload(file, content, reloading) {
 		delete require.cache[file];
 		if (!reloading) {
@@ -51,17 +51,16 @@ class CommandsManager extends FilesManager {
 		}
 	}
 
-	reportUnload(file) {
-		console.report(`Command unloaded: ${this.formatFile(file)}`);
-	}
-
 	async _reload() {
 		this.deployedCommands = await this._deployAll();
 	}
 
-	reportReload(file) {
-		console.report(`Command reloaded: ${this.formatFile(file)}`);
-	}
+	reportLoadEnd(file) { console.report(`Command ${this.formatFile(file)} loaded`); }
+	
+	reportUnloadEnd(file) { console.report(`Command ${this.formatFile(file)} unloaded`); }
+	
+	reportReloadStart(file) { console.report(`Reloading command ${this.formatFile(file)}...`); }
+	reportReloadEnd(file) { console.report(`Command ${this.formatFile(file)} reloaded`); }
 
 	_deployAll() {
 		return deployCommands(this.rest, Array.from(this.loaded.values()).map(cmd => cmd.data.toJSON()));

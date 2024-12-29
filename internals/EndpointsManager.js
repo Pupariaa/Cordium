@@ -137,22 +137,17 @@ class EndpointsManager extends FilesManager {
 		}
 	}
 
-	reportLoad(file) {
-		console.report(`Listening to endpoint ${this.formatFile(file)}...`);
-	}
-
 	_unload(file, scope) {
 		delete require.cache[require.resolve(file)];
 		this.app._router.stack = this.app._router.stack.filter(layer => layer?.route?.path !== scope.route);
 	}
 
-	reportUnload(file) {
-		console.report(`Stopped listening to endpoint ${this.formatFile(file)}`);
-	}
-
-	reportReload(file) {
-		console.report(`Endpoint reloaded: ${this.formatFile(file)}`);
-	}
+	reportLoadEnd(file) { console.report(`Listening to endpoint ${this.formatFile(file)}...`); }
+	
+	reportUnloadEnd(file) { console.report(`Stopped listening to endpoint ${this.formatFile(file)}`); }
+	
+	reportReloadStart(file) { console.report(`Reloading endpoint ${this.formatFile(file)}...`); }
+	reportReloadEnd(file) { console.report(`Endpoint ${this.formatFile(file)} reloaded`); }
 }
 
 module.exports = {

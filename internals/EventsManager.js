@@ -830,22 +830,17 @@ class EventsManager extends FilesManager {
 		return [!!scope, scope];
 	}
 
-	reportLoad(file) {
-		console.report(`Listening to event ${this.formatFile(file)}...`);
-	}
-
 	_unload(file, scope) {
 		global.client.off(scope.event, scope.onEventFunction);
 		delete require.cache[require.resolve(file)];
 	}
 
-	reportUnload(file) {
-		console.report(`Stopped listening to event ${this.formatFile(file)}`);
-	}
+	reportLoadEnd(file) { console.report(`Listening to event ${this.formatFile(file)}...`); }
 
-	reportReload(file) {
-		console.report(`Event reloaded: ${this.formatFile(file)}`);
-	}
+	reportUnloadEnd(file) { console.report(`Stopped listening to event ${this.formatFile(file)}`); }
+
+	reportReloadStart(file) { console.report(`Reloading event ${this.formatFile(file)}...`); }
+	reportReloadEnd(file) { console.report(`Event ${this.formatFile(file)} reloaded`); }
 
 	register(event, file, guildId, trigger) {
 		try {
