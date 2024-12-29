@@ -95,14 +95,11 @@ class EndpointsManager extends FilesManager {
 				return [ false, null ];
 			}
 			const scope = {};
-			set(endpoint, 'type', type);
-			set(endpoint, 'name', name);
-			set(endpoint, 'route', route);
-			set(endpoint, 'params', params);
-			set(scope, 'endpoint', endpoint);
-			set(scope, 'report', report ? () => reportEndpoint(scope) : () => { });
+			set(scope, 'type', type);
+			set(scope, 'name', name);
+			set(scope, 'route', route);
+			set(scope, 'params', params);
 			set(scope, 'set', getSet(true).bind(scope));
-			set(scope, 'handler', handler.bind(scope));
 
 			async function requestTrigger(req, res) {
 				try {
@@ -123,9 +120,11 @@ class EndpointsManager extends FilesManager {
 						return;
 					}
 					scope.set('request', req, true, true, false);
-					scope.report();
+					if (report) {
+						reportEndpoint(scope)
+					}
 
-					const resData = await scope.handler(req.query);
+					const resData = await (handler.bind(scope))(req.query);
 
 					res.status(resData.status_code).json(resData);
 				} catch (err) {
