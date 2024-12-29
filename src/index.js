@@ -19,7 +19,6 @@ module.exports = {
 		myConfigManager.loadAll()
 			.then(() => {
 				myConfigManager.watchAll();
-				global.configManagers.push(myConfigManager);
 			});
 	},
 	body: function () {

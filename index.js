@@ -29,6 +29,13 @@ const { set, walkDirSync, toCamelCase, setReportFunctions } = require(global.uti
 
 	async function initGlobal() {
 
+		// Collections
+
+		// global.client.invitesCache = new Map();
+		// global.databaseCache = {};
+		global.sigintSubscribers = [];
+		global.configManagers = [];
+
 		// Config
 
 		const { DefaultConfigManager } = require(global.defaultConfigManagerPath);
@@ -56,13 +63,6 @@ const { set, walkDirSync, toCamelCase, setReportFunctions } = require(global.uti
 				require(filePath);
 			});
 		});
-
-		// Collections
-
-		// global.client.invitesCache = new Map();
-		// global.databaseCache = {};
-		global.sigintSubscribers = [];
-		global.configManagers = [global.defaultConfigManager];
 
 		// Discord
 

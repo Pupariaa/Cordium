@@ -21,6 +21,7 @@ class ConfigManager extends FilesManager {
 	constructor(envPath, items) {
 		super([envPath]);
 		this.items = items;
+		global.configManagers.push(this);
 	}
 
 	fileToKey(file) {
