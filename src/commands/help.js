@@ -20,7 +20,7 @@ module.exports = {
 			ephemeral: false,
 			content: ''
 		};
-		for (const cmd of global.client.commands.values()) {
+		for (const cmd of global.commandsManager.loaded.values()) {
 			if (cmd.data.name !== cmdName && cmd.data.name !== 'test') {
 				replyObject.content += `${cmd.data.name} - ${cmd.data.description}\n`;
 			}

@@ -190,8 +190,7 @@ const { set, walkDirSync, toCamelCase, setReportFunctions } = require(global.uti
 		try {
 			global.client.on(Events.InteractionCreate, async (interaction) => {
 				if (!interaction.isChatInputCommand()) return;
-
-				const command = interaction.client.commands.get(interaction.commandName);
+				const command = global.commandsManager.loaded.get(interaction.commandName);
 				if (!command) {
 					return interaction.reply({
 						ephemeral: true,
