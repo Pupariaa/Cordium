@@ -50,7 +50,7 @@ class ConfigManager extends FilesManager {
 			process.exit(1);
 		}
 
-		return [ true, setKeys ];
+		return [true, setKeys];
 	}
 
 	_unload(file, setKeys) {

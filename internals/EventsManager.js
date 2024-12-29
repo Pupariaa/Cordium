@@ -827,7 +827,7 @@ class EventsManager extends FilesManager {
 			// TODO: Warn
 			// TODO: WebhooksUpdate
 		}
-		return [ !!scope, scope ];
+		return [!!scope, scope];
 	}
 
 	reportLoad(file) {

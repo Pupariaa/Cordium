@@ -248,7 +248,7 @@ const { set, walkDirSync, toCamelCase, setReportFunctions } = require(global.uti
 	await global.client.login(global.clientToken);
 
 	// Execute the user's index once the client is logged in
-	
+
 	const { FilesManager } = require(global.filesManagerPath);
 
 	class IndexManager extends FilesManager {
@@ -263,10 +263,10 @@ const { set, walkDirSync, toCamelCase, setReportFunctions } = require(global.uti
 					try { await init(); } catch (err) { console.reportError(`failed to init ${file}:`, err); }
 				}
 				try { await body(); } catch (err) { console.reportError(`failed to run ${file}:`, err); }
-				return [ true, body ];
+				return [true, body];
 			} catch (err) {
 				console.reportError(`failed to load ${file}:`, err);
-				return [ false, null ];
+				return [false, null];
 			}
 		}
 
