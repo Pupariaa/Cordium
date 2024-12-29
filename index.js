@@ -33,6 +33,7 @@ const { set, walkDirSync, toCamelCase, setReportFunctions } = require(global.uti
 		const { DefaultConfigManager } = require(global.defaultConfigManagerPath);
 		global.defaultConfigManager = new DefaultConfigManager();
 		await global.defaultConfigManager.loadAll();
+		await global.defaultConfigManager.watchAll();
 
 		// mkdir gitignored folders
 
@@ -173,7 +174,6 @@ const { set, walkDirSync, toCamelCase, setReportFunctions } = require(global.uti
 		if (global.listenEndpoints) {
 			console.report('Dispatching endpoints...');
 			await global.endpointsManager.loadAll();
-			global.endpointsManager.listen();
 			if (global.dev) {
 				global.endpointsManager.watchAll();
 			}

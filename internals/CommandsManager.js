@@ -19,19 +19,6 @@ function deployCommands(rest, commands) {
 	});
 }
 
-function undeployCommands(rest, commandIds) {
-	return Promise.all(
-		commandIds.map(id =>
-			rest.delete(
-				Routes.applicationGuildCommand(global.clientId, global.discordGuildId, id)
-			)
-		)
-	).catch(err => {
-		console.reportError('Error undeploying commands:', err);
-		throw err;
-	});
-}
-
 class CommandsManager extends FilesManager {
 	constructor() {
 		super(fs.readdirSync(global.commandsFolder).map(file => path.resolve(path.join(global.commandsFolder, file))));
@@ -57,51 +44,38 @@ class CommandsManager extends FilesManager {
 		console.report(`Command loaded: ${this.formatFile(file)}`);
 	}
 
-	_unload(file, content) {
+	async _unload(file, content, reloading) {
 		delete require.cache[file];
-		return this.undeployFromContent(content.data.toJSON());
+		if (!reloading) {
+			this.deployedCommands = await this._deployAll();
+		}
 	}
 
 	reportUnload(file) {
 		console.report(`Command unloaded: ${this.formatFile(file)}`);
 	}
 
-	_reload(file) {
-		return this.deploy(file);
+	async _reload(file) {
+		this.deployedCommands = await this._deployAll();
 	}
 
 	reportReload(file) {
 		console.report(`Command reloaded: ${this.formatFile(file)}`);
 	}
 
-	deploy(file) { return this.deployFromContent(require(file).data.toJSON()); }
-	async deployFromContent(content) {
-		const newCommand = await deployCommands(this.rest, [content]);
-		this.deployedCommands = [
-			...this.deployedCommands.filter(cmd => !newCommand.some(newCmd => newCmd.id === cmd.id)),
-			...newCommand
-		];
-	}
-	undeploy(file) { return this.undeployFromContent(require(file).data.toJSON()); }
-	undeployFromContent(content) {
-		const commandToRemove = this.deployedCommands.find(cmd => cmd.name === content.name);
-		if (!commandToRemove) {
-			console.reportWarn(`Command with name "${content.name}" not found in deployed commands`);
-			return Promise.resolve();
-		}
-		this.deployedCommands = this.deployedCommands.filter(cmd => cmd.name !== content.name);
-		return undeployCommands(this.rest, [commandToRemove.id]);
+	_deployAll() {
+		return deployCommands(this.rest, Array.from(this.loaded.values()).map(cmd => cmd.data.toJSON()));
 	}
 
 	async deployAll() {
 		console.report('Deploying all commands...');
-		this.deployedCommands = await deployCommands(this.rest, Array.from(this.loaded.values()).map(cmd => cmd.data.toJSON()));
+		this.deployedCommands = await this._deployAll();
 		console.report('All commands deployed');
 	}
 
 	async undeployAll() {
 		console.report('Undeploying all commands...');
-		await undeployCommands(this.rest, Array.from(this.deployedCommands.values()).map(cmd => cmd.id));
+		await deployCommands(this.rest, []);
 		this.deployedCommands = [];
 		console.report('All commands undeployed');
 	}

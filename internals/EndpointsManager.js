@@ -45,16 +45,17 @@ function setReportEndpointFunctions() {
 class EndpointsManager extends FilesManager {
 	constructor() {
 		super([]);
-		const app = express();
-		app.use(bodyParser.json());
-		app.use(bodyParser.urlencoded({ extended: true }));
-		app.use((req, res, next) => next());
+		this.app = express();
+		this.app.use(bodyParser.json());
+		this.app.use(bodyParser.urlencoded({ extended: true }));
+		this.app.use((req, res, next) => next());
+		this.server = http.createServer(this.app);
+		this.server.listen(global.apiPort, () => console.report(`API is running on port ${global.apiPort}`));
+		const self = this;
 		['public', 'private'].forEach(folder => {
-			app.get(`/api/${folder}/*`, this.requestTrigger.bind(this));
 			const endpointsFolder = path.join(global.endpointsFolder, folder);
-			fs.readdirSync(endpointsFolder).forEach(name => this.add(path.join(endpointsFolder, name)));
+			fs.readdirSync(endpointsFolder).forEach(name => self.add(path.join(endpointsFolder, name)));
 		});
-		this.server = http.createServer(app);
 	}
 
 	parseFile(file) {
@@ -70,6 +71,7 @@ class EndpointsManager extends FilesManager {
 		try {
 			const { type, name } = this.parseFile(file);
 			const code = `${type}/${name}`;
+			const route = `/api/${code}`;
 			const endpoint = require(file);
 			const { listen, report, params, handler } = require(file);
 			if (!handler) {
@@ -95,11 +97,13 @@ class EndpointsManager extends FilesManager {
 			const scope = {};
 			set(endpoint, 'type', type);
 			set(endpoint, 'name', name);
+			set(endpoint, 'route', route);
 			set(endpoint, 'params', params);
-			set(scope, 'report', report ? () => reportEndpoint(scope) : () => { });
 			set(scope, 'endpoint', endpoint);
+			set(scope, 'report', report ? () => reportEndpoint(scope) : () => { });
 			set(scope, 'set', getSet(true).bind(scope));
 			set(scope, 'handler', handler.bind(scope));
+			this.app.get(route, this.requestTrigger.bind(scope));
 			return  [ true, scope ];
 		} catch (err) {
 			console.reportError(`Error loading endpoint from file ${file}:`, err);
@@ -112,6 +116,7 @@ class EndpointsManager extends FilesManager {
 
 	_unload(file, content) {
 		delete require.cache[require.resolve(file)];
+		this.app._router.stack = this.app._router.stack.filter(layer => layer?.route?.path !== content.endpoint.route);
 	}
 
 	reportUnload(file) {
@@ -122,50 +127,28 @@ class EndpointsManager extends FilesManager {
 		console.report(`Endpoint reloaded: ${this.formatFile(file)}`);
 	}
 
-	listen() {
-		if (global.apiPort) {
-			this.server.listen(global.apiPort, () => console.report(`API is running on port ${global.apiPort}`));
-		} else {
-			console.reportError('API could not start, API port not defined');
-		}
-	}
-
 	async requestTrigger(req, res) {
 		try {
-			const parts = req.path.split('/');
-			const type = parts[2];
-			const name = parts[3];
-			const code = `${type}/${name}`;
-
-			const scope = this.loaded.get(code);
-			if (!scope) {
-				res.status(400).json(`cannot get /${code}`);
-				return;
-			}
-
-			const endpoint = scope.endpoint;
-			const params = req.query;
-
-			const error = spectraget.validate(endpoint.params, params);
+			const error = spectraget.validate(this.endpoint.params, req.query);
 			if (error) {
 				res.status(error.status_code).json(error);
 				return;
 			}
 
-			function get(params, name, key) {
-				const item = params.find(obj => obj.name === name);
-				return item ? item[key] : undefined;
+			function get(name, key) {
+				const item = this.endpoint.params.find(obj => obj.name === name);
+				return item ? item[key] : false;
 			}
 
-			if (get(endpoint.params, 'key', 'mandatory') && params?.key !== "bAhRTVpaXS4FvEeD9k2KLOI6Ho92MReU") {
+			if (get('key', 'mandatory') && req.query?.key !== "bAhRTVpaXS4FvEeD9k2KLOI6Ho92MReU") {
 				const status_code = 401;
 				res.status(status_code).json({ status_code: status_code, error: 'Unauthorized' });
 				return;
 			}
-			scope.set('request', req, false, true, false);
-			scope.report();
+			this.set('request', req, false, true, false);
+			this.report();
 
-			const resData = await scope.handler(params);
+			const resData = await this.handler(req.query);
 
 			res.status(resData.status_code).json(resData);
 		} catch (err) {
