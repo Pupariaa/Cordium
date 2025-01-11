@@ -27,8 +27,6 @@ function construct(files, shouldWatch, watchOptions) {
 	this.processingPromise = Promise.resolve();
 }
 
-set(module, 'FilesManager', undefined, true, true, true);
-
 function setWatcher(valueKey, newWatcher) {
 	this[valueKey] = newWatcher;
 	this.watcher.on('add', this.onAdd.bind(this));
@@ -70,228 +68,228 @@ function setWatchOptions(valueKey, newWatchOptions) {
 	this.watcher = chokidar.watch([...this.watched], this.watchOptions);
 }
 
-module.FilesManager = abstractClassBuilder('FilesManager', construct,
-	[
-		// { name: 'watcher', setter: setWatcher, isPrivate: true },
-		// { name: 'shouldWatch', setter: setShouldWatch, isProtected: true },
-		// { name: 'watchOptions', setter: setWatchOptions, isProtected: true }
-		{ name: 'watcher', setter: setWatcher },
-		{ name: 'shouldWatch', setter: setShouldWatch },
-		{ name: 'watchOptions', setter: setWatchOptions }
-	],
-	[
-		// How to format file for keys in loaded / reporting
-		// fileToKey must be able to pull out a key from the file itself, not its loaded content
+const FilesManagerAttributes = [
+	// { name: 'watcher', setter: setWatcher, isPrivate: true },
+	// { name: 'shouldWatch', setter: setShouldWatch, isProtected: true },
+	// { name: 'watchOptions', setter: setWatchOptions, isProtected: true }
+	{ name: 'watcher', setter: setWatcher },
+	{ name: 'shouldWatch', setter: setShouldWatch },
+	{ name: 'watchOptions', setter: setWatchOptions }
+];
 
-		{ name: 'fileToKey', impl: function (file) { return path.basename(file, '.js'); } },
-		{ name: 'formatFile', impl: function (file) { return this.fileToKey(file); } },
+const FilesManagerMethods = [
+	// How to format file for keys in loaded / reporting
+	// fileToKey must be able to pull out a key from the file itself, not its loaded content
 
-		// callback called after the corresponding operation is done
+	{ name: 'fileToKey', impl: function (file) { return path.basename(file, '.js'); } },
+	{ name: 'formatFile', impl: function (file) { return this.fileToKey(file); } },
 
-		// What loading and unloading a file means
-		// The return value of _load will be the value assigned in this.load at the corresponding key
+	// callback called after the corresponding operation is done
 
-		{ name: '_load', mandatory: true }, { name: '_unload', mandatory: true },
+	// What loading and unloading a file means
+	// The return value of _load will be the value assigned in this.load at the corresponding key
 
-		// reload will simply call unload then load then _reload for optinal additional behavior
-		// watch and unwatch should not need any additional behavior
+	{ name: '_load', mandatory: true }, { name: '_unload', mandatory: true },
 
-		{ name: '_reload' },
+	// reload will simply call unload then load then _reload for optinal additional behavior
+	// watch and unwatch should not need any additional behavior
 
-		// Updates this.files
+	{ name: '_reload' },
 
-		{ name: 'add', impl: function (file, stats) { this.files.includes(file) ? console.reportWarn(`'"${file}"' is already in the managed files`) : this.files.push(file); } },
-		{ name: 'addFolder', impl: async function addFolder(file) { walkDirSync(file, this.add.bind(this)); } },
-		{ name: 'remove', impl: function (file, stats) { if (!this.files.remove(file)) { console.reportWarn(`'"${file}"' is already not in the managed files`); } } },
-		{ name: 'removeFolder', impl: async function (file) { walkDirSync(file, this.remove.bind(this)); } },
+	// Updates this.files
 
-		// Queue management
+	{ name: 'add', impl: function (file, stats) { this.files.includes(file) ? console.reportWarn(`'"${file}"' is already in the managed files`) : this.files.push(file); } },
+	{ name: 'addFolder', impl: async function addFolder(file) { walkDirSync(file, this.add.bind(this)); } },
+	{ name: 'remove', impl: function (file, stats) { if (!this.files.remove(file)) { console.reportWarn(`'"${file}"' is already not in the managed files`); } } },
+	{ name: 'removeFolder', impl: async function (file) { walkDirSync(file, this.remove.bind(this)); } },
 
-		{
-			name: 'enqueueTask', impl: async function (task) {
-				await this.processingPromise;
-				this.queue.push(task);
-				this.processingPromise = this.processQueue();
-				return this.processingPromise;
+	// Queue management
+
+	{
+		name: 'enqueueTask', impl: async function (task) {
+			await this.processingPromise;
+			this.queue.push(task);
+			this.processingPromise = this.processQueue();
+			return this.processingPromise;
+		}
+	},
+
+	{
+		name: 'processQueue', impl: async function () {
+			while (this.queue.length > 0) {
+				await (this.queue.shift())();
 			}
-		},
+		}
+	},
 
-		{
-			name: 'processQueue', impl: async function () {
-				while (this.queue.length > 0) {
-					await (this.queue.shift())();
+	// File operations
+
+	{
+		name: 'load', impl: async function (file, reloading = false) {
+			let ret;
+			if (typeof reloading !== 'boolean') { reloading = false; }
+			await this.enqueueTask(async () => {
+				if (!reloading) {
+					this.reportLoadStart(file);
 				}
-			}
-		},
-
-		// File operations
-
-		{
-			name: 'load', impl: async function (file, reloading = false) {
-				let ret;
-				if (typeof reloading !== 'boolean') { reloading = false; }
-				await this.enqueueTask(async () => {
-					if (!reloading) {
-						this.reportLoadStart(file);
-					}
-					const fileKey = this.fileToKey(file);
-					if (this.loaded.has(fileKey)) {
-						console.reportWarn(`${this.constructor.name} tried to load "${file}" but it's already loaded`);
-						ret = [true, this.loaded.get(fileKey)];
-						return;
-					}
-					const [success, content] = await this._load(file, reloading);
-					if (!success) {
-						ret = [false, null];
-						return;
-					}
-					this.loaded.set(fileKey, content);
-					ret = [true, content];
-					if (!reloading) {
-						this.reportLoadEnd(file);
-					}
-				});
-				return ret;
-			}
-		},
-
-		{
-			name: 'unload', impl: function (file, reloading = false) {
-				if (typeof reloading !== 'boolean') { reloading = false; }
-				return this.enqueueTask(async () => {
-					if (!reloading) {
-						this.reportUnloadStart(file);
-					}
-					const fileKey = this.fileToKey(file);
-					if (!this.loaded.has(fileKey)) {
-						console.reportWarn(`${this.constructor.name} tried to unload "${file}" but it's already unloaded or has never been`);
-						return;
-					}
-					const content = this.loaded.get(fileKey);
-					await this._unload(file, content, reloading);
-					this.loaded.delete(fileKey);
-					if (!reloading) {
-						this.reportUnloadEnd(file);
-					}
-				});
-			}
-		},
-
-		{
-			name: 'reload', impl: function (file) {
-				return this.enqueueTask(async () => {
-					this.reportReloadStart(file);
-					await this.unload(file, true);
-					const [success, content] = await this.load(file, true);
-					if (!success) {
-						console.reportWarn(`${this.constructor.name} tried to reload "${file}" but load has failed`);
-						return;
-					}
-					await this._reload(file, content);
-					this.reportReloadEnd(file);
-				});
-			}
-		},
-
-		{
-			name: 'watch', impl: function (file) {
-				if (!this.shouldWatch) {
-					console.reportWarn(`${this.constructor.name} tried to watch "${file}" but shouldWatch is set to false`);
+				const fileKey = this.fileToKey(file);
+				if (this.loaded.has(fileKey)) {
+					console.reportWarn(`${this.constructor.name} tried to load "${file}" but it's already loaded`);
+					ret = [true, this.loaded.get(fileKey)];
 					return;
 				}
-				if (this.watched.has(file)) {
-					console.reportWarn(`${this.constructor.name} tried to watch "${file}" but it's already being watched`);
+				const [success, content] = await this._load(file, reloading);
+				if (!success) {
+					ret = [false, null];
 					return;
 				}
-				console.assert(this.watcher, '');
-				this.watcher.add(file);
-				this.watched.add(file);
-				this.reportWatch(file);
-			}
-		},
+				this.loaded.set(fileKey, content);
+				ret = [true, content];
+				if (!reloading) {
+					this.reportLoadEnd(file);
+				}
+			});
+			return ret;
+		}
+	},
 
-		{
-			name: 'unwatch', impl: function (file) {
-				if (!this.shouldWatch) {
-					console.reportWarn(`${this.constructor.name} tried to unwatch "${file}" but shouldWatch is set to false`);
+	{
+		name: 'unload', impl: function (file, reloading = false) {
+			if (typeof reloading !== 'boolean') { reloading = false; }
+			return this.enqueueTask(async () => {
+				if (!reloading) {
+					this.reportUnloadStart(file);
+				}
+				const fileKey = this.fileToKey(file);
+				if (!this.loaded.has(fileKey)) {
+					console.reportWarn(`${this.constructor.name} tried to unload "${file}" but it's already unloaded or has never been`);
 					return;
 				}
-				if (!this.watched.has(file)) {
-					console.reportWarn(`${this.constructor.name} tried to unwatch "${file}" but it's already not being watched`);
+				const content = this.loaded.get(fileKey);
+				await this._unload(file, content, reloading);
+				this.loaded.delete(fileKey);
+				if (!reloading) {
+					this.reportUnloadEnd(file);
+				}
+			});
+		}
+	},
+
+	{
+		name: 'reload', impl: function (file) {
+			return this.enqueueTask(async () => {
+				this.reportReloadStart(file);
+				await this.unload(file, true);
+				const [success, content] = await this.load(file, true);
+				if (!success) {
+					console.reportWarn(`${this.constructor.name} tried to reload "${file}" but load has failed`);
 					return;
 				}
-				console.assert(this.watcher, '');
-				this.watcher.unwatch(file);
-				this.watched.delete(file);
-				this.reportUnwatch(file);
+				await this._reload(file, content);
+				this.reportReloadEnd(file);
+			});
+		}
+	},
+
+	{
+		name: 'watch', impl: function (file) {
+			if (!this.shouldWatch) {
+				console.reportWarn(`${this.constructor.name} tried to watch "${file}" but shouldWatch is set to false`);
+				return;
 			}
-		},
-
-		// Folder operations
-
-		{ name: 'loadFolder', impl: function (folder) { return walkDirAsync(folder, (file, stats) => this.load(file)); } },
-		{ name: 'unloadFolder', impl: function (folder) { return walkDirAsync(folder, (file, stats) => this.load(file)); } },
-		{ name: 'reloadFolder', impl: function (folder) { return walkDirAsync(folder, (file, stats) => this.load(file)); } },
-		{ name: 'watchFolder', impl: function (folder) { walkDirSync(folder, this.watch.bind(this)); } },
-		{ name: 'unwatchFolder', impl: function (folder) { walkDirSync(folder, this.unwatch.bind(this)); } },
-
-		// Bulk operations
-
-		{ name: 'loadAll', impl: function () { return Promise.all(this.files.map(file => this.load(file))); } },
-		{ name: 'unloadAll', impl: function () { return Promise.all(this.files.map(file => this.unload(file))); } },
-		{ name: 'reloadAll', impl: function () { return Promise.all(this.files.map(file => this.reload(file))); } },
-		{ name: 'watchAll', impl: function () { this.files.forEach(this.watch.bind(this)); } },
-		{ name: 'unwatchAll', impl: function () { this.files.forEach(this.unwatch.bind(this)); } },
-
-		// Chokidar
-
-		{ name: 'onAdd', impl: function (file) { return this.load(file); } },
-		{ name: 'onChange', impl: function (file) { return this.reload(file); } },
-		{ name: 'onUnlink', impl: function (file) { return this.unload(file); } },
-		{ name: 'onAddDir', impl: function (folder) { return this.loadFolder(folder); } },
-		{ name: 'onUnlinkDir', impl: function (folder) { return this.unloadFolder(folder); } },
-
-		// Some utils
-
-		{
-			name: 'isFile', impl: function (file) {
-				try {
-					return fs.statSync(file).isFile();
-				} catch (err) {
-					console.reportError(`Error checking if path "${file}" is a file`, err);
-					return false;
-				}
+			if (this.watched.has(file)) {
+				console.reportWarn(`${this.constructor.name} tried to watch "${file}" but it's already being watched`);
+				return;
 			}
-		},
+			console.assert(this.watcher, '');
+			this.watcher.add(file);
+			this.watched.add(file);
+			this.reportWatch(file);
+		}
+	},
 
-		{
-			name: 'isDirectory', impl: function (file) {
-				try {
-					return fs.statSync(file).isDirectory();
-				} catch (err) {
-					console.reportError(`Error checking if path "${file}" is a directory`, err);
-					return false;
-				}
+	{
+		name: 'unwatch', impl: function (file) {
+			if (!this.shouldWatch) {
+				console.reportWarn(`${this.constructor.name} tried to unwatch "${file}" but shouldWatch is set to false`);
+				return;
 			}
-		},
+			if (!this.watched.has(file)) {
+				console.reportWarn(`${this.constructor.name} tried to unwatch "${file}" but it's already not being watched`);
+				return;
+			}
+			console.assert(this.watcher, '');
+			this.watcher.unwatch(file);
+			this.watched.delete(file);
+			this.reportUnwatch(file);
+		}
+	},
 
-		// Default report functions
+	// Folder operations
 
-		{ name: 'reportLoadStart', impl: function (file) { } },
-		{ name: 'reportLoadEnd', impl: function (file) { console.report(`${this.formatFile(file)} loaded`); } },
+	{ name: 'loadFolder', impl: function (folder) { return walkDirAsync(folder, (file, stats) => this.load(file)); } },
+	{ name: 'unloadFolder', impl: function (folder) { return walkDirAsync(folder, (file, stats) => this.load(file)); } },
+	{ name: 'reloadFolder', impl: function (folder) { return walkDirAsync(folder, (file, stats) => this.load(file)); } },
+	{ name: 'watchFolder', impl: function (folder) { walkDirSync(folder, this.watch.bind(this)); } },
+	{ name: 'unwatchFolder', impl: function (folder) { walkDirSync(folder, this.unwatch.bind(this)); } },
 
-		{ name: 'reportUnloadStart', impl: function (file) { } },
-		{ name: 'reportUnloadEnd', impl: function (file) { console.report(`${this.formatFile(file)} unloaded`); } },
+	// Bulk operations
 
-		{ name: 'reportReloadStart', impl: function (file) { } },
-		{ name: 'reportReloadEnd', impl: function (file) { console.report(`${this.formatFile(file)} reloaded`); } },
+	{ name: 'loadAll', impl: function () { return Promise.all(this.files.map(file => this.load(file))); } },
+	{ name: 'unloadAll', impl: function () { return Promise.all(this.files.map(file => this.unload(file))); } },
+	{ name: 'reloadAll', impl: function () { return Promise.all(this.files.map(file => this.reload(file))); } },
+	{ name: 'watchAll', impl: function () { this.files.forEach(this.watch.bind(this)); } },
+	{ name: 'unwatchAll', impl: function () { this.files.forEach(this.unwatch.bind(this)); } },
 
-		{ name: 'reportWatch', impl: function (file) { console.report(`Watching ${file}...`); } },
+	// Chokidar
 
-		{ name: 'reportUnwatch', impl: function (file) { console.report(`Stopped watching ${file}`); } },
-	]);
+	{ name: 'onAdd', impl: function (file) { return this.load(file); } },
+	{ name: 'onChange', impl: function (file) { return this.reload(file); } },
+	{ name: 'onUnlink', impl: function (file) { return this.unload(file); } },
+	{ name: 'onAddDir', impl: function (folder) { return this.loadFolder(folder); } },
+	{ name: 'onUnlinkDir', impl: function (folder) { return this.unloadFolder(folder); } },
 
-Object.defineProperty(module, 'FilesManager', { writable: false, enumerable: true, configurable: false });
+	// Some utils
+
+	{
+		name: 'isFile', impl: function (file) {
+			try {
+				return fs.statSync(file).isFile();
+			} catch (err) {
+				console.reportError(`Error checking if path "${file}" is a file`, err);
+				return false;
+			}
+		}
+	},
+
+	{
+		name: 'isDirectory', impl: function (file) {
+			try {
+				return fs.statSync(file).isDirectory();
+			} catch (err) {
+				console.reportError(`Error checking if path "${file}" is a directory`, err);
+				return false;
+			}
+		}
+	},
+
+	// Default report functions
+
+	{ name: 'reportLoadStart', impl: function (file) { } },
+	{ name: 'reportLoadEnd', impl: function (file) { console.report(`${this.formatFile(file)} loaded`); } },
+
+	{ name: 'reportUnloadStart', impl: function (file) { } },
+	{ name: 'reportUnloadEnd', impl: function (file) { console.report(`${this.formatFile(file)} unloaded`); } },
+
+	{ name: 'reportReloadStart', impl: function (file) { } },
+	{ name: 'reportReloadEnd', impl: function (file) { console.report(`${this.formatFile(file)} reloaded`); } },
+
+	{ name: 'reportWatch', impl: function (file) { console.report(`Watching ${file}...`); } },
+
+	{ name: 'reportUnwatch', impl: function (file) { console.report(`Stopped watching ${file}`); } },
+];
+
+set(module, 'FilesManager', abstractClassBuilder('FilesManager', construct, FilesManagerAttributes, FilesManagerMethods), false, true, false);
 
 module.exports = {
 	FilesManager: module.FilesManager
