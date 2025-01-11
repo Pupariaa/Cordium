@@ -1,11 +1,12 @@
 'use strict';
 
 const { SlashCommandBuilder } = require('discord.js');
-const { wait } = require(global.utilsPath);
 const path = require('path');
 
 const cmdName = path.basename(__filename, path.extname(__filename));
 const cmdDescription = 'cleans the current channel';
+
+const { wait } = require(global.utilsPath);
 
 const urlRegex = new RegExp('https?:\\\/\\\/(?:www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b(?:[-a-zA-Z0-9()@:%_\\+.~#?&\\\/=]*)', '');
 
@@ -25,10 +26,6 @@ module.exports = {
 		.setName(cmdName)
 		.setDescription(cmdDescription),
 
-	/**
-	 * Executes the 'clean' command.
-	 * @param {Object} interaction - The interaction object from Discord.js.
-	 */
 	async execute(interaction) {
 		const channel = interaction.channel;
 		const messagesToDelete = await channel.fetchAllMessages(

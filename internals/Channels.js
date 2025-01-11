@@ -53,8 +53,10 @@ class Channels {
 		this.categories = Array.from(Object.keys(global.configChannels));
 		for (const category of this.categories) {
 			cache[category] = {};
+			const currentConfigChannels = global.configChannels[category];
 			set(this, category, {
-				aliases: global.configChannels[category],
+				aliases: currentConfigChannels,
+				choices: Object.keys(currentConfigChannels).map(channelName => ({ name: channelName, value: JSON.stringify([channelName]) })),
 				getById: function (channelId) {
 					return _getById(channelId);
 				},

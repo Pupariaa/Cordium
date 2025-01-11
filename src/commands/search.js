@@ -124,14 +124,6 @@ function link_matches(matches, replyObject) {
 
 const reporters = [log_matches, link_matches, report_matches];
 
-function generateChannelNamesChoices() {
-	const r = [];
-	for (const channelName of Object.keys(global.channels.text.aliases)) {
-		r.push({ name: channelName, value: JSON.stringify([channelName]) });
-	}
-	return r;
-}
-
 function querySummary(regex, types, channelsName) {
 	const selectedTypes = types.map(type => type.name.substring(4).replace('_', ' ')).join(', ');
 	const selectedChannels = channelsName.map(channelName => channelName.replace('_', '-')).join(', ');
@@ -204,7 +196,7 @@ module.exports = {
 			option.setName('channel_name')
 				.setDescription('the channel to search in (all by default)')
 				.setRequired(false)
-				.addChoices(generateChannelNamesChoices())
+				.addChoices(global.channels.text.choices)
 		)
 		.addStringOption(option =>
 			option.setName('flags')
@@ -234,10 +226,6 @@ module.exports = {
 				)
 		),
 
-	/**
-	 * Executes the 'search' command.
-	 * @param {Object} interaction - The interaction object from Discord.js.
-	 */
 	async execute(interaction) {
 		const regex = new RegExp(interaction.options.getString('regex'), interaction.options.getString('flags') || '');
 		const types = JSON.parse(interaction.options.getString('type'))?.map(type => gets[type]) || [...gets];

@@ -11,10 +11,6 @@ module.exports = {
 		.setName(cmdName)
 		.setDescription(cmdDescription),
 
-	/**
-	 * Executes the 'help' command.
-	 * @param {Object} interaction - The interaction object from Discord.js.
-	 */
 	async execute(interaction) {
 		const replyObject = {
 			ephemeral: false,

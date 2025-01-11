@@ -21,10 +21,6 @@ module.exports = {
 				.setRequired(false)
 		),
 
-	/**
-	 * Executes the 'pp' command.
-	 * @param {Object} interaction - The interaction object from Discord.js.
-	 */
 	async execute(interaction) {
 		let user = interaction.options.getUser('user');
 		const getGuildPp = interaction.options.getBoolean('guild');
