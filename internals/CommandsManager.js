@@ -44,7 +44,7 @@ class CommandsManager extends FilesManager {
 		}
 	}
 
-	async _unload(file, content, reloading) {
+	async _unload(file, command, reloading) {
 		delete require.cache[file];
 		if (!reloading) {
 			this.deployedCommands = await this._deployAll();
