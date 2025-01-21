@@ -15,7 +15,7 @@ module.exports = {
 		.addStringOption(option =>
 			option.setName('channel_name')
 				.setDescription('the channel to send the file to')
-				.setRequired(true)
+				.setRequired(false)
 				.addChoices(global.channels.text.choices)
 		)
 		.addStringOption(option =>
@@ -30,12 +30,14 @@ module.exports = {
 		),
 
 	async execute(interaction) {
-		const channelAlias = JSON.parse(interaction.options.getString('channel_name'))[0];
-		const channel = global.channels.getByAlias(channelAlias);
+		const channelAlias = JSON.parse(interaction.options.getString('channel_name'))?.[0];
+		const channel = channelAlias
+			? global.channels.getByAlias(JSON.parse(channelAlias)[0])
+			: interaction.channel;
 
 		if (!channel) {
 			return interaction.reply({
-				ephemeral: false,
+				ephemeral: true,
 				content: `No channel named ${channelAlias} found`
 			});
 		}
@@ -52,12 +54,17 @@ module.exports = {
 
 			if (!(await waitForFile(filePath))) {
 				return interaction.reply({
-					ephemeral: false,
+					ephemeral: true,
 					content: `No file found at ${filePath}`
 				});
 			}
 
 			replyObject.files = [filePath];
+		} else if (replyObject.content.length === 0) {
+			return interaction.reply({
+				ephemeral: true,
+				content: `Cannot send empty message`
+			});
 		}
 
 		await channel.send(replyObject);
