@@ -23,8 +23,7 @@ function construct(files, shouldWatch, watchOptions) {
 	this.files = files ?? []; // files to take action on if a XAll method is called
 	this.shouldWatch = (shouldWatch ?? global.dev) ?? true; // starts or closes the watcher automatically accordingly
 	this.watchOptions = watchOptions ?? defaultWatchOptions; // updates the watcher if the options are changed
-	this.queue = [];
-	this.processingPromise = Promise.resolve();
+	this.processingTask = Promise.resolve();
 }
 
 function setWatcher(valueKey, newWatcher) {
@@ -91,7 +90,7 @@ const FilesManagerMethods = [
 
 	{ name: '_load', mandatory: true }, { name: '_unload', mandatory: true },
 
-	// reload will simply call unload then load then _reload for optinal additional behavior
+	// reload will simply call unload then load then _reload for optinal additional behavior after this.loaded has been updated
 	// watch and unwatch should not need any additional behavior
 
 	{ name: '_reload' },
@@ -103,22 +102,10 @@ const FilesManagerMethods = [
 	{ name: 'remove', impl: function (file, stats) { if (!this.files.remove(file)) { console.reportWarn(`'"${file}"' is already not in the managed files`); } } },
 	{ name: 'removeFolder', impl: async function (file) { walkDirSync(file, this.remove.bind(this)); } },
 
-	// Queue management
-
 	{
 		name: 'enqueueTask', impl: async function (task) {
-			await this.processingPromise;
-			this.queue.push(task);
-			this.processingPromise = this.processQueue();
-			return this.processingPromise;
-		}
-	},
-
-	{
-		name: 'processQueue', impl: async function () {
-			while (this.queue.length > 0) {
-				await (this.queue.shift())();
-			}
+			this.processingTask = this.processingTask.then(() => task());
+			return this.processingTask;
 		}
 	},
 
@@ -166,8 +153,8 @@ const FilesManagerMethods = [
 					return;
 				}
 				const content = this.loaded.get(fileKey);
-				await this._unload(file, content, reloading);
 				this.loaded.delete(fileKey);
+				await this._unload(file, content, reloading);
 				if (!reloading) {
 					this.reportUnloadEnd(file);
 				}
