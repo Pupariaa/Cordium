@@ -3,10 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { REST } = require('@discordjs/rest');
-const { Collection } = require('discord.js');
 const { Routes } = require('discord-api-types/v10');
-const chokidar = require('chokidar');
-const { walkDirSync } = require(global.utilsPath);
 const { FilesManager } = require(global.filesManagerPath);
 
 function deployCommands(rest, commands) {
@@ -33,10 +30,26 @@ class CommandsManager extends FilesManager {
 				console.reportError(`Invalid command.data.name in ${file}: ${command?.data?.name}`);
 				return [false, null];
 			}
-			if (typeof command.execute !== 'function') {
+			if (typeof command?.execute !== 'function') {
 				console.reportError(`Invalid typeof command.execute type in ${file}: ${typeof command.execute}`);
 				return [false, null];
 			}
+			if (typeof command?.buttons !== 'object') {
+				console.reportError(`Invalid typeof command.buttons type in ${file}: ${typeof command.buttons}`);
+				return [false, null];
+			}
+			for (const [buttonId, button] of Object.entries(command.buttons)) {
+				if (typeof button?.execute !== 'function') {
+					console.reportError(`Invalid typeof command.buttons.${buttonId}.execute type in ${file}: ${typeof button.execute}`);
+					return [false, null];
+				}
+				if (typeof button?.data !== "object") {
+					console.reportError(`Invalid typeof command.buttons.${buttonId}.data type in ${file}: ${typeof button.data}`);
+					return [false, null];
+				}
+				button.data.setCustomId(`${command.data.name}-${buttonId}`);
+			}
+
 			return [true, command];
 		} catch (err) {
 			console.reportError(`Error loading command from ${file}:`, err);
@@ -56,9 +69,9 @@ class CommandsManager extends FilesManager {
 	}
 
 	reportLoadEnd(file) { console.report(`Command ${this.formatFile(file)} loaded`); }
-	
+
 	reportUnloadEnd(file) { console.report(`Command ${this.formatFile(file)} unloaded`); }
-	
+
 	reportReloadStart(file) { console.report(`Reloading command ${this.formatFile(file)}...`); }
 	reportReloadEnd(file) { console.report(`Command ${this.formatFile(file)} reloaded`); }
 

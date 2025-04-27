@@ -2,7 +2,6 @@
 
 const fs = require('fs');
 const path = require('path');
-const chokidar = require('chokidar');
 const { Client, Events, GatewayIntentBits, Partials } = require('discord.js');
 
 // Must haves ASAP
@@ -190,23 +189,30 @@ const { set, walkDirSync, toCamelCase, setReportFunctions } = require(global.uti
 		// Interaction handler
 		try {
 			global.client.on(Events.InteractionCreate, async (interaction) => {
-				if (!interaction.isChatInputCommand()) return;
-				const command = global.commandsManager.loaded.get(interaction.commandName);
-				if (!command) {
-					return interaction.reply({
-						ephemeral: true,
-						content: 'Not a command',
-					});
-				}
+				if (interaction.isChatInputCommand()) {
+					const command = global.commandsManager.loaded.get(interaction.commandName);
+					if (!command) {
+						return interaction.reply({
+							ephemeral: true,
+							content: 'Not a command',
+						});
+					}
 
-				try {
-					return command.execute(interaction);
-				} catch (err) {
-					console.reportError(err);
-					return (interaction.replied || interaction.deferred ? interaction.followUp : interaction.reply)({
-						ephemeral: true,
-						content: `${interaction.commandName} failed (${err})`,
-					});
+					try {
+						return command.execute(interaction);
+					} catch (err) {
+						console.reportError(err);
+						return (interaction.replied || interaction.deferred ? interaction.followUp : interaction.reply)({
+							ephemeral: true,
+							content: `${interaction.commandName} failed (${err})`,
+						});
+					}
+				} else if (interaction.isButton()) {
+					const parts = interaction.customId.split('-');
+					const commandName = parts[0];
+					const buttonId = parts[1];
+					const command = global.commandsManager.loaded.get(commandName);
+					return command.buttons[buttonId].execute(interaction);
 				}
 			});
 		} catch (err) {

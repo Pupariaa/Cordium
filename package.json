@@ -19,6 +19,7 @@
 		"extend-console": "^7.4.7",
 		"sanitize-filename": "^1.6.3",
 		"express": "^5.1.0",
-		"spectraget": "^1.1.0"
+		"spectraget": "^1.1.0",
+		"chokidar": "^4.0.3"
 	}
 }
