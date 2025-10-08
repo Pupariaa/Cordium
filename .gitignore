@@ -2,7 +2,7 @@ node_modules/
 package-lock.json
 
 *.env
-# config/*.json
+config/*.json
 
 internals/cache/
 src/files/
