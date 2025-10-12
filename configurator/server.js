@@ -853,7 +853,7 @@ app.get('/api/server/message-history', async (req, res) => {
 			reactions: history.reactions.length,
 			replies: history.replies.length
 		});
-		
+
 		res.json(history);
 	} catch (err) {
 		console.error('Error fetching message history:', err);
