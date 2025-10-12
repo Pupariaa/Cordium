@@ -36,7 +36,42 @@ A production-ready Discord.js framework with advanced features for building scal
 npm install
 ```
 
-Configure your bot credentials in `config/config.env`:
+## Quick Start
+
+Cordium includes a web-based configuration panel that launches automatically on first run:
+
+```bash
+npm start
+```
+
+This will:
+1. Check if your bot is configured (Discord credentials present)
+2. If **not configured**: Launch the Configuration Panel at `http://localhost:3001`
+3. If **configured**: Start the Discord bot directly
+
+**Note:** Once configured, `npm start` will launch the bot. To access the configuration panel after setup, use `npm run config`.
+
+### Configuration Panel
+
+The web interface provides:
+
+- **Initial Setup** - Configure Discord credentials and database settings
+- **Advanced Configuration** - Adjust events, endpoints, folders, and development mode
+- **Commands Manager** - Create and edit slash commands
+- **Events Manager** - Modify event handlers
+- **Endpoints Manager** - Edit API endpoints
+- **Sandbox** - Test and develop code snippets
+
+The panel features:
+- Responsive Bootstrap design
+- Dark/Light theme toggle
+- Live code editor with syntax highlighting
+- Real-time configuration status
+- Secure file management
+
+### Manual Configuration
+
+Alternatively, configure manually in `config/config.env`:
 
 ```env
 client_token=your_bot_token_here
@@ -44,16 +79,14 @@ client_id=your_client_id_here
 discord_guild_id=your_guild_id_here
 ```
 
-Run the bot:
+### Available Commands
 
 ```bash
-node index.js
-```
-
-For production mode:
-
-```bash
-npm run prod
+npm start          # Auto-detect: config panel or bot
+npm run config     # Force launch configuration panel
+npm run bot        # Force launch bot (if configured)
+npm run prod       # Production mode
+node index.js      # Direct bot launch
 ```
 
 ## Project Structure
@@ -64,6 +97,11 @@ Cordium/
 │   ├── cli/              # Command-line tools
 │   ├── config.json       # JSON configuration
 │   └── config.env        # Environment variables
+├── configurator/         # Web configuration panel
+│   ├── public/           # Frontend assets
+│   │   ├── index.html    # Main UI
+│   │   └── app.js        # Frontend logic
+│   └── server.js         # Configuration API server
 ├── internals/            # Core framework files
 │   ├── prototypes/       # Discord.js class extensions
 │   ├── CommandsManager.js
@@ -85,7 +123,9 @@ Cordium/
 │   │   ├── public/       # Publicly accessible
 │   │   └── private/      # Authentication required
 │   ├── config/           # User configuration
+│   ├── sandbox/          # Code testing area
 │   └── index.js          # User entry point
+├── start.js              # Entry point with auto-detection
 └── index.js              # Framework entry point
 ```
 
