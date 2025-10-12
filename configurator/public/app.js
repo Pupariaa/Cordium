@@ -5,14 +5,12 @@ let currentPage = 'setup';
 
 document.addEventListener('DOMContentLoaded', async () => {
 	initTheme();
-	await checkConfigStatus();
-	initNavigation();
-
-	const savedPage = localStorage.getItem('currentPage');
 	const statusResponse = await fetch('/api/config/status');
 	const statusData = await statusResponse.json();
 
-	if (savedPage && statusData.configured) {
+	if (statusData.configured) {
+		initDashboard();
+		const savedPage = localStorage.getItem('currentPage') || 'server';
 		loadPage(savedPage);
 		document.querySelectorAll('.nav-link').forEach(link => {
 			link.classList.remove('active');
@@ -20,27 +18,33 @@ document.addEventListener('DOMContentLoaded', async () => {
 				link.classList.add('active');
 			}
 		});
-	} else if (statusData.configured && !savedPage) {
-		loadPage('server');
-		document.querySelectorAll('.nav-link').forEach(link => {
-			link.classList.remove('active');
-			if (link.getAttribute('data-page') === 'server') {
-				link.classList.add('active');
-			}
-		});
 	} else {
-		loadPage('setup');
+		initSetupWizard();
 	}
 });
+
+function initSetupWizard() {
+	document.body.classList.add('setup-mode');
+	document.body.classList.remove('dashboard-mode');
+	document.getElementById('pageTitle').textContent = 'Cordium Setup';
+	document.getElementById('setupWizard').style.display = 'block';
+	document.getElementById('dashboard').style.display = 'none';
+	renderSetupWizard();
+}
+
+function initDashboard() {
+	document.body.classList.remove('setup-mode');
+	document.body.classList.add('dashboard-mode');
+	document.getElementById('pageTitle').textContent = 'Cordium Manager';
+	document.getElementById('setupWizard').style.display = 'none';
+	document.getElementById('dashboard').style.display = 'block';
+	checkConfigStatus();
+	initNavigation();
+}
 
 function initTheme() {
 	const savedTheme = localStorage.getItem('theme') || 'dark';
 	setTheme(savedTheme);
-
-	document.getElementById('themeToggle').addEventListener('click', () => {
-		const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-		setTheme(newTheme);
-	});
 }
 
 function setTheme(theme) {
@@ -60,21 +64,439 @@ function setTheme(theme) {
 	}
 }
 
+async function renderSetupWizard() {
+	const response = await fetch('/api/config');
+	const config = await response.json();
+	let setupStep = 1;
+
+	const wizardContainer = document.getElementById('setupWizard');
+	wizardContainer.innerHTML = `
+		<div class="setup-wizard">
+			<div class="wizard-header">
+				<div class="container">
+					<div class="text-center">
+						<i class="bi bi-lightning-charge-fill text-warning" style="font-size: 2.5rem;"></i>
+						<h1 class="fw-bold mt-2 text-gradient" style="font-size: 2rem;">Welcome to Cordium</h1>
+						<p class="text-muted mb-0" style="font-size: 0.95rem;">Let's get your Discord bot up and running in just a few steps</p>
+					</div>
+				</div>
+			</div>
+			
+			<div class="container py-3" style="flex: 1; display: flex; flex-direction: column;">
+				<div class="row justify-content-center" style="flex: 1;">
+					<div class="col-lg-8" style="display: flex; flex-direction: column;">
+						<div class="wizard-steps mb-3">
+							<div class="step active" data-step="1">
+								<div class="step-number">1</div>
+								<div class="step-label">Discord Setup</div>
+							</div>
+							<div class="step-line"></div>
+							<div class="step" data-step="2">
+								<div class="step-number">2</div>
+								<div class="step-label">Database</div>
+							</div>
+							<div class="step-line"></div>
+							<div class="step" data-step="3">
+								<div class="step-number">3</div>
+								<div class="step-label">Redis</div>
+							</div>
+							<div class="step-line"></div>
+							<div class="step" data-step="4">
+								<div class="step-number">4</div>
+								<div class="step-label">Complete</div>
+							</div>
+						</div>
+
+						<div class="wizard-content" style="flex: 1;">
+							<div id="wizardStep1" style="width: 100%;">
+								<div class="card shadow-lg">
+									<div class="card-body">
+										<h3>Discord Bot Configuration</h3>
+										<p class="text-muted">Connect your Discord bot credentials</p>
+										
+										<form id="wizardDiscordForm">
+											<div class="mb-3">
+												<label class="form-label fw-bold">Bot Token</label>
+												<input type="password" class="form-control" id="wizard_client_token" value="${config.client_token || ''}" required>
+												<small class="form-text text-muted">Developer Portal > Bot > Reset Token</small>
+											</div>
+											<div class="mb-3">
+												<label class="form-label fw-bold">Client ID</label>
+												<input type="text" class="form-control" id="wizard_client_id" value="${config.client_id || ''}" required>
+												<small class="form-text text-muted">Developer Portal > General Information</small>
+											</div>
+											<div class="mb-3">
+												<label class="form-label fw-bold">Guild ID (Server ID)</label>
+												<input type="text" class="form-control" id="wizard_discord_guild_id" value="${config.discord_guild_id || ''}" required>
+												<small class="form-text text-muted">Right-click server > Copy Server ID</small>
+											</div>
+											
+											<div class="alert alert-warning py-2">
+												<small><strong>Enable Intents:</strong> Presence, Server Members, Message Content</small>
+											</div>
+
+											<div id="wizardInviteLink" class="alert alert-info py-2" style="display: none;">
+												<small><strong>Invite Link:</strong></small>
+												<div class="input-group input-group-sm mt-1">
+													<input type="text" class="form-control" id="wizardInviteLinkInput" readonly>
+													<button class="btn btn-primary" type="button" id="wizardCopyInviteBtn">
+														<i class="bi bi-clipboard"></i>
+													</button>
+												</div>
+											</div>
+
+											<div class="d-grid mt-3">
+												<button type="submit" class="btn btn-primary">
+													Continue to Database Setup <i class="bi bi-arrow-right ms-2"></i>
+												</button>
+											</div>
+										</form>
+									</div>
+								</div>
+							</div>
+
+							<div id="wizardStep2" style="display: none; width: 100%;">
+								<div class="card shadow-lg">
+									<div class="card-body">
+										<h3>Database Configuration</h3>
+										<p class="text-muted">Optional: MySQL/MariaDB for event logging</p>
+										
+										<form id="wizardDatabaseForm">
+											<div class="row">
+												<div class="col-md-6 mb-2">
+													<label class="form-label fw-bold">Host</label>
+													<input type="text" class="form-control" id="wizard_db_host" value="${config.db_host || ''}" placeholder="localhost">
+												</div>
+												<div class="col-md-6 mb-2">
+													<label class="form-label fw-bold">Database Name</label>
+													<input type="text" class="form-control" id="wizard_db_name" value="${config.db_name || ''}" placeholder="cordium_events">
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-4 mb-2">
+													<label class="form-label fw-bold">Port</label>
+													<input type="number" class="form-control" id="wizard_db_port" value="${config.db_port || ''}" placeholder="3306">
+												</div>
+												<div class="col-md-4 mb-2">
+													<label class="form-label fw-bold">User</label>
+													<input type="text" class="form-control" id="wizard_db_user" value="${config.db_user || ''}" placeholder="username">
+												</div>
+												<div class="col-md-4 mb-2">
+													<label class="form-label fw-bold">Password</label>
+													<input type="password" class="form-control" id="wizard_db_pass" value="${config.db_pass || ''}" placeholder="password">
+												</div>
+											</div>
+											
+											<div id="wizardDbTestResult" class="mb-2" style="display: none; font-size: 0.85rem;"></div>
+											
+											<div class="d-flex gap-2 mt-3">
+												<button type="button" class="btn btn-outline-light" onclick="wizardGoToStep(1)">
+													<i class="bi bi-arrow-left"></i>
+												</button>
+												<button type="button" class="btn btn-info flex-fill" id="wizardTestDbBtn">
+													<i class="bi bi-wifi me-1"></i> Test
+												</button>
+												<button type="submit" class="btn btn-primary flex-fill">
+													Continue <i class="bi bi-arrow-right"></i>
+												</button>
+											</div>
+											<button type="button" class="btn btn-link w-100 p-1 mt-1" onclick="wizardSkipDatabase()" style="font-size: 0.85rem;">
+												Skip database
+											</button>
+										</form>
+									</div>
+								</div>
+							</div>
+
+							<div id="wizardStep3" style="display: none; width: 100%;">
+								<div class="card shadow-lg">
+									<div class="card-body">
+										<h3>Redis Cache Configuration</h3>
+										<p class="text-muted">Optional: Redis for ultra-fast caching</p>
+										
+										<form id="wizardRedisForm">
+											<div class="row">
+												<div class="col-md-6 mb-2">
+													<label class="form-label fw-bold">Host</label>
+													<input type="text" class="form-control" id="wizard_redis_host" value="${config.redis_host || ''}" placeholder="localhost">
+												</div>
+												<div class="col-md-6 mb-2">
+													<label class="form-label fw-bold">Port</label>
+													<input type="number" class="form-control" id="wizard_redis_port" value="${config.redis_port || ''}" placeholder="6379">
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-6 mb-2">
+													<label class="form-label fw-bold">Password</label>
+													<input type="password" class="form-control" id="wizard_redis_password" value="${config.redis_password || ''}" placeholder="Optional">
+												</div>
+												<div class="col-md-6 mb-2">
+													<label class="form-label fw-bold">Database Number</label>
+													<input type="number" class="form-control" id="wizard_redis_db" value="${config.redis_db || ''}" placeholder="0">
+												</div>
+											</div>
+											
+											<div class="alert alert-info py-2">
+												<small><strong>What is Redis?</strong> In-memory cache for faster data access and reduced database load</small>
+											</div>
+											
+											<div id="wizardRedisTestResult" class="mb-2" style="display: none; font-size: 0.85rem;"></div>
+											
+											<div class="d-flex gap-2 mt-3">
+												<button type="button" class="btn btn-outline-light" onclick="wizardGoToStep(2)">
+													<i class="bi bi-arrow-left"></i>
+												</button>
+												<button type="button" class="btn btn-info flex-fill" id="wizardTestRedisBtn">
+													<i class="bi bi-wifi me-1"></i> Test
+												</button>
+												<button type="submit" class="btn btn-success flex-fill">
+													Complete <i class="bi bi-check"></i>
+												</button>
+											</div>
+											<button type="button" class="btn btn-link w-100 p-1 mt-1" onclick="wizardSkipRedis()" style="font-size: 0.85rem;">
+												Skip Redis
+											</button>
+										</form>
+									</div>
+								</div>
+							</div>
+
+							<div id="wizardStep4" style="display: none; width: 100%;">
+								<div class="card shadow-lg border-success">
+									<div class="card-body text-center">
+										<i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
+										<h3 class="mt-3 mb-2">All Set!</h3>
+										<p class="text-muted mb-3">Your bot is configured and ready to launch.</p>
+										
+										<div class="alert alert-info text-start py-2 mb-3">
+											<strong style="font-size: 0.9rem;">Next Steps:</strong>
+											<ol class="mb-0 mt-1" style="font-size: 0.85rem;">
+												<li>Close this window (Ctrl+C in terminal)</li>
+												<li>Restart with <code>npm start</code></li>
+												<li>Dashboard will be at <code>http://localhost:3001</code></li>
+											</ol>
+										</div>
+
+										<div class="d-grid">
+											<button class="btn btn-success" onclick="window.location.reload()">
+												<i class="bi bi-arrow-clockwise me-2"></i>Reload Dashboard
+											</button>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	`;
+
+	document.getElementById('wizard_client_id').addEventListener('input', updateWizardInviteLink);
+	updateWizardInviteLink();
+
+	document.getElementById('wizardCopyInviteBtn').addEventListener('click', () => {
+		const input = document.getElementById('wizardInviteLinkInput');
+		input.select();
+		document.execCommand('copy');
+		showNotification('Invite link copied to clipboard!', 'success');
+	});
+
+	document.getElementById('wizardDiscordForm').addEventListener('submit', async (e) => {
+		e.preventDefault();
+		await saveWizardConfig(['client_token', 'client_id', 'discord_guild_id'], 'wizard_');
+		wizardGoToStep(2);
+	});
+
+	document.getElementById('wizardDatabaseForm').addEventListener('submit', async (e) => {
+		e.preventDefault();
+		await saveWizardConfig(['db_host', 'db_name', 'db_port', 'db_user', 'db_pass'], 'wizard_');
+		wizardGoToStep(3);
+	});
+
+	document.getElementById('wizardTestDbBtn').addEventListener('click', async () => {
+		await testWizardDatabaseConnection();
+	});
+
+	document.getElementById('wizardRedisForm').addEventListener('submit', async (e) => {
+		e.preventDefault();
+		await saveWizardConfig(['redis_host', 'redis_port', 'redis_password', 'redis_db'], 'wizard_');
+		wizardGoToStep(4);
+	});
+
+	document.getElementById('wizardTestRedisBtn').addEventListener('click', async () => {
+		await testWizardRedisConnection();
+	});
+}
+
+function updateWizardInviteLink() {
+	const clientId = document.getElementById('wizard_client_id').value.trim();
+	const inviteLinkDiv = document.getElementById('wizardInviteLink');
+	const inviteLinkInput = document.getElementById('wizardInviteLinkInput');
+
+	if (clientId) {
+		const permissions = '8';
+		const scopes = 'bot%20applications.commands';
+		const inviteUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&permissions=${permissions}&scope=${scopes}&integration_type=0`;
+		inviteLinkInput.value = inviteUrl;
+		inviteLinkDiv.style.display = 'block';
+	} else {
+		inviteLinkDiv.style.display = 'none';
+	}
+}
+
+function wizardGoToStep(step) {
+	document.getElementById('wizardStep1').style.display = step === 1 ? 'block' : 'none';
+	document.getElementById('wizardStep2').style.display = step === 2 ? 'block' : 'none';
+	document.getElementById('wizardStep3').style.display = step === 3 ? 'block' : 'none';
+	document.getElementById('wizardStep4').style.display = step === 4 ? 'block' : 'none';
+
+	document.querySelectorAll('.wizard-steps .step').forEach(s => {
+		const stepNum = parseInt(s.getAttribute('data-step'));
+		s.classList.toggle('active', stepNum <= step);
+		s.classList.toggle('completed', stepNum < step);
+	});
+}
+
+async function wizardSkipDatabase() {
+	if (confirm('Skip database configuration? You can add it later in Settings.')) {
+		wizardGoToStep(3);
+	}
+}
+
+async function wizardSkipRedis() {
+	if (confirm('Skip Redis configuration? You can add it later in Settings.')) {
+		wizardGoToStep(4);
+	}
+}
+
+async function saveWizardConfig(fields, prefix) {
+	try {
+		showLoading();
+		const response = await fetch('/api/config');
+		const currentConfig = await response.json();
+
+		fields.forEach(field => {
+			const element = document.getElementById(prefix + field);
+			if (element) {
+				currentConfig[field] = element.value;
+			}
+		});
+
+		const saveResponse = await fetch('/api/config', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(currentConfig)
+		});
+
+		const data = await saveResponse.json();
+		if (data.success) {
+			showNotification('Configuration saved!', 'success');
+		} else {
+			showNotification('Error saving configuration', 'danger');
+		}
+	} catch (err) {
+		showNotification('Error: ' + err.message, 'danger');
+	} finally {
+		hideLoading();
+	}
+}
+
+async function testWizardDatabaseConnection() {
+	const dbConfig = {
+		host: document.getElementById('wizard_db_host').value,
+		name: document.getElementById('wizard_db_name').value,
+		port: document.getElementById('wizard_db_port').value,
+		user: document.getElementById('wizard_db_user').value,
+		pass: document.getElementById('wizard_db_pass').value
+	};
+
+	if (!dbConfig.host || !dbConfig.name) {
+		showNotification('Please fill in at least host and database name', 'warning');
+		return;
+	}
+
+	const resultDiv = document.getElementById('wizardDbTestResult');
+	resultDiv.innerHTML = '<div class="spinner-border spinner-border-sm"></div> Testing connection...';
+	resultDiv.className = 'alert alert-info mb-2';
+	resultDiv.style.display = 'block';
+
+	try {
+		const response = await fetch('/api/test-db', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(dbConfig)
+		});
+
+		const data = await response.json();
+
+		if (data.success) {
+			resultDiv.className = 'alert alert-success mb-2';
+			resultDiv.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Database connection successful!';
+		} else {
+			resultDiv.className = 'alert alert-danger mb-2';
+			resultDiv.innerHTML = `<i class="bi bi-x-circle-fill me-2"></i>Connection failed: ${data.error}`;
+		}
+	} catch (err) {
+		resultDiv.className = 'alert alert-danger mb-2';
+		resultDiv.innerHTML = `<i class="bi bi-x-circle-fill me-2"></i>Error: ${err.message}`;
+	}
+}
+
+async function testWizardRedisConnection() {
+	const redisConfig = {
+		host: document.getElementById('wizard_redis_host').value,
+		port: document.getElementById('wizard_redis_port').value,
+		password: document.getElementById('wizard_redis_password').value,
+		db: document.getElementById('wizard_redis_db').value
+	};
+
+	if (!redisConfig.host) {
+		showNotification('Please fill in at least the host', 'warning');
+		return;
+	}
+
+	const resultDiv = document.getElementById('wizardRedisTestResult');
+	resultDiv.innerHTML = '<div class="spinner-border spinner-border-sm"></div> Testing connection...';
+	resultDiv.className = 'alert alert-info mb-2';
+	resultDiv.style.display = 'block';
+
+	try {
+		const response = await fetch('/api/test-redis', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(redisConfig)
+		});
+
+		const data = await response.json();
+
+		if (data.success) {
+			resultDiv.className = 'alert alert-success mb-2';
+			resultDiv.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Redis connection successful!';
+		} else {
+			resultDiv.className = 'alert alert-danger mb-2';
+			resultDiv.innerHTML = `<i class="bi bi-x-circle-fill me-2"></i>Connection failed: ${data.error}`;
+		}
+	} catch (err) {
+		resultDiv.className = 'alert alert-danger mb-2';
+		resultDiv.innerHTML = `<i class="bi bi-x-circle-fill me-2"></i>Error: ${err.message}`;
+	}
+}
+
 function initNavigation() {
+	const themeToggle = document.getElementById('themeToggle');
+	if (themeToggle && !themeToggle.hasAttribute('data-initialized')) {
+		themeToggle.setAttribute('data-initialized', 'true');
+		themeToggle.addEventListener('click', () => {
+			const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+			setTheme(newTheme);
+		});
+	}
+
 	document.querySelectorAll('.nav-link').forEach(link => {
 		link.addEventListener('click', async (e) => {
 			e.preventDefault();
 			const page = link.getAttribute('data-page');
-
-			if (page !== 'setup') {
-				const response = await fetch('/api/config/status');
-				const data = await response.json();
-				if (!data.configured) {
-					showNotification('Please complete the initial setup first', 'warning');
-					loadPage('setup');
-					return;
-				}
-			}
 
 			document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
 			link.classList.add('active');
@@ -88,41 +510,164 @@ async function checkConfigStatus() {
 	try {
 		const response = await fetch('/api/config/status');
 		const data = await response.json();
-		updateStatusBadge(data.configured);
-		updateNavigationAccess(data.configured);
+		return data.configured;
 	} catch (err) {
 		console.error('Failed to check config status:', err);
+		return false;
 	}
 }
 
-function updateNavigationAccess(configured) {
-	document.querySelectorAll('.nav-link').forEach(link => {
-		const page = link.getAttribute('data-page');
-		if (page !== 'setup') {
-			if (!configured) {
-				link.classList.add('disabled');
-				link.style.opacity = '0.5';
-				link.style.cursor = 'not-allowed';
-			} else {
-				link.classList.remove('disabled');
-				link.style.opacity = '1';
-				link.style.cursor = 'pointer';
+function filterServerContent() {
+	const searchTerm = document.getElementById('serverSearch')?.value.toLowerCase() || '';
+
+	// Get active tab
+	const activeTab = document.querySelector('#serverTabs .nav-link.active')?.id;
+
+	if (!activeTab || !searchTerm) {
+		// Show all items if no search
+		document.querySelectorAll('.list-group-item').forEach(item => {
+			item.style.display = '';
+		});
+		return;
+	}
+
+	let items;
+	if (activeTab === 'channels-tab') {
+		items = document.querySelectorAll('#channels .list-group-item');
+	} else if (activeTab === 'roles-tab') {
+		items = document.querySelectorAll('#roles .list-group-item');
+	} else if (activeTab === 'members-tab') {
+		items = document.querySelectorAll('#members .list-group-item');
+	} else if (activeTab === 'messages-tab') {
+		items = document.querySelectorAll('#messagesContainer .list-group-item');
+	}
+
+	if (items) {
+		items.forEach(item => {
+			let searchableText = '';
+
+			// Get all text content
+			searchableText += item.textContent.toLowerCase();
+
+			// Get all data attributes
+			for (let attr of item.attributes) {
+				if (attr.name.startsWith('data-')) {
+					searchableText += ' ' + attr.value.toLowerCase();
+				}
 			}
-		}
-	});
+
+			// Get onclick attributes (for IDs in function calls)
+			const onclickAttr = item.getAttribute('onclick');
+			if (onclickAttr) {
+				searchableText += ' ' + onclickAttr.toLowerCase();
+			}
+
+			// Search in all buttons inside the item
+			const buttons = item.querySelectorAll('button');
+			buttons.forEach(btn => {
+				const btnOnclick = btn.getAttribute('onclick');
+				if (btnOnclick) {
+					// Extract IDs from function calls like copyChannelId('123456')
+					const matches = btnOnclick.match(/'([^']+)'/g);
+					if (matches) {
+						matches.forEach(match => {
+							searchableText += ' ' + match.replace(/'/g, '').toLowerCase();
+						});
+					}
+				}
+			});
+
+			// For messages, also search in message ID attribute
+			if (activeTab === 'messages-tab') {
+				const messageId = item.getAttribute('data-message-id');
+				if (messageId) {
+					searchableText += ' ' + messageId.toLowerCase();
+				}
+			}
+
+			// Show/hide based on search
+			item.style.display = searchableText.includes(searchTerm) ? '' : 'none';
+		});
+	}
 }
 
-function updateStatusBadge(configured) {
-	const badge = document.getElementById('configStatus');
-	const text = document.getElementById('statusText');
-
-	if (configured) {
-		badge.className = 'status-badge bg-success';
-		text.textContent = 'Configured';
-	} else {
-		badge.className = 'status-badge bg-warning';
-		text.textContent = 'Not Configured';
+function clearServerSearch() {
+	const searchInput = document.getElementById('serverSearch');
+	if (searchInput) {
+		searchInput.value = '';
+		filterServerContent();
 	}
+}
+
+async function showReactionDetails(messageId, emoji) {
+	try {
+		const response = await fetch(`/api/server/message-history?messageId=${messageId}`);
+		const data = await response.json();
+
+		if (data.error) {
+			showToast('Unable to load reaction details', 'warning');
+			return;
+		}
+
+		// Filter reactions for this specific emoji
+		const emojiReactions = data.reactions.filter(r =>
+			r.emoji === emoji && r.action === 'add'
+		);
+
+		if (emojiReactions.length === 0) {
+			showToast('No reaction history found', 'info');
+			return;
+		}
+
+		// Group by user (keep only latest action)
+		const userReactions = {};
+		emojiReactions.forEach(r => {
+			userReactions[r.userId] = r;
+		});
+
+		const users = Object.values(userReactions);
+
+		let detailsHTML = `
+			<div class="modal fade show" id="reactionDetailsModal" tabindex="-1" style="display: block;" aria-modal="true">
+				<div class="modal-dialog modal-sm">
+					<div class="modal-content bg-dark text-white">
+						<div class="modal-header">
+							<h6 class="modal-title">
+								${emoji} Reactions (${users.length})
+							</h6>
+							<button type="button" class="btn-close btn-close-white" onclick="closeReactionDetails()"></button>
+						</div>
+						<div class="modal-body p-2">
+							<div class="list-group list-group-flush">
+								${users.map(u => `
+									<div class="list-group-item bg-dark text-white border-secondary py-2 px-3">
+										<strong>${u.username}</strong>
+									</div>
+								`).join('')}
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="modal-backdrop fade show"></div>
+		`;
+
+		document.body.insertAdjacentHTML('beforeend', detailsHTML);
+	} catch (err) {
+		showToast('Error loading reaction details', 'danger');
+	}
+}
+
+function closeReactionDetails() {
+	const modal = document.getElementById('reactionDetailsModal');
+	const backdrop = document.querySelectorAll('.modal-backdrop');
+	if (modal) modal.remove();
+	backdrop.forEach(b => b.remove());
+}
+
+async function reloadServerOverview() {
+	await loadPage('server');
+	showToast('Server overview reloaded', 'success');
 }
 
 async function loadPage(page) {
@@ -133,9 +678,6 @@ async function loadPage(page) {
 
 	try {
 		switch (page) {
-			case 'setup':
-				await renderSetupPage(content);
-				break;
 			case 'config':
 				await renderConfigPage(content);
 				break;
@@ -167,191 +709,6 @@ async function loadPage(page) {
 	}
 }
 
-async function renderSetupPage(container) {
-	const response = await fetch('/api/config');
-	const config = await response.json();
-
-	const statusResponse = await fetch('/api/config/status');
-	const statusData = await statusResponse.json();
-	const isConfigured = statusData.configured;
-
-	container.innerHTML = `
-        <div class="row">
-            <div class="col-12">
-                <h2 class="mb-4">
-                    <i class="bi bi-rocket-takeoff me-2"></i>
-                    Initial Setup
-                </h2>
-                ${isConfigured ? `
-                    <div class="alert alert-success" role="alert">
-                        <i class="bi bi-check-circle-fill me-2"></i>
-                        Your bot is configured! You can now access all features from the sidebar.
-                        <br><br>
-                        <strong>To launch the bot:</strong> Restart with <code>npm start</code> - The bot and this panel will run together.
-                    </div>
-                ` : `
-                    <div class="alert alert-info" role="alert">
-                        <i class="bi bi-info-circle-fill me-2"></i>
-                        Configure the essential settings to get your Discord bot running.
-                    </div>
-                `}
-            </div>
-        </div>
-        
-        <div class="row g-4">
-            <div class="col-md-6">
-                <div class="card config-card h-100">
-                    <div class="card-body">
-                        <h5 class="card-title">
-                            <i class="bi bi-discord text-primary me-2"></i>
-                            Discord Configuration
-                        </h5>
-                        <div class="alert alert-warning py-2 px-2 mb-2" style="font-size: 0.8rem;">
-                            <strong>Enable Intents:</strong> In Discord Developer Portal > Bot, enable Presence, Server Members, and Message Content intents.
-                        </div>
-                        <hr>
-                        <form id="discordForm">
-                            <div class="mb-3">
-                                <label class="form-label">Bot Token</label>
-                                <input type="password" class="form-control" id="client_token" 
-                                       value="${config.client_token || ''}" required>
-                                <small class="form-text text-muted">
-                                    Discord Developer Portal > Bot > Reset Token
-                                </small>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Client ID</label>
-                                <input type="text" class="form-control" id="client_id" 
-                                       value="${config.client_id || ''}" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Guild ID</label>
-                                <input type="text" class="form-control" id="discord_guild_id" 
-                                       value="${config.discord_guild_id || ''}" required>
-                            </div>
-                            <button type="submit" class="btn btn-primary w-100">
-                                <i class="bi bi-save me-2"></i>
-                                Save Discord Config
-                            </button>
-                        </form>
-                        <div id="inviteLink" class="mt-3" style="display: none;">
-                            <hr>
-                            <h6><i class="bi bi-link-45deg me-1"></i>Invite Link</h6>
-                            <div class="input-group">
-                                <input type="text" class="form-control" id="inviteLinkInput" readonly>
-                                <button class="btn btn-outline-primary" type="button" id="copyInviteBtn">
-                                    <i class="bi bi-clipboard"></i>
-                                </button>
-                            </div>
-                            <small class="text-muted">Use this link to add your bot to your Discord server</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-md-6">
-                <div class="card config-card h-100">
-                    <div class="card-body">
-                        <h5 class="card-title">
-                            <i class="bi bi-database text-success me-2"></i>
-                            Database Configuration
-                        </h5>
-                        <div class="alert alert-info py-2 px-2 mb-2" style="font-size: 0.8rem;">
-                            <strong>MySQL 5.7+ or MariaDB 10.3+</strong> - Records all Discord events for analytics and logs. Not required, leave empty to skip.
-                        </div>
-                        <hr>
-                        <form id="databaseForm">
-                            <div class="mb-2">
-                                <label class="form-label">Host</label>
-                                <input type="text" class="form-control" id="db_host" 
-                                       value="${config.db_host || ''}" placeholder="localhost or IP address">
-                            </div>
-                            <div class="mb-2">
-                                <label class="form-label">Database Name</label>
-                                <input type="text" class="form-control" id="db_name" 
-                                       value="${config.db_name || ''}" placeholder="cordium_events">
-                            </div>
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <div class="mb-2">
-                                        <label class="form-label">Port</label>
-                                        <input type="number" class="form-control" id="db_port" 
-                                               value="${config.db_port || ''}" placeholder="3306">
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="mb-2">
-                                        <label class="form-label">User</label>
-                                        <input type="text" class="form-control" id="db_user" 
-                                               value="${config.db_user || ''}" placeholder="username">
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="mb-2">
-                                        <label class="form-label">Password</label>
-                                        <input type="password" class="form-control" id="db_pass" 
-                                               value="${config.db_pass || ''}" placeholder="password">
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="d-flex gap-2">
-                                <button type="button" class="btn btn-outline-success flex-fill" id="testDbBtn">
-                                    <i class="bi bi-wifi me-2"></i>
-                                    Test Connection
-                                </button>
-                                <button type="submit" class="btn btn-success flex-fill">
-                                    <i class="bi bi-save me-2"></i>
-                                    Save
-                                </button>
-                            </div>
-                        </form>
-                        <div id="dbTestResult" class="mt-3" style="display: none;"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="card config-card bg-primary text-white">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Ready to Launch?</h5>
-                        <p class="card-text mb-2">Once configured, restart with:</p>
-                        <code class="bg-dark p-2 rounded d-inline-block mb-2">npm start</code>
-                        <p class="card-text mb-0" style="font-size: 0.85rem;">The bot and this panel will run together. Edit commands and settings anytime!</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-
-	document.getElementById('discordForm').addEventListener('submit', async (e) => {
-		e.preventDefault();
-		await savePartialConfig(['client_token', 'client_id', 'discord_guild_id']);
-		updateInviteLink();
-	});
-
-	const clientIdInput = document.getElementById('client_id');
-	clientIdInput.addEventListener('input', updateInviteLink);
-	updateInviteLink();
-
-	document.getElementById('copyInviteBtn').addEventListener('click', () => {
-		const input = document.getElementById('inviteLinkInput');
-		input.select();
-		document.execCommand('copy');
-		showNotification('Invite link copied to clipboard!', 'success');
-	});
-
-	document.getElementById('databaseForm').addEventListener('submit', async (e) => {
-		e.preventDefault();
-		await savePartialConfig(['db_host', 'db_name', 'db_port', 'db_user', 'db_pass']);
-	});
-
-	document.getElementById('testDbBtn').addEventListener('click', async () => {
-		await testDatabaseConnection();
-	});
-}
-
 async function renderServerPage(container) {
 	try {
 		const response = await fetch('/api/server/info');
@@ -359,19 +716,19 @@ async function renderServerPage(container) {
 
 		if (serverInfo.error) {
 			container.innerHTML = `
-				<div class="row">
-					<div class="col-12">
-						<h2 class="mb-4">
+        <div class="row">
+            <div class="col-12">
+                <h2 class="mb-4">
 							<i class="bi bi-server me-2"></i>
 							Server Overview
-						</h2>
+                </h2>
 						<div class="alert alert-warning" role="alert">
 							<i class="bi bi-exclamation-triangle-fill me-2"></i>
 							${serverInfo.error}
 							<br><small>Make sure the bot is running and connected to the server.</small>
-						</div>
-					</div>
-				</div>
+                    </div>
+                    </div>
+            </div>
 			`;
 			return;
 		}
@@ -401,19 +758,20 @@ async function renderServerPage(container) {
 			<div class="list-group-item bg-primary text-white d-flex justify-content-between align-items-center">
 				<div>
 					<strong>Create New Channel/Category</strong>
-				</div>
+        </div>
 				<button class="btn btn-sm btn-light" onclick="createChannel()" title="Create channel">
 					<i class="bi bi-plus-circle"></i> New Channel
 				</button>
-			</div>
+                            </div>
 		`;
 
 		noCategory.forEach(channel => {
 			const icon = channelTypeIcons[channel.type] || 'bi-circle';
 			const typeName = channelTypeNames[channel.type] || 'Unknown';
-			const textActions = channel.type === 0 ? `
-				<button class="btn btn-sm btn-primary" onclick="sendMessageToChannel('${channel.id}', '${channel.name}')" title="Send message">
+			const sendAction = channel.type === 0 ? `
+				<button onclick="sendMessageToChannel('${channel.id}', '${channel.name}')">
 					<i class="bi bi-send"></i>
+					<span>Send Message</span>
 				</button>
 			` : '';
 			channelsHTML += `
@@ -424,20 +782,30 @@ async function renderServerPage(container) {
 						<span class="badge bg-secondary ms-2">${typeName}</span>
 						${channel.members !== null ? `<span class="badge bg-info ms-1">${channel.members} members</span>` : ''}
 						${channel.topic ? `<br><small class="text-muted ms-4">${channel.topic}</small>` : ''}
-					</div>
-					<div class="btn-group" role="group">
-						${textActions}
-						<button class="btn btn-sm btn-warning" onclick="editChannel('${channel.id}', '${channel.name}', '${channel.type}', '${(channel.topic || '').replace(/'/g, "\\'")}' )" title="Edit channel">
-							<i class="bi bi-pencil"></i>
+                            </div>
+					<div class="item-menu">
+						<button class="item-menu-btn" onclick="toggleMenu(this)">
+							<i class="bi bi-three-dots-vertical"></i>
 						</button>
-						<button class="btn btn-sm btn-secondary" onclick="copyChannelId('${channel.id}')" title="Copy ID">
-							<i class="bi bi-clipboard"></i>
-						</button>
-						<button class="btn btn-sm btn-danger" onclick="deleteChannel('${channel.id}', '${channel.name}')" title="Delete channel">
-							<i class="bi bi-trash"></i>
-						</button>
-					</div>
-				</div>
+						<div class="item-menu-dropdown">
+							${sendAction}
+							${sendAction ? '<div class="divider"></div>' : ''}
+							<button onclick="editChannel('${channel.id}', '${channel.name}', '${channel.type}', '${(channel.topic || '').replace(/'/g, "\\'")}')">
+								<i class="bi bi-pencil"></i>
+								<span>Edit</span>
+							</button>
+							<button onclick="copyChannelId('${channel.id}')">
+								<i class="bi bi-clipboard"></i>
+								<span>Copy ID</span>
+							</button>
+							<div class="divider"></div>
+							<button class="text-danger" onclick="deleteChannel('${channel.id}', '${channel.name}')">
+								<i class="bi bi-trash"></i>
+								<span>Delete</span>
+							</button>
+                            </div>
+                            </div>
+                            </div>
 			`;
 		});
 
@@ -450,27 +818,37 @@ async function renderServerPage(container) {
 						<i class="bi bi-folder me-2"></i>
 						<strong>${category.name.toUpperCase()}</strong>
 						<span class="badge bg-secondary ms-2">${childChannels.length} channels</span>
+                    </div>
+					<div class="item-menu">
+						<button class="item-menu-btn" onclick="toggleMenu(this)">
+							<i class="bi bi-three-dots-vertical"></i>
+                            </button>
+						<div class="item-menu-dropdown">
+							<button onclick="createChannel('${category.id}')">
+								<i class="bi bi-plus-circle"></i>
+								<span>Add Channel</span>
+							</button>
+							<button onclick="editChannel('${category.id}', '${category.name}', '4', '')">
+								<i class="bi bi-pencil"></i>
+								<span>Edit Category</span>
+							</button>
+							<div class="divider"></div>
+							<button class="text-danger" onclick="deleteChannel('${category.id}', '${category.name}')">
+								<i class="bi bi-trash"></i>
+								<span>Delete Category</span>
+							</button>
+						</div>
 					</div>
-					<div class="btn-group" role="group">
-						<button class="btn btn-sm btn-success" onclick="createChannel('${category.id}')" title="Add channel">
-							<i class="bi bi-plus-circle"></i>
-						</button>
-						<button class="btn btn-sm btn-warning" onclick="editChannel('${category.id}', '${category.name}', '4', '')" title="Edit category">
-							<i class="bi bi-pencil"></i>
-						</button>
-						<button class="btn btn-sm btn-danger" onclick="deleteChannel('${category.id}', '${category.name}')" title="Delete category">
-							<i class="bi bi-trash"></i>
-						</button>
-					</div>
-				</div>
+            </div>
 			`;
 
 			childChannels.forEach(channel => {
 				const icon = channelTypeIcons[channel.type] || 'bi-circle';
 				const typeName = channelTypeNames[channel.type] || 'Unknown';
-				const textActions = channel.type === 0 ? `
-					<button class="btn btn-sm btn-primary" onclick="sendMessageToChannel('${channel.id}', '${channel.name}')" title="Send message">
+				const sendAction = channel.type === 0 ? `
+					<button onclick="sendMessageToChannel('${channel.id}', '${channel.name}')">
 						<i class="bi bi-send"></i>
+						<span>Send Message</span>
 					</button>
 				` : '';
 				channelsHTML += `
@@ -481,20 +859,30 @@ async function renderServerPage(container) {
 							<span class="badge bg-secondary ms-2">${typeName}</span>
 							${channel.members !== null ? `<span class="badge bg-info ms-1">${channel.members} members</span>` : ''}
 							${channel.topic ? `<br><small class="text-muted ms-4">${channel.topic}</small>` : ''}
-						</div>
-						<div class="btn-group" role="group">
-							${textActions}
-							<button class="btn btn-sm btn-warning" onclick="editChannel('${channel.id}', '${channel.name}', '${channel.type}', '${(channel.topic || '').replace(/'/g, "\\'")}' )" title="Edit channel">
-								<i class="bi bi-pencil"></i>
+                            </div>
+						<div class="item-menu">
+							<button class="item-menu-btn" onclick="toggleMenu(this)">
+								<i class="bi bi-three-dots-vertical"></i>
 							</button>
-							<button class="btn btn-sm btn-secondary" onclick="copyChannelId('${channel.id}')" title="Copy ID">
-								<i class="bi bi-clipboard"></i>
-							</button>
-							<button class="btn btn-sm btn-danger" onclick="deleteChannel('${channel.id}', '${channel.name}')" title="Delete channel">
-								<i class="bi bi-trash"></i>
-							</button>
-						</div>
-					</div>
+							<div class="item-menu-dropdown">
+								${sendAction}
+								${sendAction ? '<div class="divider"></div>' : ''}
+								<button onclick="editChannel('${channel.id}', '${channel.name}', '${channel.type}', '${(channel.topic || '').replace(/'/g, "\\'")}')">
+									<i class="bi bi-pencil"></i>
+									<span>Edit</span>
+								</button>
+								<button onclick="copyChannelId('${channel.id}')">
+                                    <i class="bi bi-clipboard"></i>
+									<span>Copy ID</span>
+								</button>
+								<div class="divider"></div>
+								<button class="text-danger" onclick="deleteChannel('${channel.id}', '${channel.name}')">
+									<i class="bi bi-trash"></i>
+									<span>Delete</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
 				`;
 			});
 		});
@@ -526,38 +914,59 @@ async function renderServerPage(container) {
 				`<br><small class="text-muted"><i class="bi bi-controller"></i> ${member.activities.join(', ')}</small>` : '';
 
 			const actionButtons = !member.isOwner ? `
-				<div class="btn-group-vertical" role="group">
-					<button class="btn btn-sm btn-info" onclick="event.stopPropagation(); showMemberDetails('${member.id}', '${member.username.replace(/'/g, "\\'")}')" title="Full details">
-						<i class="bi bi-info-circle"></i>
+				<div class="item-menu">
+					<button class="item-menu-btn" onclick="event.stopPropagation(); toggleMenu(this)">
+						<i class="bi bi-three-dots-vertical"></i>
 					</button>
-					<button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); manageMemberRoles('${member.id}', '${member.displayName.replace(/'/g, "\\'")}')" title="Manage roles">
-						<i class="bi bi-shield"></i>
-					</button>
-					<button class="btn btn-sm btn-warning" onclick="event.stopPropagation(); changeNickname('${member.id}', '${member.nickname ? member.nickname.replace(/'/g, "\\'") : ''}')" title="Change nickname">
-						<i class="bi bi-pencil"></i>
-					</button>
-					<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); timeoutMember('${member.id}', '${member.displayName.replace(/'/g, "\\'")}')" title="Timeout">
-						<i class="bi bi-clock"></i>
-					</button>
-					<button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); kickMember('${member.id}', '${member.displayName.replace(/'/g, "\\'")}')" title="Kick">
-						<i class="bi bi-box-arrow-right"></i>
-					</button>
-					<button class="btn btn-sm btn-dark" onclick="event.stopPropagation(); banMember('${member.id}', '${member.displayName.replace(/'/g, "\\'")}')" title="Ban">
-						<i class="bi bi-hammer"></i>
-					</button>
-					<button class="btn btn-sm btn-outline-secondary" onclick="event.stopPropagation(); copyMemberId('${member.id}')" title="Copy ID">
-						<i class="bi bi-clipboard"></i>
-					</button>
-				</div>
+					<div class="item-menu-dropdown">
+						<button onclick="event.stopPropagation(); showMemberDetails('${member.id}', '${member.username.replace(/'/g, "\\'")}')">
+							<i class="bi bi-info-circle"></i>
+							<span>Full Details</span>
+						</button>
+						<div class="divider"></div>
+						<button onclick="event.stopPropagation(); manageMemberRoles('${member.id}', '${member.displayName.replace(/'/g, "\\'")}')">
+							<i class="bi bi-shield"></i>
+							<span>Manage Roles</span>
+						</button>
+						<button onclick="event.stopPropagation(); changeNickname('${member.id}', '${member.nickname ? member.nickname.replace(/'/g, "\\'") : ''}')">
+							<i class="bi bi-pencil"></i>
+							<span>Change Nickname</span>
+						</button>
+						<button onclick="event.stopPropagation(); copyMemberId('${member.id}')">
+							<i class="bi bi-clipboard"></i>
+							<span>Copy ID</span>
+						</button>
+						<div class="divider"></div>
+						<button onclick="event.stopPropagation(); timeoutMember('${member.id}', '${member.displayName.replace(/'/g, "\\'")}')">
+							<i class="bi bi-clock"></i>
+							<span>Timeout</span>
+						</button>
+						<button class="text-danger" onclick="event.stopPropagation(); kickMember('${member.id}', '${member.displayName.replace(/'/g, "\\'")}')">
+							<i class="bi bi-box-arrow-right"></i>
+							<span>Kick</span>
+						</button>
+						<button class="text-danger" onclick="event.stopPropagation(); banMember('${member.id}', '${member.displayName.replace(/'/g, "\\'")}')">
+							<i class="bi bi-hammer"></i>
+							<span>Ban</span>
+						</button>
+                </div>
+            </div>
 			` : `
-				<div class="btn-group-vertical" role="group">
-					<button class="btn btn-sm btn-info" onclick="event.stopPropagation(); showMemberDetails('${member.id}', '${member.username.replace(/'/g, "\\'")}')" title="Full details">
-						<i class="bi bi-info-circle"></i>
+				<div class="item-menu">
+					<button class="item-menu-btn" onclick="event.stopPropagation(); toggleMenu(this)">
+						<i class="bi bi-three-dots-vertical"></i>
 					</button>
-					<button class="btn btn-sm btn-outline-secondary" onclick="event.stopPropagation(); copyMemberId('${member.id}')" title="Copy ID">
-						<i class="bi bi-clipboard"></i>
-					</button>
-				</div>
+					<div class="item-menu-dropdown">
+						<button onclick="event.stopPropagation(); showMemberDetails('${member.id}', '${member.username.replace(/'/g, "\\'")}')">
+							<i class="bi bi-info-circle"></i>
+							<span>Full Details</span>
+						</button>
+						<button onclick="event.stopPropagation(); copyMemberId('${member.id}')">
+							<i class="bi bi-clipboard"></i>
+							<span>Copy ID</span>
+						</button>
+					</div>
+            </div>
 			`;
 
 			membersHTML += `
@@ -570,20 +979,20 @@ async function renderServerPage(container) {
 									${statusIcon}
 									<strong class="ms-2" style="color: ${member.color};">${member.displayName}</strong>
 									${member.nickname ? `<small class="text-muted ms-2">(${member.username})</small>` : ''}
-								</div>
+                            </div>
 								<div class="mb-1">
 									${ownerBadge} ${botBadge} ${premiumBadge}
-								</div>
+                            </div>
 								${rolesDisplay ? `<div class="mb-1">${rolesDisplay}</div>` : ''}
 								<small class="text-muted">
 									<i class="bi bi-calendar-plus"></i> Joined ${memberDays}d ago • Account ${accountDays}d old
 									${activities}
-								</small>
-							</div>
-						</div>
+                                </small>
+                                    </div>
+                                </div>
 						${actionButtons}
-					</div>
-				</div>
+                                    </div>
+                                </div>
 			`;
 		});
 
@@ -592,11 +1001,11 @@ async function renderServerPage(container) {
 			<div class="list-group-item bg-success text-white d-flex justify-content-between align-items-center">
 				<div>
 					<strong>Create New Role</strong>
-				</div>
+                                    </div>
 				<button class="btn btn-sm btn-light" onclick="createRole()" title="Create role">
 					<i class="bi bi-plus-circle"></i> New Role
-				</button>
-			</div>
+                            </button>
+                                </div>
 		`;
 
 		serverInfo.roles.forEach(role => {
@@ -607,10 +1016,11 @@ async function renderServerPage(container) {
 			if (role.mentionable) badges.push('<span class="badge bg-success">Mentionable</span>');
 
 			const isEveryoneRole = role.name === '@everyone';
-			const deleteBtn = !isEveryoneRole ? `
-				<button class="btn btn-sm btn-danger" onclick="deleteRole('${role.id}', '${role.name}')" title="Delete role">
+			const deleteAction = !isEveryoneRole ? `
+				<button class="text-danger" onclick="deleteRole('${role.id}', '${role.name}')">
 					<i class="bi bi-trash"></i>
-				</button>
+					<span>Delete</span>
+                </button>
 			` : '';
 
 			rolesHTML += `
@@ -620,52 +1030,62 @@ async function renderServerPage(container) {
 						<strong ${colorStyle}>${role.name}</strong>
 						${badges.join(' ')}
 						<span class="badge bg-secondary ms-2">${role.memberCount} members</span>
-					</div>
-					<div class="btn-group" role="group">
-						<button class="btn btn-sm btn-info" onclick="showRoleMembers('${role.id}', '${role.name}')" title="View members">
-							<i class="bi bi-people"></i>
-						</button>
-						<button class="btn btn-sm btn-primary" onclick="assignRole('${role.id}', '${role.name}')" title="Assign to member">
-							<i class="bi bi-person-plus"></i>
-						</button>
-						<button class="btn btn-sm btn-warning" onclick="editRole('${role.id}', '${role.name}', '${role.hexColor}')" title="Edit role">
-							<i class="bi bi-pencil"></i>
-						</button>
-						<button class="btn btn-sm btn-secondary" onclick="copyRoleId('${role.id}')" title="Copy ID">
-							<i class="bi bi-clipboard"></i>
-						</button>
-						${deleteBtn}
-					</div>
-				</div>
+                            </div>
+					<div class="item-menu">
+						<button class="item-menu-btn" onclick="toggleMenu(this)">
+							<i class="bi bi-three-dots-vertical"></i>
+                                </button>
+						<div class="item-menu-dropdown">
+							<button onclick="showRoleMembers('${role.id}', '${role.name}')">
+								<i class="bi bi-people"></i>
+								<span>View Members</span>
+                                </button>
+							<button onclick="assignRole('${role.id}', '${role.name}')">
+								<i class="bi bi-person-plus"></i>
+								<span>Assign to Member</span>
+							</button>
+							<div class="divider"></div>
+							<button onclick="editRole('${role.id}', '${role.name}', '${role.hexColor}')">
+								<i class="bi bi-pencil"></i>
+								<span>Edit</span>
+							</button>
+							<button onclick="copyRoleId('${role.id}')">
+                                    <i class="bi bi-clipboard"></i>
+								<span>Copy ID</span>
+                                </button>
+							${deleteAction ? '<div class="divider"></div>' + deleteAction : ''}
+                            </div>
+                    </div>
+                </div>
 			`;
 		});
 
 		container.innerHTML = `
-			<div class="row">
+                            <div class="row">
 				<div class="col-12">
 					<h2 class="mb-4">
 						<i class="bi bi-server me-2"></i>
 						Server Overview - ${serverInfo.guildName}
 					</h2>
-				</div>
-			</div>
-
-			<div class="row mb-4">
+            </div>
+        </div>
+        
+			<div class="row mb-3">
 				<div class="col-md-2">
 					<div class="card">
 						<div class="card-body text-center py-2">
 							<h6 class="card-title mb-1">${serverInfo.memberCount}</h6>
 							<small class="text-muted">Total Members</small>
-						</div>
-					</div>
-				</div>
+                            </div>
+                            </div>
+                                    </div>
 				<div class="col-md-2">
 					<div class="card">
 						<div class="card-body text-center py-2">
 							<h6 class="card-title mb-1">${serverInfo.members.filter(m => m.status !== 'offline').length}</h6>
 							<small class="text-muted">Online</small>
-						</div>
-					</div>
+                                </div>
+                            </div>
 				</div>
 				<div class="col-md-2">
 					<div class="card">
@@ -701,41 +1121,74 @@ async function renderServerPage(container) {
 				</div>
 			</div>
 
-			<div class="row">
-				<div class="col-12">
-					<ul class="nav nav-tabs mb-3" id="serverTabs" role="tablist">
-						<li class="nav-item" role="presentation">
-							<button class="nav-link active" id="channels-tab" data-bs-toggle="tab" data-bs-target="#channels" type="button" role="tab">
-								<i class="bi bi-list-ul me-2"></i>Channels (${serverInfo.channels.length})
+			<div class="row mb-3">
+            <div class="col-12">
+					<div class="card bg-dark text-white">
+						<div class="card-body py-2 px-3">
+							<div class="d-flex align-items-center justify-content-between">
+								<strong><i class="bi bi-lightning-charge-fill text-danger me-2"></i>Cache Status</strong>
+								<div id="cacheStats" class="d-flex gap-3 align-items-center">
+									<small><i class="bi bi-hourglass-split"></i> Loading...</small>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+                            <div class="row">
+            <div class="col-12">
+					<div class="d-flex justify-content-between align-items-center mb-3">
+						<ul class="nav nav-tabs flex-grow-1 mb-0" id="serverTabs" role="tablist" style="border-bottom: none;">
+							<li class="nav-item" role="presentation">
+								<button class="nav-link active" id="channels-tab" data-bs-toggle="tab" data-bs-target="#channels" type="button" role="tab">
+									<i class="bi bi-list-ul me-2"></i>Channels (${serverInfo.channels.length})
+	                                </button>
+							</li>
+							<li class="nav-item" role="presentation">
+								<button class="nav-link" id="roles-tab" data-bs-toggle="tab" data-bs-target="#roles" type="button" role="tab">
+									<i class="bi bi-shield-check me-2"></i>Roles (${serverInfo.roles.length})
+	                                </button>
+							</li>
+							<li class="nav-item" role="presentation">
+								<button class="nav-link" id="members-tab" data-bs-toggle="tab" data-bs-target="#members" type="button" role="tab">
+									<i class="bi bi-people-fill me-2"></i>Members (${serverInfo.members.length})
+								</button>
+							</li>
+							<li class="nav-item" role="presentation">
+								<button class="nav-link" id="messages-tab" data-bs-toggle="tab" data-bs-target="#messages" type="button" role="tab" onclick="loadMessages(true)">
+									<i class="bi bi-chat-dots me-2"></i>Messages
+								</button>
+							</li>
+						</ul>
+						<div class="d-flex align-items-center gap-2 ms-3">
+							<div class="input-group" style="width: 220px;">
+								<input type="text" id="serverSearch" class="form-control form-control-sm" placeholder="Search..." oninput="filterServerContent()" style="height: 31px; font-size: 0.875rem;">
+								<button class="btn btn-sm btn-outline-secondary" type="button" onclick="clearServerSearch()" style="height: 31px; padding: 0 0.5rem; display: flex; align-items: center; border-left: 0;">
+									<i class="bi bi-x" style="font-size: 1rem;"></i>
+								</button>
+							</div>
+							<button class="btn btn-sm btn-primary" onclick="reloadServerOverview()" title="Reload" style="height: 31px; width: 31px; padding: 0; display: flex; align-items: center; justify-content: center;">
+								<i class="bi bi-arrow-clockwise" style="font-size: 0.875rem;"></i>
 							</button>
-						</li>
-						<li class="nav-item" role="presentation">
-							<button class="nav-link" id="roles-tab" data-bs-toggle="tab" data-bs-target="#roles" type="button" role="tab">
-								<i class="bi bi-shield-check me-2"></i>Roles (${serverInfo.roles.length})
-							</button>
-						</li>
-						<li class="nav-item" role="presentation">
-							<button class="nav-link" id="members-tab" data-bs-toggle="tab" data-bs-target="#members" type="button" role="tab">
-								<i class="bi bi-people-fill me-2"></i>Members (${serverInfo.members.length})
-							</button>
-						</li>
-					</ul>
+						</div>
+                                    </div>
 					<div class="tab-content" id="serverTabContent">
 						<div class="tab-pane fade show active" id="channels" role="tabpanel">
 							<div class="card">
 								<div class="card-body p-0">
 									<div class="list-group list-group-flush" style="max-height: 600px; overflow-y: auto;">
 										${channelsHTML}
-									</div>
-								</div>
-							</div>
-						</div>
+                                </div>
+                                    </div>
+                                </div>
+                            </div>
 						<div class="tab-pane fade" id="roles" role="tabpanel">
 							<div class="card">
 								<div class="card-body p-0">
 									<div class="list-group list-group-flush" style="max-height: 600px; overflow-y: auto;">
 										${rolesHTML}
-									</div>
+        </div>
 								</div>
 							</div>
 						</div>
@@ -748,17 +1201,563 @@ async function renderServerPage(container) {
 								</div>
 							</div>
 						</div>
-					</div>
-				</div>
-			</div>
-		`;
+						<div class="tab-pane fade" id="messages" role="tabpanel">
+							<div class="card">
+								<div class="card-header d-flex justify-content-between align-items-center">
+									<strong><i class="bi bi-chat-dots me-2"></i>Recent Messages</strong>
+									<div id="messagesStats">
+										<small class="text-muted">Click to load</small>
+									</div>
+								</div>
+								<div class="card-body p-0">
+									<div id="messagesContainer" class="list-group list-group-flush" style="max-height: 600px; overflow-y: auto;">
+										<div class="text-center py-5 text-muted">
+											<i class="bi bi-chat-dots" style="font-size: 3rem;"></i>
+											<p class="mt-3">Click this tab to load messages</p>
+										</div>
+									</div>
+								</div>
+							</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+		loadCacheStats();
 	} catch (err) {
 		container.innerHTML = `
 			<div class="alert alert-danger" role="alert">
 				<i class="bi bi-exclamation-triangle-fill me-2"></i>
 				Error loading server information: ${err.message}
-			</div>
+                    </div>
 		`;
+	}
+}
+
+async function loadCacheStats() {
+	try {
+		const response = await fetch('/api/server/cache-stats');
+		const stats = await response.json();
+
+		if (stats.error) {
+			document.getElementById('cacheStats').innerHTML = '<small class="text-warning">Cache not available</small>';
+			return;
+		}
+
+		const statusIcon = stats.redisEnabled
+			? '<i class="bi bi-circle-fill text-success"></i> Redis'
+			: '<i class="bi bi-circle text-warning"></i> Memory Only';
+
+		document.getElementById('cacheStats').innerHTML = `
+			<small>${statusIcon}</small>
+			<small><i class="bi bi-bullseye"></i> Hit Rate: <strong>${stats.hitRate}</strong></small>
+			<small><i class="bi bi-check-circle"></i> Hits: <strong>${stats.hits}</strong> (Redis: ${stats.redisHits}, Memory: ${stats.memoryHits})</small>
+			<small><i class="bi bi-x-circle"></i> Misses: <strong>${stats.misses}</strong></small>
+			<small><i class="bi bi-database"></i> Memory Size: <strong>${stats.memorySize}</strong></small>
+			<button class="btn btn-sm btn-outline-light" onclick="flushCache()">
+				<i class="bi bi-trash"></i> Flush Cache
+                                </button>
+		`;
+	} catch (err) {
+		document.getElementById('cacheStats').innerHTML = '<small class="text-danger">Error loading cache stats</small>';
+	}
+}
+
+async function flushCache() {
+	if (!confirm('Flush all cache data? This will clear both Redis and memory cache.')) return;
+
+	try {
+		const response = await fetch('/api/server/cache-flush', {
+			method: 'POST'
+		});
+
+		const data = await response.json();
+		if (data.success) {
+			showNotification('Cache flushed successfully!', 'success');
+			loadCacheStats();
+		} else {
+			showNotification('Failed: ' + data.error, 'danger');
+		}
+	} catch (err) {
+		showNotification('Error: ' + err.message, 'danger');
+	}
+}
+
+let messagesLoading = false;
+let messagesHasMore = true;
+let messagesOffset = 0;
+let messagesAutoRefresh = null;
+
+async function refreshMessages() {
+	const container = document.getElementById('messagesContainer');
+	if (!container) return;
+
+	messagesOffset = 0;
+	messagesHasMore = true;
+	container.innerHTML = '';
+	await loadMessages(true);
+}
+
+async function loadMessages(reset = false) {
+	if (messagesLoading) return;
+
+	if (reset) {
+		messagesOffset = 0;
+		messagesHasMore = true;
+		const container = document.getElementById('messagesContainer');
+		container.innerHTML = `
+			<div class="text-center py-5" id="messagesLoader">
+				<div class="spinner-border text-primary" role="status">
+					<span class="visually-hidden">Loading...</span>
+                            </div>
+				<p class="text-muted mt-3">Loading messages...</p>
+                    </div>
+		`;
+	}
+
+	try {
+		messagesLoading = true;
+
+		const timeoutPromise = new Promise((_, reject) =>
+			setTimeout(() => reject(new Error('Request timeout')), 5000)
+		);
+
+		const fetchPromise = fetch(messagesOffset > 0
+			? `/api/server/messages?limit=30&offset=${messagesOffset}`
+			: '/api/server/messages?limit=30'
+		).then(res => res.json());
+
+		const data = await Promise.race([fetchPromise, timeoutPromise]);
+
+		if (data.error) {
+			const container = document.getElementById('messagesContainer');
+			container.innerHTML = `
+				<div class="alert alert-warning m-3">
+					<i class="bi bi-exclamation-triangle me-2"></i>
+					${data.error}
+					<br><small>Messages history requires Redis to be configured.</small>
+                </div>
+    `;
+			document.getElementById('messages-tab').classList.add('disabled');
+			return;
+		}
+
+		messagesHasMore = data.hasMore;
+
+		const container = document.getElementById('messagesContainer');
+		const loader = document.getElementById('messagesLoader');
+		if (loader) loader.remove();
+
+		if (data.messages.length === 0 && messagesOffset === 0) {
+			container.innerHTML = `
+				<div class="text-center py-5 text-muted">
+					<i class="bi bi-chat-dots" style="font-size: 3rem;"></i>
+					<p class="mt-3">No messages yet. Send some messages in Discord to see them here!</p>
+            </div>
+			`;
+			return;
+		}
+
+		const fragment = document.createDocumentFragment();
+
+		data.messages.forEach(msg => {
+			const time = new Date(msg.timestamp);
+			const timeStr = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+			const messageItem = document.createElement('div');
+			messageItem.className = 'list-group-item';
+			messageItem.setAttribute('data-message-id', msg.id);
+
+			let contentHTML = `
+				<div class="d-flex align-items-start justify-content-between">
+					<div class="d-flex align-items-start flex-grow-1">
+						<small class="text-muted me-3 flex-shrink-0" style="min-width: 45px;">${timeStr}</small>
+						<img src="${msg.authorAvatar}" alt="${msg.authorDisplayName}" class="rounded-circle me-2" width="40" height="40" loading="lazy">
+						<div class="flex-grow-1">
+							<div class="mb-1">
+								<strong style="color: var(--primary-color);">${msg.authorDisplayName}</strong>
+								<small class="text-muted ms-2">#${msg.channelName}</small>
+								${msg.pinned ? '<i class="bi bi-pin-fill text-warning ms-2" title="Pinned"></i>' : ''}
+								${msg.edited ? '<span class="badge bg-secondary ms-2" title="Edited"><i class="bi bi-pencil-fill"></i> Edited</span>' : ''}
+        </div>
+							<div class="message-content">${msg.content || '<em class="text-muted">No content</em>'}</div>`;
+
+			if (msg.attachments && msg.attachments.length > 0) {
+				contentHTML += '<div class="mt-2 message-attachments">';
+				msg.attachments.forEach(a => {
+					const imageUrl = a.savedLocally && a.localPath ? a.localPath : a.url;
+					const linkUrl = a.savedLocally && a.localPath ? a.localPath : a.url;
+
+					if (a.isImage) {
+						contentHTML += `
+							<div class="message-image mb-2 ${a.savedLocally ? 'saved-locally' : ''}">
+								<a href="${linkUrl}" target="_blank">
+									<img src="${imageUrl}" alt="${a.name}" class="img-fluid rounded" style="max-width: 400px; max-height: 300px; cursor: pointer;" loading="lazy">
+								</a>
+								${a.savedLocally ? '<span class="saved-badge"><i class="bi bi-check-circle-fill"></i> Saved</span>' : ''}
+                    </div>
+						`;
+					} else {
+						contentHTML += `
+							<a href="${linkUrl}" target="_blank" class="badge ${a.savedLocally ? 'bg-success' : 'bg-secondary'} me-1 mb-1">
+								<i class="bi bi-${a.savedLocally ? 'check-circle-fill' : 'paperclip'}"></i> ${a.name}
+							</a>
+						`;
+					}
+				});
+				contentHTML += '</div>';
+			}
+
+			if (msg.embeds > 0) {
+				contentHTML += `<small class="badge bg-info mt-1">${msg.embeds} embed(s)</small>`;
+			}
+
+			if (msg.reactions && msg.reactions.length > 0) {
+				contentHTML += '<div class="message-reactions mt-2">';
+				msg.reactions.forEach(r => {
+					const emojiDisplay = r.isCustom && r.emojiUrl
+						? `<img src="${r.emojiUrl}" alt="${r.emoji}" width="18" height="18">`
+						: r.emoji;
+					contentHTML += `
+						<span class="reaction-badge" onclick="showReactionDetails('${msg.id}', '${r.emoji}')" style="cursor: pointer;" title="Click to see who reacted">
+							${emojiDisplay}
+							<span class="reaction-count">${r.count}</span>
+						</span>
+					`;
+				});
+				contentHTML += '</div>';
+			}
+
+			contentHTML += `</div>
+                </div>
+					<div class="item-menu">
+						<button class="item-menu-btn" onclick="toggleMenu(this)">
+							<i class="bi bi-three-dots-vertical"></i>
+						</button>
+						<div class="item-menu-dropdown">
+							<button onclick="viewMessageHistory('${msg.id}')">
+								<i class="bi bi-clock-history"></i>
+								<span>View History</span>
+							</button>
+							<button onclick="toggleMessagePriority('${msg.id}')">
+								<i class="bi bi-star text-warning"></i>
+								<span>Priority Reload</span>
+							</button>
+							<div class="divider"></div>
+							<button class="text-danger" onclick="deleteMessageFromCache('${msg.id}', '${msg.channelId}')">
+								<i class="bi bi-trash"></i>
+								<span>Delete</span>
+							</button>
+            </div>
+        </div>
+				</div>`;
+
+			messageItem.innerHTML = contentHTML;
+			fragment.appendChild(messageItem);
+		});
+
+		container.appendChild(fragment);
+
+		if (data.messages.length > 0) {
+			messagesOffset = data.offset;
+		}
+
+		if (messagesHasMore) {
+			const existingBtn = document.getElementById('loadMoreMessages');
+			if (existingBtn) existingBtn.remove();
+
+			const loadMoreBtn = document.createElement('div');
+			loadMoreBtn.id = 'loadMoreMessages';
+			loadMoreBtn.className = 'text-center py-3';
+			loadMoreBtn.innerHTML = `
+				<button class="btn btn-sm btn-primary" onclick="loadMessages()">
+					<i class="bi bi-arrow-down-circle me-1"></i> Load More
+				</button>
+			`;
+			container.appendChild(loadMoreBtn);
+		} else {
+			const existingBtn = document.getElementById('loadMoreMessages');
+			if (existingBtn) existingBtn.remove();
+		}
+
+		if (messagesOffset === 0 || reset) {
+			const statsResponse = await fetch('/api/server/messages-stats');
+			const stats = await statsResponse.json();
+
+			if (!stats.error && stats.total) {
+				document.getElementById('messagesStats').innerHTML = `
+					<small class="text-success">
+						<i class="bi bi-database me-1"></i>${stats.total} messages
+					</small>
+				`;
+			}
+		}
+
+		setupInfiniteScroll();
+	} catch (err) {
+		const container = document.getElementById('messagesContainer');
+		if (messagesOffset === 0) {
+			container.innerHTML = `
+				<div class="alert alert-danger m-3">
+					<i class="bi bi-x-circle me-2"></i>
+					${err.message === 'Request timeout' ? 'Request timed out. Check Redis connection.' : 'Error: ' + err.message}
+				</div>
+			`;
+		} else {
+			showNotification('Error loading more messages: ' + err.message, 'danger');
+		}
+	} finally {
+		messagesLoading = false;
+	}
+}
+
+function setupInfiniteScroll() {
+	const container = document.getElementById('messagesContainer');
+	if (!container || container.hasAttribute('data-scroll-initialized')) return;
+
+	container.setAttribute('data-scroll-initialized', 'true');
+
+	container.addEventListener('scroll', () => {
+		const scrollPercentage = (container.scrollTop + container.clientHeight) / container.scrollHeight;
+
+		if (scrollPercentage > 0.9 && messagesHasMore && !messagesLoading) {
+			const loadMoreBtn = document.getElementById('loadMoreMessages');
+			if (loadMoreBtn) loadMoreBtn.remove();
+			loadMessages();
+		}
+	});
+}
+
+async function viewMessageHistory(messageId) {
+	try {
+		const response = await fetch(`/api/server/message-history?messageId=${messageId}`);
+		const data = await response.json();
+
+		console.log('Message History Data:', data);
+
+		if (data.error) {
+			showToast(data.error, 'danger');
+			return;
+		}
+
+		let historyHTML = `
+			<div class="modal fade show" id="messageHistoryModal" tabindex="-1" style="display: block;" aria-modal="true">
+				<div class="modal-dialog modal-lg modal-dialog-scrollable">
+					<div class="modal-content bg-dark text-white">
+						<div class="modal-header">
+							<h5 class="modal-title">
+								<i class="bi bi-clock-history me-2"></i>Message History
+							</h5>
+							<button type="button" class="btn-close btn-close-white" onclick="closeMessageHistory()"></button>
+						</div>
+						<div class="modal-body">
+							<ul class="nav nav-tabs mb-3" id="historyTabs" role="tablist">
+								<li class="nav-item" role="presentation">
+									<button class="nav-link active" id="edits-tab" onclick="switchHistoryTab('edits')" type="button">
+										<i class="bi bi-pencil"></i> Edits (${data.edits.length})
+									</button>
+								</li>
+								<li class="nav-item" role="presentation">
+									<button class="nav-link" id="reactions-tab" onclick="switchHistoryTab('reactions')" type="button">
+										<i class="bi bi-emoji-smile"></i> Reactions (${data.reactions.length})
+									</button>
+								</li>
+								<li class="nav-item" role="presentation">
+									<button class="nav-link" id="replies-tab" onclick="switchHistoryTab('replies')" type="button">
+										<i class="bi bi-reply"></i> Replies (${data.replies.length})
+									</button>
+								</li>
+							</ul>
+							<div class="tab-content">
+								<div class="tab-pane show active" id="edits-pane" role="tabpanel">
+									${renderEdits(data.edits)}
+								</div>
+								<div class="tab-pane" id="reactions-pane" role="tabpanel" style="display: none;">
+									${renderReactions(data.reactions)}
+								</div>
+								<div class="tab-pane" id="replies-pane" role="tabpanel" style="display: none;">
+									${renderReplies(data.replies)}
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="modal-backdrop fade show"></div>
+		`;
+
+		document.body.insertAdjacentHTML('beforeend', historyHTML);
+	} catch (err) {
+		showToast('Error loading message history', 'danger');
+	}
+}
+
+function renderEdits(edits) {
+	if (!edits || edits.length === 0) {
+		return '<p class="text-muted">No edits recorded</p>';
+	}
+
+	return `
+		<div class="list-group list-group-flush">
+			${edits.map(edit => {
+		const time = new Date(edit.timestamp);
+		return `
+					<div class="list-group-item bg-dark text-white border-secondary">
+						<small class="text-muted">${time.toLocaleString()}</small>
+						<div class="mt-2">
+							<div class="mb-2">
+								<strong class="text-danger"><i class="bi bi-dash-circle"></i> Before:</strong>
+								<div class="p-2 bg-dark border border-danger rounded mt-1">
+									${edit.oldContent || '<em class="text-muted">Empty</em>'}
+								</div>
+							</div>
+							<div>
+								<strong class="text-success"><i class="bi bi-plus-circle"></i> After:</strong>
+								<div class="p-2 bg-dark border border-success rounded mt-1">
+									${edit.newContent || '<em class="text-muted">Empty</em>'}
+								</div>
+							</div>
+						</div>
+					</div>
+				`;
+	}).join('')}
+		</div>
+	`;
+}
+
+function renderReactions(reactions) {
+	if (!reactions || reactions.length === 0) {
+		return '<p class="text-muted">No reactions recorded</p>';
+	}
+
+	return `
+		<div class="list-group list-group-flush">
+			${reactions.map(reaction => {
+		const time = new Date(reaction.timestamp);
+		const emojiDisplay = reaction.emojiUrl
+			? `<img src="${reaction.emojiUrl}" alt="${reaction.emoji}" width="20" height="20">`
+			: reaction.emoji;
+		const actionIcon = reaction.action === 'add'
+			? '<i class="bi bi-plus-circle text-success"></i>'
+			: '<i class="bi bi-dash-circle text-danger"></i>';
+		const actionText = reaction.action === 'add' ? 'added' : 'removed';
+		const countBadge = reaction.count && reaction.count > 1
+			? `<span class="badge bg-secondary ms-2">${reaction.count}x</span>`
+			: '';
+
+		return `
+					<div class="list-group-item bg-dark text-white border-secondary d-flex align-items-center">
+						<div class="flex-grow-1">
+							${actionIcon}
+							<strong class="ms-2">${reaction.username}</strong>
+							<span class="text-muted ms-2">${actionText} reaction</span>
+							<span class="ms-2">${emojiDisplay}</span>
+							${countBadge}
+						</div>
+						<small class="text-muted">${time.toLocaleString()}</small>
+					</div>
+				`;
+	}).join('')}
+		</div>
+	`;
+}
+
+function renderReplies(replies) {
+	if (!replies || replies.length === 0) {
+		return '<p class="text-muted">No replies recorded</p>';
+	}
+
+	return `
+		<div class="list-group list-group-flush">
+			${replies.map(reply => `
+				<div class="list-group-item bg-dark text-white border-secondary">
+					<div class="d-flex align-items-start">
+						<img src="${reply.authorAvatar}" alt="${reply.authorName}" class="rounded-circle me-2" width="32" height="32">
+						<div class="flex-grow-1">
+							<strong>${reply.authorName}</strong>
+							<small class="text-muted ms-2">${new Date(reply.timestamp).toLocaleString()}</small>
+							<div class="mt-1">${reply.content}</div>
+						</div>
+					</div>
+				</div>
+			`).join('')}
+		</div>
+	`;
+}
+
+function switchHistoryTab(tabName) {
+	// Remove active class from all tabs
+	document.querySelectorAll('#historyTabs .nav-link').forEach(tab => {
+		tab.classList.remove('active');
+	});
+
+	// Hide all panes
+	document.querySelectorAll('#messageHistoryModal .tab-pane').forEach(pane => {
+		pane.style.display = 'none';
+		pane.classList.remove('show', 'active');
+	});
+
+	// Activate selected tab and pane
+	document.getElementById(`${tabName}-tab`).classList.add('active');
+	const pane = document.getElementById(`${tabName}-pane`);
+	pane.style.display = 'block';
+	pane.classList.add('show', 'active');
+}
+
+function closeMessageHistory() {
+	const modal = document.getElementById('messageHistoryModal');
+	const backdrop = document.querySelector('.modal-backdrop');
+	if (modal) modal.remove();
+	if (backdrop) backdrop.remove();
+}
+
+async function toggleMessagePriority(messageId) {
+	try {
+		const response = await fetch('/api/server/message-priority', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ messageId, isPriority: true })
+		});
+
+		const data = await response.json();
+
+		if (data.success) {
+			const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+			if (messageElement) {
+				messageElement.classList.toggle('priority');
+			}
+			showToast('Message marked as priority for reload', 'success');
+		} else {
+			showToast(data.error || 'Failed to set priority', 'danger');
+		}
+	} catch (err) {
+		showToast('Error setting message priority', 'danger');
+	}
+}
+
+async function deleteMessageFromCache(messageId, channelId) {
+	if (!confirm('Delete this message from Discord and cache?')) return;
+
+	try {
+		const response = await fetch('/api/server/delete-message', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ messageId, channelId })
+		});
+
+		const data = await response.json();
+		if (data.success) {
+			const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+			if (messageElement) {
+				messageElement.remove();
+			}
+			showNotification('Message deleted!', 'success');
+		} else {
+			showNotification('Failed: ' + data.error, 'danger');
+		}
+	} catch (err) {
+		showNotification('Error: ' + err.message, 'danger');
 	}
 }
 
@@ -771,16 +1770,127 @@ async function renderConfigPage(container) {
         <div class="row">
             <div class="col-12">
                 <h2 class="mb-4">
-                    <i class="bi bi-sliders me-2"></i>
-                    Advanced Configuration
+                    <i class="bi bi-gear me-2"></i>
+                    Settings
                 </h2>
             </div>
         </div>
+        
+        <div class="row g-4 mb-4">
+            <div class="col-md-6">
+                <div class="card config-card">
+                    <div class="card-body">
+                        <h5 class="mb-3"><i class="bi bi-discord me-2"></i>Discord Credentials</h5>
+                        <form id="discordCredentialsForm">
+                            <div class="mb-3">
+                                <label class="form-label">Bot Token</label>
+                                <input type="password" class="form-control" id="settings_client_token" value="${config.client_token || ''}" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Client ID</label>
+                                <input type="text" class="form-control" id="settings_client_id" value="${config.client_id || ''}" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Guild ID</label>
+                                <input type="text" class="form-control" id="settings_discord_guild_id" value="${config.discord_guild_id || ''}" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-save me-2"></i>Save Discord Config
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card config-card">
+                    <div class="card-body">
+                        <h5 class="mb-3"><i class="bi bi-database me-2"></i>Database Connection</h5>
+                        <form id="databaseCredentialsForm">
+                            <div class="mb-3">
+                                <label class="form-label">Host</label>
+                                <input type="text" class="form-control" id="settings_db_host" value="${config.db_host || ''}" placeholder="localhost">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Database Name</label>
+                                <input type="text" class="form-control" id="settings_db_name" value="${config.db_name || ''}" placeholder="cordium_events">
+                            </div>
+                            <div class="row">
+                                <div class="col-4">
+                                    <div class="mb-3">
+                                        <label class="form-label">Port</label>
+                                        <input type="number" class="form-control" id="settings_db_port" value="${config.db_port || ''}" placeholder="3306">
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="mb-3">
+                                        <label class="form-label">User</label>
+                                        <input type="text" class="form-control" id="settings_db_user" value="${config.db_user || ''}" placeholder="username">
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="mb-3">
+                                        <label class="form-label">Password</label>
+                                        <input type="password" class="form-control" id="settings_db_pass" value="${config.db_pass || ''}" placeholder="password">
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-success w-100">
+                                <i class="bi bi-save me-2"></i>Save Database Config
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card config-card">
+                    <div class="card-body">
+                        <h5 class="mb-3"><i class="bi bi-lightning-charge me-2 text-danger"></i>Redis Cache</h5>
+                        <form id="redisCredentialsForm">
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Host</label>
+                                        <input type="text" class="form-control" id="settings_redis_host" value="${config.redis_host || ''}" placeholder="localhost">
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Port</label>
+                                        <input type="number" class="form-control" id="settings_redis_port" value="${config.redis_port || ''}" placeholder="6379">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Password</label>
+                                        <input type="password" class="form-control" id="settings_redis_password" value="${config.redis_password || ''}" placeholder="Optional">
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Database</label>
+                                        <input type="number" class="form-control" id="settings_redis_db" value="${config.redis_db || ''}" placeholder="0">
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-danger w-100">
+                                <i class="bi bi-save me-2"></i>Save Redis Config
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         
         <div class="row">
             <div class="col-12">
                 <div class="card config-card">
                     <div class="card-body">
+                        <h5 class="mb-3"><i class="bi bi-sliders me-2"></i>Advanced Settings</h5>
                         <form id="advancedConfigForm">
                             <div class="row">
                                 <div class="col-md-6">
@@ -898,6 +2008,16 @@ async function renderConfigPage(container) {
                                 </div>
                             </div>
                             
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="save_attachments" 
+                                           ${config.save_attachments === 'true' ? 'checked' : ''}>
+                                    <label class="form-check-label" for="save_attachments">
+                                        Save Attachments Locally (Images/Videos preserved even if deleted)
+                                    </label>
+                                </div>
+                            </div>
+                            
                             <button type="submit" class="btn btn-primary w-100">
                                 <i class="bi bi-save me-2"></i>
                                 Save All Configuration
@@ -908,6 +2028,18 @@ async function renderConfigPage(container) {
             </div>
         </div>
     `;
+
+	document.getElementById('databaseCredentialsForm').addEventListener('submit', async (e) => {
+		e.preventDefault();
+		await saveWizardConfig(['db_host', 'db_name', 'db_port', 'db_user', 'db_pass'], 'settings_');
+		showNotification('Database config saved!', 'success');
+	});
+
+	document.getElementById('redisCredentialsForm').addEventListener('submit', async (e) => {
+		e.preventDefault();
+		await saveWizardConfig(['redis_host', 'redis_port', 'redis_password', 'redis_db'], 'settings_');
+		showNotification('Redis config saved!', 'success');
+	});
 
 	document.getElementById('advancedConfigForm').addEventListener('submit', async (e) => {
 		e.preventDefault();
@@ -1093,48 +2225,6 @@ async function deleteFile(category, filePath) {
 	}
 }
 
-async function savePartialConfig(fields) {
-	try {
-		showLoading();
-		const response = await fetch('/api/config');
-		const currentConfig = await response.json();
-
-		fields.forEach(field => {
-			const element = document.getElementById(field);
-			if (element) {
-				if (element.type === 'checkbox') {
-					currentConfig[field] = element.checked ? 'true' : 'false';
-				} else {
-					currentConfig[field] = element.value;
-				}
-			}
-		});
-
-		const saveResponse = await fetch('/api/config', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(currentConfig)
-		});
-
-		const data = await saveResponse.json();
-		if (data.success) {
-			showNotification('Configuration saved successfully', 'success');
-			updateStatusBadge(data.configured);
-			updateNavigationAccess(data.configured);
-
-			if (data.configured) {
-				showNotification('Bot configured! Restart with npm start to launch', 'success');
-			}
-		} else {
-			showNotification('Error saving configuration', 'danger');
-		}
-	} catch (err) {
-		showNotification('Error saving configuration: ' + err.message, 'danger');
-	} finally {
-		hideLoading();
-	}
-}
-
 async function saveFullConfig() {
 	try {
 		showLoading();
@@ -1145,7 +2235,7 @@ async function saveFullConfig() {
 			'listen_events', 'report_events', 'events_folder',
 			'listen_endpoints', 'report_endpoints', 'endpoints_folder',
 			'commands_folder', 'files_folder', 'sandbox_folder',
-			'api_port', 'timezone', 'locale', 'dev'
+			'api_port', 'timezone', 'locale', 'dev', 'save_attachments'
 		];
 
 		fields.forEach(field => {
@@ -1202,75 +2292,15 @@ function showNotification(message, type) {
 		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 	`;
 	alertDiv.innerHTML = `
-		${message}
-		<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-	`;
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
 	document.body.appendChild(alertDiv);
 
 	setTimeout(() => {
 		alertDiv.classList.remove('show');
 		setTimeout(() => alertDiv.remove(), 150);
 	}, 3000);
-}
-
-function updateInviteLink() {
-	const clientId = document.getElementById('client_id').value.trim();
-	const inviteLinkDiv = document.getElementById('inviteLink');
-	const inviteLinkInput = document.getElementById('inviteLinkInput');
-
-	if (clientId) {
-		const permissions = '8';
-		const scopes = 'bot%20applications.commands';
-		const intents = '3276799';
-		const inviteUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&permissions=${permissions}&scope=${scopes}&integration_type=0`;
-
-		inviteLinkInput.value = inviteUrl;
-		inviteLinkDiv.style.display = 'block';
-	} else {
-		inviteLinkDiv.style.display = 'none';
-	}
-}
-
-async function testDatabaseConnection() {
-	const dbConfig = {
-		host: document.getElementById('db_host').value,
-		name: document.getElementById('db_name').value,
-		port: document.getElementById('db_port').value,
-		user: document.getElementById('db_user').value,
-		pass: document.getElementById('db_pass').value
-	};
-
-	if (!dbConfig.host || !dbConfig.name) {
-		showNotification('Please fill in at least host and database name', 'warning');
-		return;
-	}
-
-	const resultDiv = document.getElementById('dbTestResult');
-	resultDiv.innerHTML = '<div class="spinner-border spinner-border-sm"></div> Testing connection...';
-	resultDiv.className = 'alert alert-info mt-3';
-	resultDiv.style.display = 'block';
-
-	try {
-		const response = await fetch('/api/test-db', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(dbConfig)
-		});
-
-		const data = await response.json();
-
-		if (data.success) {
-			resultDiv.className = 'alert alert-success mt-3';
-			resultDiv.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Database connection successful!';
-			showNotification('Database connection successful!', 'success');
-		} else {
-			resultDiv.className = 'alert alert-danger mt-3';
-			resultDiv.innerHTML = `<i class="bi bi-x-circle-fill me-2"></i>Connection failed: ${data.error}`;
-		}
-	} catch (err) {
-		resultDiv.className = 'alert alert-danger mt-3';
-		resultDiv.innerHTML = `<i class="bi bi-x-circle-fill me-2"></i>Error: ${err.message}`;
-	}
 }
 
 async function sendMessageToChannel(channelId, channelName) {
@@ -1292,6 +2322,30 @@ async function sendMessageToChannel(channelId, channelName) {
 		}
 	} catch (err) {
 		showNotification('Error: ' + err.message, 'danger');
+	}
+}
+
+function toggleMenu(button) {
+	const dropdown = button.nextElementSibling;
+	const allDropdowns = document.querySelectorAll('.item-menu-dropdown.show');
+
+	allDropdowns.forEach(d => {
+		if (d !== dropdown) {
+			d.classList.remove('show');
+		}
+	});
+
+	dropdown.classList.toggle('show');
+
+	if (dropdown.classList.contains('show')) {
+		setTimeout(() => {
+			document.addEventListener('click', function closeMenu(e) {
+				if (!button.contains(e.target) && !dropdown.contains(e.target)) {
+					dropdown.classList.remove('show');
+					document.removeEventListener('click', closeMenu);
+				}
+			});
+		}, 10);
 	}
 }
 
@@ -1696,4 +2750,5 @@ async function banMember(memberId, displayName) {
 		showNotification('Error: ' + err.message, 'danger');
 	}
 }
+
 
