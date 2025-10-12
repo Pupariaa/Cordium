@@ -116,6 +116,16 @@ const { set, walkDirSync, toCamelCase, setReportFunctions } = require(global.uti
 
 		const AttachmentsManager = require(global.attachmentsManagerPath);
 		global.attachmentsManager = new AttachmentsManager();
+		global.saveAttachments = process.env.save_attachments === 'true';
+
+		const RedisManager = require(global.redisManagerPath);
+		global.redisManager = new RedisManager();
+
+		const CacheManager = require(global.cacheManagerPath);
+		global.cache = new CacheManager();
+
+		const MessagesCache = require(global.messagesCachePath);
+		global.messagesCache = new MessagesCache();
 
 		// Databases
 
@@ -145,6 +155,18 @@ const { set, walkDirSync, toCamelCase, setReportFunctions } = require(global.uti
 		if (!global.guild) {
 			console.reportError(`Guild of id ${global.discordGuildId} not found`);
 			process.exit(1);
+		}
+
+		// Init Redis cache
+		try {
+			await global.redisManager.init();
+		} catch (err) {
+			console.reportWarn('Redis init failed, continuing without cache');
+		}
+
+		// Restore messages from Redis to Discord.js cache
+		if (global.redisOnline && global.messagesCache) {
+			await global.messagesCache.restoreToDiscordCache();
 		}
 
 		// Init databases
@@ -212,6 +234,21 @@ const { set, walkDirSync, toCamelCase, setReportFunctions } = require(global.uti
 					const commandName = parts[0];
 					const buttonId = parts[1];
 					const command = global.commandsManager.loaded.get(commandName);
+
+					if (!command) {
+						return interaction.reply({
+							ephemeral: true,
+							content: 'This button is from an older version. Please run the command again.',
+						});
+					}
+
+					if (!command.buttons || !command.buttons[buttonId]) {
+						return interaction.reply({
+							ephemeral: true,
+							content: 'This button is no longer available. Please run the command again.',
+						});
+					}
+
 					return command.buttons[buttonId].execute(interaction);
 				}
 			});
