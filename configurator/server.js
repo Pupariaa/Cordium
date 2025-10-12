@@ -8,12 +8,13 @@ const bodyParser = require('body-parser');
 const app = express();
 const PORT = 3001;
 
+const projectRoot = path.join(__dirname, '..');
+const configPath = path.join(projectRoot, 'config', 'config.env');
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
-
-const projectRoot = path.join(__dirname, '..');
-const configPath = path.join(projectRoot, 'config', 'config.env');
+app.use('/files', express.static(path.join(projectRoot, 'src', 'files', 'downloads')));
 
 function parseEnvFile(content) {
 	const lines = content.split('\n');
@@ -763,6 +764,198 @@ app.post('/api/test-db', async (req, res) => {
 		await connection.end();
 
 		res.json({ success: true, message: 'Connection successful' });
+	} catch (err) {
+		res.json({ success: false, error: err.message });
+	}
+});
+
+app.get('/api/server/messages', async (req, res) => {
+	try {
+		if (!global.messagesCache) {
+			return res.json({ error: 'Messages cache not initialized' });
+		}
+
+		if (!global.redisOnline) {
+			return res.json({ error: 'Redis is not configured. Enable Redis in Settings to use this feature.' });
+		}
+
+		const { limit, offset } = req.query;
+		const result = await global.messagesCache.getMessages(
+			parseInt(limit) || 30,
+			offset ? parseInt(offset) : null
+		);
+
+		res.json(result);
+	} catch (err) {
+		res.json({ error: err.message });
+	}
+});
+
+app.post('/api/server/message-priority', async (req, res) => {
+	try {
+		const { messageId, isPriority } = req.body;
+
+		if (!global.messagesCache) {
+			return res.json({ success: false, error: 'Messages cache not initialized' });
+		}
+
+		await global.messagesCache.setPriority(messageId, isPriority);
+		res.json({ success: true });
+	} catch (err) {
+		res.json({ success: false, error: err.message });
+	}
+});
+
+app.get('/api/server/loading-progress', (req, res) => {
+	try {
+		if (!global.messagesCache) {
+			return res.json({ error: 'Messages cache not initialized' });
+		}
+
+		res.json(global.messagesCache.loadingProgress);
+	} catch (err) {
+		res.json({ error: err.message });
+	}
+});
+
+app.get('/api/server/messages-stats', async (req, res) => {
+	try {
+		if (!global.messagesCache) {
+			return res.json({ error: 'Messages cache not initialized' });
+		}
+
+		const stats = await global.messagesCache.getStats();
+		res.json(stats);
+	} catch (err) {
+		res.json({ error: err.message });
+	}
+});
+
+app.get('/api/server/message-history', async (req, res) => {
+	try {
+		const { messageId } = req.query;
+
+		console.log('Fetching history for message:', messageId);
+
+		if (!global.messagesCache) {
+			console.log('Messages cache not initialized');
+			return res.json({ error: 'Messages cache not initialized' });
+		}
+
+		if (!messageId) {
+			console.log('No message ID provided');
+			return res.json({ error: 'Message ID required' });
+		}
+
+		const history = await global.messagesCache.getMessageHistory(messageId);
+		console.log('History retrieved:', {
+			edits: history.edits.length,
+			reactions: history.reactions.length,
+			replies: history.replies.length
+		});
+		
+		res.json(history);
+	} catch (err) {
+		console.error('Error fetching message history:', err);
+		res.json({ error: err.message });
+	}
+});
+
+app.get('/api/server/cache-stats', (req, res) => {
+	try {
+		if (!global.cache) {
+			return res.json({ error: 'Cache not initialized' });
+		}
+
+		const stats = global.cache.getStats();
+		res.json(stats);
+	} catch (err) {
+		res.json({ error: err.message });
+	}
+});
+
+app.post('/api/server/delete-message', async (req, res) => {
+	try {
+		const { messageId, channelId } = req.body;
+
+		if (!global.guild) {
+			return res.json({ success: false, error: 'Bot is not running' });
+		}
+
+		const channel = global.guild.channels.cache.get(channelId);
+		if (!channel) {
+			return res.json({ success: false, error: 'Channel not found' });
+		}
+
+		if (!channel.isTextBased()) {
+			return res.json({ success: false, error: 'Not a text channel' });
+		}
+
+		try {
+			const message = await channel.messages.fetch(messageId);
+			if (message) {
+				await message.delete();
+			}
+		} catch (err) {
+			console.reportWarn('Message not found in Discord, removing from cache only');
+		}
+
+		if (global.messagesCache) {
+			await global.messagesCache.deleteMessage(messageId);
+		}
+
+		res.json({ success: true });
+	} catch (err) {
+		res.json({ success: false, error: err.message });
+	}
+});
+
+app.post('/api/server/cache-flush', async (req, res) => {
+	try {
+		if (!global.cache) {
+			return res.json({ success: false, error: 'Cache not initialized' });
+		}
+
+		await global.cache.flush();
+		res.json({ success: true });
+	} catch (err) {
+		res.json({ success: false, error: err.message });
+	}
+});
+
+app.post('/api/test-redis', async (req, res) => {
+	try {
+		const { host, port, password, db } = req.body;
+
+		if (!host) {
+			return res.json({ success: false, error: 'Host is required' });
+		}
+
+		let redis;
+		try {
+			redis = require('redis');
+		} catch (err) {
+			return res.json({
+				success: false,
+				error: 'Redis driver not installed. Run: npm install redis'
+			});
+		}
+
+		const client = redis.createClient({
+			socket: {
+				host: host,
+				port: port || 6379,
+				connectTimeout: 5000
+			},
+			password: password || undefined,
+			database: parseInt(db) || 0
+		});
+
+		await client.connect();
+		await client.ping();
+		await client.quit();
+
+		res.json({ success: true, message: 'Redis connection successful' });
 	} catch (err) {
 		res.json({ success: false, error: err.message });
 	}
