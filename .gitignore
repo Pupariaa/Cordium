@@ -4,3 +4,5 @@ package-lock.json
 *.env
 config/*.json
 config/config.env
+/src/files/downloads
+src/files/attachmentsIndex.json
