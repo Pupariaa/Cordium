@@ -57,23 +57,35 @@ class AttachmentsManager {
 		}
 	}
 
-	saveAttachments(message) {
+	async saveAttachments(message) {
 		try {
 			if (!message.attachments || message.attachments.size === 0) return;
+
+			if (!fs.existsSync(this.downloadsPath)) {
+				fs.mkdirSync(this.downloadsPath, { recursive: true });
+			}
+
 			for (const attachment of message.attachments.values()) {
 				const url = attachment.url;
 				const originalFilename = this.#extractFilenameFromUrl(url);
-				const filename = `${message.channel.id}.${message.id}.${originalFilename}.${path.extname(originalFilename)}`;
-				downloadFile(url, path.join(this.downloadsPath, filename));
+				const ext = path.extname(originalFilename);
+				const filename = `${message.channel.id}.${message.id}.${originalFilename}`;
+
+				await downloadFile(url, path.join(this.downloadsPath, filename));
+
 				this.index[message.id] = {
 					type: attachment.contentType ? attachment.contentType.split('/')[0] : 'file',
 					filename: filename,
 					url: url,
-					authorId: message.author.id
+					authorId: message.author.id,
+					originalName: attachment.name || originalFilename,
+					contentType: attachment.contentType
 				};
 			}
+
+			this.saveIndex();
 		} catch (err) {
-			console.reportError(err);
+			console.reportError('Error saving attachments:', err);
 		}
 	}
 
