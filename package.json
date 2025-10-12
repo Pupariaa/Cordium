@@ -4,6 +4,9 @@
 	"main": "index.js",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
+		"start": "node start.js",
+		"config": "node start.js --config",
+		"bot": "node start.js --bot",
 		"init": "echo|set /p=> config/config.env & echo 'use strict';> src\\sandbox\\index.js & echo.>> src\\sandbox\\index.js & echo require('extend-console');>> src\\sandbox\\index.js & echo.>> src\\sandbox\\index.js & echo report('--------------------------------------------SANDBOX OUTPUT START--------------------------------------------');>> src\\sandbox\\index.js & echo const fs = require('fs');>> src\\sandbox\\index.js & echo const path = require('path');>> src\\sandbox\\index.js & echo const guild = global.client.guilds.cache.get(global.discordGuildId);>> src\\sandbox\\index.js & echo.>> src\\sandbox\\index.js & echo.>> src\\sandbox\\index.js & echo.>> src\\sandbox\\index.js & echo|set /p=report('--------------------------------------------SANDBOX OUTPUT END----------------------------------------------');>> src\\sandbox\\index.js & npm i & echo. & powershell -ExecutionPolicy Bypass -File ./config/cli/init.ps1",
 		"prod": "set prod=true && node index.js"
 	},
@@ -15,11 +18,12 @@
 	"license": "MIT",
 	"description": "",
 	"dependencies": {
+		"chokidar": "^4.0.3",
 		"discord.js": "^14.19.1",
-		"extend-console": "^7.4.7",
-		"sanitize-filename": "^1.6.3",
 		"express": "^5.1.0",
-		"spectraget": "^1.1.0",
-		"chokidar": "^4.0.3"
+		"extend-console": "^7.4.7",
+		"mysql2": "^3.15.2",
+		"sanitize-filename": "^1.6.3",
+		"spectraget": "^1.1.0"
 	}
 }
