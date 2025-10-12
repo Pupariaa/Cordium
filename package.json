@@ -23,6 +23,7 @@
 		"express": "^5.1.0",
 		"extend-console": "^7.4.7",
 		"mysql2": "^3.15.2",
+		"redis": "^4.7.1",
 		"sanitize-filename": "^1.6.3",
 		"spectraget": "^1.1.0"
 	}
