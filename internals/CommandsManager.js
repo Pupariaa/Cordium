@@ -34,7 +34,10 @@ class CommandsManager extends FilesManager {
 				console.reportError(`Invalid typeof command.execute type in ${file}: ${typeof command.execute}`);
 				return [false, null];
 			}
-			if (typeof command?.buttons !== 'object') {
+			if (!command.buttons) {
+				command.buttons = {};
+			}
+			if (typeof command.buttons !== 'object') {
 				console.reportError(`Invalid typeof command.buttons type in ${file}: ${typeof command.buttons}`);
 				return [false, null];
 			}
