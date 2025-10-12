@@ -8,3 +8,4 @@ internals/cache/
 src/files/
 src/sandbox/
 config/config.env
+config/config.env
