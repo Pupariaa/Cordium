@@ -1686,11 +1686,13 @@ async function initMemberDetailsPage() {
 
 	try {
 		const response = await fetch(`/api/server/member-details?memberId=${memberId}`);
-		const member = await response.json();
+		const data = await response.json();
 
-		if (member.error) {
-			throw new Error(member.error);
+		if (data.error) {
+			throw new Error(data.error);
 		}
+
+		const member = data.member || data;
 
 		document.getElementById('memberDetailsName').textContent = member.displayName || member.username;
 		document.getElementById('memberAvatar').src = member.avatarURL;
