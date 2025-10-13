@@ -1773,33 +1773,36 @@ async function initMemberDetailsPage() {
 				} catch (e) {
 					eventData = {};
 				}
-				
-				const icons = {
-					'MessageCreate': 'chat-left-text',
-					'MessageUpdate': 'pencil-square',
-					'MessageDelete': 'trash',
-					'MessageReactionAdd': 'emoji-smile',
-					'MessageReactionRemove': 'emoji-neutral',
-					'GuildMemberAdd': 'door-open',
-					'GuildMemberRemove': 'door-closed',
-					'GuildMemberUpdate': 'person-badge',
-					'VoiceStateUpdate': 'mic',
-					'GuildBanAdd': 'ban',
-					'GuildBanRemove': 'check-circle',
-					'InteractionCreate': 'cursor',
-					'InviteCreate': 'link-45deg',
-					'InviteDelete': 'link-45deg',
-					'GuildRoleCreate': 'plus-circle',
-					'GuildRoleUpdate': 'arrow-repeat',
-					'GuildRoleDelete': 'x-circle',
-					'ChannelCreate': 'hash-plus',
-					'ChannelUpdate': 'hash',
-					'ChannelDelete': 'hash-x'
-				};
-				
-				const icon = icons[event.event_name] || 'circle';
-				let details = '';
-				
+
+			const icons = {
+				'MessageCreate': 'chat-left-text',
+				'MessageUpdate': 'pencil-square',
+				'MessageDelete': 'trash',
+				'MessageReactionAdd': 'emoji-smile',
+				'MessageReactionRemove': 'emoji-neutral',
+				'GuildMemberAdd': 'door-open',
+				'GuildMemberRemove': 'door-closed',
+				'GuildMemberUpdate': 'person-badge',
+				'VoiceStateUpdate': 'mic',
+				'GuildBanAdd': 'ban',
+				'GuildBanRemove': 'check-circle',
+				'InteractionCreate': 'cursor',
+				'InviteCreate': 'link-45deg',
+				'InviteDelete': 'link-45deg',
+				'GuildRoleCreate': 'plus-circle',
+				'GuildRoleUpdate': 'arrow-repeat',
+				'GuildRoleDelete': 'x-circle',
+				'ChannelCreate': 'hash-plus',
+				'ChannelUpdate': 'hash',
+				'ChannelDelete': 'hash-x'
+			};
+
+			let icon = icons[event.event_name] || 'circle';
+			if (event.event_name === 'GuildMemberRemove' && eventData.reason === 'kicked') {
+				icon = 'person-x';
+			}
+			let details = '';
+
 				switch (event.event_name) {
 					case 'MessageCreate':
 						const channelId1 = event.channel_id;
@@ -1863,19 +1866,40 @@ async function initMemberDetailsPage() {
 						details = changes.length > 0 ? `<div class="text-muted small mt-1">${changes.join('<br>')}</div>` : '';
 						break;
 					case 'VoiceStateUpdate':
+						const vcDetails = [];
 						if (eventData.action === 'join') {
-							details = `<div class="text-muted small mt-1">Joined <strong>#${eventData.channelName}</strong></div>`;
+							vcDetails.push(`<strong class="text-success">🎤 Joined voice channel</strong> #${eventData.channelName}`);
 						} else if (eventData.action === 'leave') {
-							details = `<div class="text-muted small mt-1">Left <strong>#${eventData.channelName}</strong></div>`;
+							vcDetails.push(`<strong class="text-danger">🚪 Left voice channel</strong> #${eventData.channelName}`);
 						} else if (eventData.action === 'move') {
-							details = `<div class="text-muted small mt-1">Moved from <strong>#${eventData.oldChannelName}</strong> to <strong>#${eventData.newChannelName}</strong></div>`;
+							vcDetails.push(`<strong>🔀 Moved channels</strong><br>From: #${eventData.oldChannelName}<br>To: #${eventData.newChannelName}`);
 						}
+
 						const vcChanges = [];
-						if (eventData.serverMute) vcChanges.push(`Server ${eventData.serverMute.new ? 'muted' : 'unmuted'}`);
-						if (eventData.serverDeaf) vcChanges.push(`Server ${eventData.serverDeaf.new ? 'deafened' : 'undeafened'}`);
-						if (eventData.streaming) vcChanges.push(eventData.streaming.new ? 'Started streaming' : 'Stopped streaming');
-						if (eventData.camera) vcChanges.push(eventData.camera.new ? 'Turned camera on' : 'Turned camera off');
-						if (vcChanges.length > 0) details += `<div class="text-muted small">${vcChanges.join(', ')}</div>`;
+						if (eventData.serverMute) {
+							vcChanges.push(`<i class="bi bi-mic-mute-fill text-${eventData.serverMute.new ? 'danger' : 'success'}"></i> Server ${eventData.serverMute.new ? '<strong>muted</strong>' : 'unmuted'}`);
+						}
+						if (eventData.serverDeaf) {
+							vcChanges.push(`<i class="bi bi-volume-mute-fill text-${eventData.serverDeaf.new ? 'danger' : 'success'}"></i> Server ${eventData.serverDeaf.new ? '<strong>deafened</strong>' : 'undeafened'}`);
+						}
+						if (eventData.selfMute) {
+							vcChanges.push(`<i class="bi bi-mic-fill"></i> Self ${eventData.selfMute.new ? 'muted' : 'unmuted'}`);
+						}
+						if (eventData.selfDeaf) {
+							vcChanges.push(`<i class="bi bi-headphones"></i> Self ${eventData.selfDeaf.new ? 'deafened' : 'undeafened'}`);
+						}
+						if (eventData.streaming) {
+							vcChanges.push(`<i class="bi bi-broadcast-pin text-${eventData.streaming.new ? 'info' : 'muted'}"></i> ${eventData.streaming.new ? '<strong>Started streaming 🔴</strong>' : 'Stopped streaming'}`);
+						}
+						if (eventData.camera) {
+							vcChanges.push(`<i class="bi bi-camera-video-fill text-${eventData.camera.new ? 'info' : 'muted'}"></i> Camera ${eventData.camera.new ? '<strong>ON</strong>' : 'off'}`);
+						}
+
+						if (vcChanges.length > 0) {
+							vcDetails.push(`<div class="mt-1">${vcChanges.join('<br>')}</div>`);
+						}
+
+						details = `<div class="text-muted small mt-1">${vcDetails.join('<br>')}</div>`;
 						break;
 					case 'MessageReactionAdd':
 					case 'MessageReactionRemove':
@@ -1887,10 +1911,23 @@ async function initMemberDetailsPage() {
 							${messageLink3 ? `<a href="${messageLink3}" target="_blank" class="text-primary"><i class="bi bi-box-arrow-up-right"></i> View message</a>` : ''}
 						</div>`;
 						break;
-					case 'GuildBanAdd':
-						details = `<div class="text-muted small mt-1">Reason: ${eventData.reason || 'No reason provided'}</div>`;
-						break;
-					case 'InteractionCreate':
+				case 'GuildBanAdd':
+					details = `<div class="text-muted small mt-1">Reason: ${eventData.reason || 'No reason provided'}</div>`;
+					break;
+				case 'GuildMemberRemove':
+					if (eventData.reason === 'kicked' && eventData.executor) {
+						details = `<div class="text-muted small mt-1">
+							<strong class="text-warning">⚠️ Kicked from server</strong><br>
+							By: <img src="${eventData.executor.avatar}" width="20" height="20" class="rounded me-1">${eventData.executor.username}<br>
+							${eventData.roles && eventData.roles.length > 0 ? `Had roles: ${eventData.roles.map(r => r.name).join(', ')}` : ''}
+						</div>`;
+					} else {
+						details = `<div class="text-muted small mt-1">
+							${eventData.roles && eventData.roles.length > 0 ? `Had roles: ${eventData.roles.map(r => r.name).join(', ')}` : ''}
+						</div>`;
+					}
+					break;
+				case 'InteractionCreate':
 						if (eventData.commandName) {
 							const channelId4 = event.channel_id;
 							const channelLink = channelId4 ? `https://discord.com/channels/${event.guild_id}/${channelId4}` : null;
@@ -1930,30 +1967,34 @@ async function initMemberDetailsPage() {
 						details = `<div class="text-muted small mt-1">Channel: #${eventData.channelName || eventData.name}</div>`;
 						break;
 				}
-				
-				const eventNames = {
-					'MessageCreate': 'Sent a message',
-					'MessageUpdate': 'Edited a message',
-					'MessageDelete': 'Deleted a message',
-					'MessageReactionAdd': 'Added reaction',
-					'MessageReactionRemove': 'Removed reaction',
-					'GuildMemberAdd': 'Joined server',
-					'GuildMemberRemove': 'Left server',
-					'GuildMemberUpdate': 'Updated profile',
-					'VoiceStateUpdate': 'Voice activity',
-					'GuildBanAdd': 'Banned from server',
-					'GuildBanRemove': 'Unbanned',
-					'InteractionCreate': 'Used command',
-					'InviteCreate': 'Created invite',
-					'InviteDelete': 'Deleted invite',
-					'GuildRoleCreate': 'Role created',
-					'GuildRoleUpdate': 'Role updated',
-					'GuildRoleDelete': 'Role deleted',
-					'ChannelCreate': 'Channel created',
-					'ChannelUpdate': 'Channel updated',
-					'ChannelDelete': 'Channel deleted'
-				};
-				const eventName = eventNames[event.event_name] || event.event_name;
+
+			const eventNames = {
+				'MessageCreate': 'Sent a message',
+				'MessageUpdate': 'Edited a message',
+				'MessageDelete': 'Deleted a message',
+				'MessageReactionAdd': 'Added reaction',
+				'MessageReactionRemove': 'Removed reaction',
+				'GuildMemberAdd': 'Joined server',
+				'GuildMemberRemove': 'Left server',
+				'GuildMemberUpdate': 'Updated profile',
+				'VoiceStateUpdate': 'Voice activity',
+				'GuildBanAdd': 'Banned from server',
+				'GuildBanRemove': 'Unbanned',
+				'InteractionCreate': 'Used command',
+				'InviteCreate': 'Created invite',
+				'InviteDelete': 'Deleted invite',
+				'GuildRoleCreate': 'Role created',
+				'GuildRoleUpdate': 'Role updated',
+				'GuildRoleDelete': 'Role deleted',
+				'ChannelCreate': 'Channel created',
+				'ChannelUpdate': 'Channel updated',
+				'ChannelDelete': 'Channel deleted'
+			};
+			let eventName = eventNames[event.event_name] || event.event_name;
+			
+			if (event.event_name === 'GuildMemberRemove' && eventData.reason === 'kicked') {
+				eventName = 'Kicked from server';
+			}
 
 				return `
 					<div class="list-group-item">
