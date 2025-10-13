@@ -1,0 +1,300 @@
+<div class="container-fluid">
+	<div class="row mb-4">
+		<div class="col-12">
+			<div class="d-flex justify-content-between align-items-center">
+				<div>
+					<h2 class="mb-1">
+						<i class="bi bi-gear-fill me-2"></i>Configuration
+					</h2>
+					<p class="text-muted mb-0">Manage your Cordium bot settings</p>
+				</div>
+				<div>
+					<button class="btn btn-outline-primary" onclick="reconfigureWizard()">
+						<i class="bi bi-arrow-repeat me-2"></i>Run Setup Wizard
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="row mb-4">
+		<div class="col-md-4">
+			<div class="card h-100">
+				<div class="card-body">
+					<div class="d-flex align-items-center mb-3">
+						<div class="config-icon bg-primary bg-gradient me-3">
+							<i class="bi bi-gear-fill"></i>
+						</div>
+						<div>
+							<h6 class="mb-0">Current Mode</h6>
+							<small class="text-muted">Deployment type</small>
+						</div>
+					</div>
+					<div id="currentModeInfo">
+						<div class="spinner-border spinner-border-sm" role="status"></div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="col-md-4">
+			<div class="card h-100">
+				<div class="card-body">
+					<div class="d-flex align-items-center mb-3">
+						<div class="config-icon bg-success bg-gradient me-3">
+							<i class="bi bi-database-fill"></i>
+						</div>
+						<div>
+							<h6 class="mb-0">Database</h6>
+							<small class="text-muted">Storage status</small>
+						</div>
+					</div>
+					<div id="databaseStatus">
+						<div class="spinner-border spinner-border-sm" role="status"></div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="col-md-4">
+			<div class="card h-100">
+				<div class="card-body">
+					<div class="d-flex align-items-center mb-3">
+						<div class="config-icon bg-danger bg-gradient me-3">
+							<i class="bi bi-lightning-charge-fill"></i>
+						</div>
+						<div>
+							<h6 class="mb-0">Redis Cache</h6>
+							<small class="text-muted">Cache status</small>
+						</div>
+					</div>
+					<div id="redisStatus">
+						<div class="spinner-border spinner-border-sm" role="status"></div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="row">
+		<div class="col-lg-6">
+			<div class="card mb-4">
+				<div class="card-header d-flex justify-content-between align-items-center">
+					<div>
+						<i class="bi bi-discord me-2"></i>Discord Bot
+					</div>
+					<span class="badge bg-primary" id="discordStatusBadge">Not Connected</span>
+				</div>
+				<div class="card-body">
+					<form id="discordConfigForm">
+						<div class="mb-3">
+							<label class="form-label">Bot Token</label>
+							<div class="input-group">
+								<input type="password" class="form-control" id="config_client_token" required>
+								<button class="btn btn-outline-secondary" type="button"
+									onclick="togglePasswordVisibility('config_client_token')">
+									<i class="bi bi-eye"></i>
+								</button>
+							</div>
+							<small class="text-muted">Developer Portal > Bot > Reset Token</small>
+						</div>
+						<div class="row g-2 mb-3">
+							<div class="col-md-6">
+								<label class="form-label">Client ID</label>
+								<input type="text" class="form-control" id="config_client_id" required>
+							</div>
+							<div class="col-md-6">
+								<label class="form-label">Guild ID</label>
+								<input type="text" class="form-control" id="config_discord_guild_id" required>
+							</div>
+						</div>
+						<button type="submit" class="btn btn-primary w-100">
+							<i class="bi bi-save me-2"></i>Save Discord Configuration
+						</button>
+					</form>
+				</div>
+			</div>
+		</div>
+
+		<div class="col-lg-6">
+			<div class="card mb-4" id="databaseConfigCard">
+				<div class="card-header d-flex justify-content-between align-items-center">
+					<div>
+						<i class="bi bi-database me-2"></i>Database
+					</div>
+					<span class="badge bg-success" id="databaseTypeBadge">Loading...</span>
+				</div>
+				<div class="card-body">
+					<div id="sqliteConfigSection" style="display: none;">
+						<div class="alert alert-info">
+							<i class="bi bi-info-circle me-2"></i>
+							<strong>Standalone Mode:</strong> Using SQLite database
+						</div>
+						<div class="mb-3">
+							<label class="form-label">Database Path</label>
+							<input type="text" class="form-control" id="config_db_path" value="./src/cordium.sqlite"
+								readonly>
+						</div>
+						<p class="text-muted mb-0">
+							<small>SQLite database is created automatically. To switch to MySQL/Redis, run the setup
+								wizard.</small>
+						</p>
+					</div>
+
+					<form id="mysqlConfigForm" style="display: none;">
+						<div class="row g-2 mb-3">
+							<div class="col-md-8">
+								<label class="form-label">Host</label>
+								<input type="text" class="form-control" id="config_db_host" required>
+							</div>
+							<div class="col-md-4">
+								<label class="form-label">Port</label>
+								<input type="number" class="form-control" id="config_db_port" required>
+							</div>
+						</div>
+						<div class="mb-3">
+							<label class="form-label">Database Name</label>
+							<input type="text" class="form-control" id="config_db_name" required>
+						</div>
+						<div class="row g-2 mb-3">
+							<div class="col-md-6">
+								<label class="form-label">User</label>
+								<input type="text" class="form-control" id="config_db_user" required>
+							</div>
+							<div class="col-md-6">
+								<label class="form-label">Password</label>
+								<div class="input-group">
+									<input type="password" class="form-control" id="config_db_pass" required>
+									<button class="btn btn-outline-secondary" type="button"
+										onclick="togglePasswordVisibility('config_db_pass')">
+										<i class="bi bi-eye"></i>
+									</button>
+								</div>
+							</div>
+						</div>
+						<div class="d-flex gap-2">
+							<button type="button" class="btn btn-outline-primary flex-fill"
+								onclick="testDatabaseConnection()">
+								<i class="bi bi-wifi me-2"></i>Test Connection
+							</button>
+							<button type="submit" class="btn btn-primary flex-fill">
+								<i class="bi bi-save me-2"></i>Save
+							</button>
+						</div>
+						<div id="dbTestResult" class="mt-2" style="display: none;"></div>
+					</form>
+				</div>
+			</div>
+		</div>
+
+		<div class="col-lg-6">
+			<div class="card mb-4" id="redisConfigCard">
+				<div class="card-header d-flex justify-content-between align-items-center">
+					<div>
+						<i class="bi bi-lightning-charge me-2"></i>Redis Cache
+					</div>
+					<span class="badge bg-secondary" id="redisModeBadge">Loading...</span>
+				</div>
+				<div class="card-body">
+					<div id="redisNotAvailableSection" style="display: none;">
+						<div class="alert alert-warning">
+							<i class="bi bi-exclamation-triangle me-2"></i>
+							<strong>Standalone Mode:</strong> Redis caching not available
+						</div>
+						<p class="text-muted mb-0">
+							<small>Messages are cached in RAM and will be lost on restart. Run the setup wizard to
+								enable Redis.</small>
+						</p>
+					</div>
+
+					<form id="redisConfigForm" style="display: none;">
+						<div class="row g-2 mb-3">
+							<div class="col-md-8">
+								<label class="form-label">Host</label>
+								<input type="text" class="form-control" id="config_redis_host" required>
+							</div>
+							<div class="col-md-4">
+								<label class="form-label">Port</label>
+								<input type="number" class="form-control" id="config_redis_port" required>
+							</div>
+						</div>
+						<div class="row g-2 mb-3">
+							<div class="col-md-6">
+								<label class="form-label">Password (Optional)</label>
+								<input type="password" class="form-control" id="config_redis_password">
+							</div>
+							<div class="col-md-6">
+								<label class="form-label">Database Number</label>
+								<input type="number" class="form-control" id="config_redis_db" value="0">
+							</div>
+						</div>
+						<div class="d-flex gap-2">
+							<button type="button" class="btn btn-outline-primary flex-fill"
+								onclick="testRedisConnection()">
+								<i class="bi bi-wifi me-2"></i>Test Connection
+							</button>
+							<button type="submit" class="btn btn-primary flex-fill">
+								<i class="bi bi-save me-2"></i>Save
+							</button>
+						</div>
+						<div id="redisTestResult" class="mt-2" style="display: none;"></div>
+					</form>
+				</div>
+			</div>
+		</div>
+
+		<div class="col-lg-6">
+			<div class="card mb-4">
+				<div class="card-header">
+					<i class="bi bi-sliders me-2"></i>Advanced Settings
+				</div>
+				<div class="card-body">
+					<form id="advancedConfigForm">
+						<div class="mb-3">
+							<label class="form-label">Configurator Port</label>
+							<input type="number" class="form-control" id="config_configurator_port" value="3001">
+							<small class="text-muted">Port for this dashboard (default: 3001)</small>
+						</div>
+						<div class="mb-3">
+							<div class="form-check form-switch">
+								<input class="form-check-input" type="checkbox" id="config_save_attachments">
+								<label class="form-check-label" for="config_save_attachments">
+									Save Message Attachments
+								</label>
+							</div>
+							<small class="text-muted d-block mt-1">Download and store message attachments
+								locally</small>
+						</div>
+						<button type="submit" class="btn btn-primary w-100">
+							<i class="bi bi-save me-2"></i>Save Advanced Settings
+						</button>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="row">
+		<div class="col-12">
+			<div class="card border-danger">
+				<div class="card-header bg-danger text-white">
+					<i class="bi bi-exclamation-triangle-fill me-2"></i>Danger Zone
+				</div>
+				<div class="card-body">
+					<div class="row align-items-center">
+						<div class="col-md-8">
+							<h6 class="mb-1">Reconfigure Bot</h6>
+							<p class="text-muted mb-md-0">Run the setup wizard again to change your configuration mode
+								or settings</p>
+						</div>
+						<div class="col-md-4 text-md-end">
+							<button class="btn btn-outline-danger" onclick="reconfigureWizard()">
+								<i class="bi bi-arrow-repeat me-2"></i>Run Setup Wizard
+							</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>

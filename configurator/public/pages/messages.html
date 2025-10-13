@@ -1,0 +1,76 @@
+<div class="row">
+	<div class="col-12">
+		<h2 class="mb-4">
+			<i class="bi bi-chat-dots me-2"></i>
+			Messages
+		</h2>
+	</div>
+</div>
+
+<div class="row mb-4">
+	<div class="col-md-4">
+		<div class="card shadow-sm">
+			<div class="card-body">
+				<h6 class="card-title mb-2">
+					<i class="bi bi-chat-dots-fill me-2 text-primary"></i>
+					Total Cached
+				</h6>
+				<h3 class="mb-0" id="totalMessageCount">--</h3>
+			</div>
+		</div>
+	</div>
+	<div class="col-md-4">
+		<div class="card shadow-sm">
+			<div class="card-body">
+				<h6 class="card-title mb-2">
+					<i class="bi bi-clock me-2 text-info"></i>
+					Last 24 Hours
+				</h6>
+				<h3 class="mb-0" id="recentMessageCount">--</h3>
+			</div>
+		</div>
+	</div>
+	<div class="col-md-4">
+		<div class="card shadow-sm">
+			<div class="card-body">
+				<h6 class="card-title mb-2">
+					<i class="bi bi-image me-2 text-success"></i>
+					With Attachments
+				</h6>
+				<h3 class="mb-0" id="attachmentCount">--</h3>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="row">
+	<div class="col-12">
+		<div class="card">
+			<div class="card-header d-flex justify-content-between align-items-center">
+				<span><i class="bi bi-chat-dots me-2"></i>Cached Messages</span>
+				<div class="d-flex align-items-center gap-2">
+					<div class="input-group" style="width: 300px;">
+						<input type="text" class="form-control form-control-sm" id="messageSearch" placeholder="Search messages...">
+						<button class="btn btn-outline-secondary btn-sm" type="button" id="clearMessageSearch">
+							<i class="bi bi-x"></i>
+						</button>
+					</div>
+					<button class="btn btn-sm btn-outline-primary" onclick="loadMoreMessages()">
+						<i class="bi bi-arrow-clockwise me-1"></i>Reload
+					</button>
+					<span class="badge bg-secondary" id="messagesStats">0 messages</span>
+				</div>
+			</div>
+			<div class="card-body p-0">
+			<div class="list-group list-group-flush" id="messagesContainer">
+				<div class="text-center p-4">
+					<div class="cordium-spinner spinner-sm">
+						<img src="logo-base.png" alt="Loading" class="cordium-spinner-base">
+						<img src="logo-arrow.png" alt="Loading" class="cordium-spinner-arrow">
+					</div>
+				</div>
+			</div>
+			</div>
+		</div>
+	</div>
+</div>

@@ -1,0 +1,82 @@
+<div class="row">
+	<div class="col-12">
+		<h2 class="mb-4">
+			<i class="bi bi-people me-2"></i>
+			Members
+		</h2>
+	</div>
+</div>
+
+<div class="row mb-4">
+	<div class="col-md-3">
+		<div class="card shadow-sm">
+			<div class="card-body">
+				<h6 class="card-title mb-2">
+					<i class="bi bi-people-fill me-2 text-primary"></i>
+					Total Members
+				</h6>
+				<h3 class="mb-0" id="totalMemberCount">--</h3>
+			</div>
+		</div>
+	</div>
+	<div class="col-md-3">
+		<div class="card shadow-sm">
+			<div class="card-body">
+				<h6 class="card-title mb-2">
+					<i class="bi bi-circle-fill text-success me-2"></i>
+					Online
+				</h6>
+				<h3 class="mb-0" id="onlineMemberCount">--</h3>
+			</div>
+		</div>
+	</div>
+	<div class="col-md-3">
+		<div class="card shadow-sm">
+			<div class="card-body">
+				<h6 class="card-title mb-2">
+					<i class="bi bi-robot me-2 text-info"></i>
+					Bots
+				</h6>
+				<h3 class="mb-0" id="botCount">--</h3>
+			</div>
+		</div>
+	</div>
+	<div class="col-md-3">
+		<div class="card shadow-sm">
+			<div class="card-body">
+				<h6 class="card-title mb-2">
+					<i class="bi bi-gem me-2 text-warning"></i>
+					Boosters
+				</h6>
+				<h3 class="mb-0" id="boosterCount">--</h3>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="row">
+	<div class="col-12">
+		<div class="card">
+			<div class="card-header d-flex justify-content-between align-items-center">
+				<span><i class="bi bi-people me-2"></i>All Members</span>
+				<div class="input-group" style="width: 300px;">
+					<input type="text" class="form-control form-control-sm" id="serverSearch"
+						placeholder="Search members...">
+					<button class="btn btn-outline-secondary btn-sm" type="button" id="clearSearch">
+						<i class="bi bi-x"></i>
+					</button>
+				</div>
+			</div>
+			<div class="card-body p-0">
+			<div class="list-group list-group-flush" id="membersList">
+				<div class="text-center p-4">
+					<div class="cordium-spinner spinner-sm">
+						<img src="logo-base.png" alt="Loading" class="cordium-spinner-base">
+						<img src="logo-arrow.png" alt="Loading" class="cordium-spinner-arrow">
+					</div>
+				</div>
+			</div>
+			</div>
+		</div>
+	</div>
+</div>

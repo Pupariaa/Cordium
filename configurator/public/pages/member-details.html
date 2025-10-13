@@ -1,0 +1,126 @@
+<div class="row mb-4">
+	<div class="col-12">
+		<button class="btn btn-outline-secondary mb-3" onclick="loadPage('members')">
+			<i class="bi bi-arrow-left me-2"></i>Back to Members
+		</button>
+		<h2 class="mb-4">
+			<i class="bi bi-person-circle me-2"></i>
+			<span id="memberDetailsName">Member Details</span>
+		</h2>
+	</div>
+</div>
+
+<div class="row mb-4">
+	<div class="col-md-4">
+		<div class="card shadow-sm">
+			<div class="card-body text-center">
+				<img id="memberAvatar" src="" alt="Avatar" class="rounded-circle mb-3" width="120" height="120">
+				<h4 id="memberDisplayName">--</h4>
+				<p class="text-muted mb-2" id="memberUsername">--</p>
+				<div id="memberBadges" class="mb-3"></div>
+				<div id="memberStatus"></div>
+			</div>
+		</div>
+	</div>
+
+	<div class="col-md-8">
+		<div class="card shadow-sm mb-3">
+			<div class="card-header">
+				<i class="bi bi-info-circle me-2"></i>
+				General Information
+			</div>
+			<div class="card-body">
+				<div class="row mb-2">
+					<div class="col-sm-4"><strong>User ID:</strong></div>
+					<div class="col-sm-8"><code id="memberUserId">--</code></div>
+				</div>
+				<div class="row mb-2">
+					<div class="col-sm-4"><strong>Joined Server:</strong></div>
+					<div class="col-sm-8" id="memberJoinedAt">--</div>
+				</div>
+				<div class="row mb-2">
+					<div class="col-sm-4"><strong>Account Created:</strong></div>
+					<div class="col-sm-8" id="memberCreatedAt">--</div>
+				</div>
+				<div class="row mb-2">
+					<div class="col-sm-4"><strong>Days on Server:</strong></div>
+					<div class="col-sm-8" id="memberDaysOnServer">--</div>
+				</div>
+				<div class="row mb-2">
+					<div class="col-sm-4"><strong>Account Age:</strong></div>
+					<div class="col-sm-8" id="memberAccountAge">--</div>
+				</div>
+				<div class="row mb-2" id="memberNicknameRow" style="display: none;">
+					<div class="col-sm-4"><strong>Nickname:</strong></div>
+					<div class="col-sm-8" id="memberNickname">--</div>
+				</div>
+				<div class="row mb-2" id="memberBoostRow" style="display: none;">
+					<div class="col-sm-4"><strong>Boosting Since:</strong></div>
+					<div class="col-sm-8" id="memberBoostingSince">--</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="card shadow-sm mb-3">
+			<div class="card-header">
+				<i class="bi bi-shield me-2"></i>
+				Roles
+			</div>
+			<div class="card-body">
+				<div id="memberRolesDisplay">--</div>
+			</div>
+		</div>
+
+		<div class="card shadow-sm mb-3" id="memberActivitiesCard" style="display: none;">
+			<div class="card-header">
+				<i class="bi bi-controller me-2"></i>
+				Activities
+			</div>
+			<div class="card-body">
+				<div id="memberActivities">--</div>
+			</div>
+		</div>
+
+		<div class="card shadow-sm">
+			<div class="card-header">
+				<i class="bi bi-sliders me-2"></i>
+				Actions
+			</div>
+			<div class="card-body">
+				<div class="btn-group-vertical w-100 gap-2">
+					<button class="btn btn-outline-primary" onclick="manageMemberRolesAction()">
+						<i class="bi bi-shield me-2"></i>Manage Roles
+					</button>
+					<button class="btn btn-outline-primary" onclick="changeNicknameAction()">
+						<i class="bi bi-pencil me-2"></i>Change Nickname
+					</button>
+					<button class="btn btn-outline-warning" onclick="timeoutMemberAction()">
+						<i class="bi bi-clock me-2"></i>Timeout Member
+					</button>
+					<button class="btn btn-outline-danger" onclick="kickMemberAction()">
+						<i class="bi bi-door-open me-2"></i>Kick Member
+					</button>
+					<button class="btn btn-outline-danger" onclick="banMemberAction()">
+						<i class="bi bi-ban me-2"></i>Ban Member
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="row">
+	<div class="col-12">
+		<div class="card shadow-sm">
+			<div class="card-header">
+				<i class="bi bi-clock-history me-2"></i>
+				Recent Activity
+			</div>
+			<div class="card-body">
+				<div id="memberRecentActivity" class="list-group list-group-flush">
+					<div class="text-center p-4 text-muted">No recent activity</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>

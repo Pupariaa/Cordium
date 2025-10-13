@@ -1,0 +1,117 @@
+<div class="row">
+	<div class="col-12">
+		<h2 class="mb-4">
+			<i class="bi bi-server me-2"></i>
+			Server Overview
+		</h2>
+	</div>
+</div>
+
+<div id="serverError" class="row" style="display: none;">
+	<div class="col-12">
+		<div class="alert alert-warning" role="alert">
+			<i class="bi bi-exclamation-triangle-fill me-2"></i>
+			<span id="serverErrorMessage"></span>
+			<br><small>Make sure the bot is running and connected to the server.</small>
+		</div>
+	</div>
+</div>
+
+<div id="serverContent" style="display: none;">
+	<div class="row mb-4">
+		<div class="col-md-3">
+			<div class="card shadow-sm">
+				<div class="card-body">
+					<h6 class="card-title mb-2">
+						<i class="bi bi-people-fill me-2 text-primary"></i>
+						Members
+					</h6>
+					<h3 class="mb-0" id="serverMemberCount">--</h3>
+				</div>
+			</div>
+		</div>
+		<div class="col-md-3">
+			<div class="card shadow-sm">
+				<div class="card-body">
+					<h6 class="card-title mb-2">
+						<i class="bi bi-hash me-2 text-success"></i>
+						Channels
+					</h6>
+					<h3 class="mb-0" id="serverChannelCount">--</h3>
+				</div>
+			</div>
+		</div>
+		<div class="col-md-3">
+			<div class="card shadow-sm">
+				<div class="card-body">
+					<h6 class="card-title mb-2">
+						<i class="bi bi-shield-fill me-2 text-warning"></i>
+						Roles
+					</h6>
+					<h3 class="mb-0" id="serverRoleCount">--</h3>
+				</div>
+			</div>
+		</div>
+		<div class="col-md-3">
+			<div class="card shadow-sm">
+				<div class="card-body">
+					<h6 class="card-title mb-2">
+						<i class="bi bi-chat-dots-fill me-2 text-info"></i>
+						Messages Cached
+					</h6>
+					<h3 class="mb-0" id="serverMessageCount">--</h3>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="row mb-4">
+		<div class="col-lg-6">
+			<div class="card shadow-sm">
+				<div class="card-header">
+					<i class="bi bi-graph-up me-2"></i>
+					Message Activity (Last 7 Days)
+				</div>
+				<div class="card-body">
+					<canvas id="messagesChart" height="200"></canvas>
+				</div>
+			</div>
+		</div>
+		<div class="col-lg-6">
+			<div class="card shadow-sm">
+				<div class="card-header">
+					<i class="bi bi-people me-2"></i>
+					Member Activity (Last 7 Days)
+				</div>
+				<div class="card-body">
+					<canvas id="memberActivityChart" height="200"></canvas>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="row mb-4">
+		<div class="col-lg-6">
+			<div class="card shadow-sm">
+				<div class="card-header">
+					<i class="bi bi-pie-chart me-2"></i>
+					Messages by Channel (Top 10)
+				</div>
+				<div class="card-body">
+					<canvas id="channelDistributionChart" height="200"></canvas>
+				</div>
+			</div>
+		</div>
+		<div class="col-lg-6">
+			<div class="card shadow-sm">
+				<div class="card-header">
+					<i class="bi bi-clock me-2"></i>
+					Activity by Hour
+				</div>
+				<div class="card-body">
+					<canvas id="hourlyActivityChart" height="200"></canvas>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
