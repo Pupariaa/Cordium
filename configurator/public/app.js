@@ -1599,6 +1599,13 @@ function populateMembersList(members) {
 
 	let html = '';
 	members.forEach(member => {
+		membersDataCache[member.id] = {
+			displayName: member.displayName || member.username,
+			avatarURL: member.avatarURL,
+			nickname: member.nickname,
+			roles: member.roles || []
+		};
+		
 		const statusIcon = statusIcons[member.status] || statusIcons.offline;
 		const ownerBadge = member.isOwner ? '<span class="badge bg-warning ms-2"><i class="bi bi-crown"></i> Owner</span>' : '';
 		const botBadge = member.bot ? '<span class="badge bg-secondary ms-2">Bot</span>' : '';
@@ -1911,17 +1918,17 @@ async function initMemberDetailsPage() {
 							${messageLink3 ? `<a href="${messageLink3}" target="_blank" class="text-primary"><i class="bi bi-box-arrow-up-right"></i> View message</a>` : ''}
 						</div>`;
 						break;
-				case 'GuildBanAdd':
-					if (eventData.executor) {
-						details = `<div class="text-muted small mt-1">
+					case 'GuildBanAdd':
+						if (eventData.executor) {
+							details = `<div class="text-muted small mt-1">
 							<strong class="text-danger">🔨 Banned from server</strong><br>
 							By: <img src="${eventData.executor.avatar}" width="20" height="20" class="rounded me-1">${eventData.executor.username}<br>
 							Reason: ${eventData.reason || 'No reason provided'}
 						</div>`;
-					} else {
-						details = `<div class="text-muted small mt-1">Reason: ${eventData.reason || 'No reason provided'}</div>`;
-					}
-					break;
+						} else {
+							details = `<div class="text-muted small mt-1">Reason: ${eventData.reason || 'No reason provided'}</div>`;
+						}
+						break;
 					case 'GuildMemberRemove':
 						if (eventData.reason === 'kicked' && eventData.executor) {
 							details = `<div class="text-muted small mt-1">
@@ -2019,11 +2026,11 @@ async function initMemberDetailsPage() {
 			document.getElementById('memberRecentActivity').innerHTML = activityHTML;
 		}
 
-		window.manageMemberRolesAction = () => manageMemberRoles(member.id, member.displayName);
-		window.changeNicknameAction = () => changeNickname(member.id, member.displayName);
-		window.timeoutMemberAction = () => timeoutMember(member.id, member.displayName);
-		window.kickMemberAction = () => kickMember(member.id, member.displayName);
-		window.banMemberAction = () => banMember(member.id, member.displayName);
+		window.manageMemberRolesAction = () => manageMemberRoles(member.id, member.displayName, member.avatarURL, member.roles);
+		window.changeNicknameAction = () => changeNickname(member.id, member.displayName, member.avatarURL, member.nickname);
+		window.timeoutMemberAction = () => timeoutMember(member.id, member.displayName, member.avatarURL);
+		window.kickMemberAction = () => kickMember(member.id, member.displayName, member.avatarURL);
+		window.banMemberAction = () => banMember(member.id, member.displayName, member.avatarURL);
 
 	} catch (err) {
 		console.error('Error loading member details:', err);
@@ -4488,49 +4495,143 @@ function copyMemberId(memberId) {
 	showNotification('Member ID copied to clipboard!', 'success');
 }
 
-async function manageMemberRoles(memberId, displayName) {
-	const action = prompt(`Manage roles for ${displayName}:\n\n1 - Add role\n2 - Remove role\n\nEnter your choice:`);
-	if (!action) return;
+let currentModalMemberId = null;
+let currentModalMemberName = null;
+let currentModalMemberAvatar = null;
+let currentMemberRoles = [];
+let membersDataCache = {};
 
-	const roleId = prompt('Enter role ID:');
-	if (!roleId) return;
+async function manageMemberRoles(memberId, displayName, avatarURL, roles) {
+	const memberData = membersDataCache[memberId] || {};
+	
+	currentModalMemberId = memberId;
+	currentModalMemberName = displayName || memberData.displayName;
+	currentModalMemberAvatar = avatarURL || memberData.avatarURL;
+	currentMemberRoles = roles || memberData.roles || [];
 
-	const endpoint = action === '1' ? '/api/server/add-member-role' : '/api/server/remove-member-role';
+	document.getElementById('roleModalMemberInfo').innerHTML = `
+		<img src="${currentModalMemberAvatar}" width="40" height="40" class="rounded me-2">
+		<div>
+			<strong>${currentModalMemberName}</strong>
+			<div class="text-muted small">${memberId}</div>
+		</div>
+	`;
 
 	try {
-		const response = await fetch(endpoint, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ memberId, roleId })
-		});
-
+		const response = await fetch('/api/server/roles');
 		const data = await response.json();
-		if (data.success) {
-			showNotification(action === '1' ? 'Role added!' : 'Role removed!', 'success');
-			await loadPage('server');
-			document.getElementById('members-tab').click();
-		} else {
-			showNotification('Failed: ' + data.error, 'danger');
+		
+		if (data.error) {
+			showNotification('Error loading roles: ' + data.error, 'danger');
+			return;
 		}
+
+		const rolesHTML = data.roles
+			.filter(role => role.name !== '@everyone')
+			.map(role => {
+				const hasRole = currentMemberRoles.some(r => r.id === role.id);
+				const roleColor = role.color !== '#000000' ? role.color : '#99aab5';
+				return `
+					<div class="form-check mb-2 p-2 rounded" style="background: rgba(255,255,255,0.03);">
+						<input class="form-check-input" type="checkbox" value="${role.id}" id="role_${role.id}" ${hasRole ? 'checked' : ''}>
+						<label class="form-check-label d-flex align-items-center" for="role_${role.id}">
+							<span class="badge me-2" style="background-color: ${roleColor};">&nbsp;</span>
+							${role.name}
+							<span class="text-muted small ms-2">(${role.memberCount} members)</span>
+						</label>
+					</div>
+				`;
+			}).join('');
+
+		document.getElementById('rolesList').innerHTML = rolesHTML;
+
+		const modal = new bootstrap.Modal(document.getElementById('manageRolesModal'));
+		modal.show();
 	} catch (err) {
 		showNotification('Error: ' + err.message, 'danger');
 	}
 }
 
-async function changeNickname(memberId, currentNickname) {
-	const nickname = prompt('New nickname (leave empty to reset):', currentNickname);
-	if (nickname === null) return;
+async function saveRoleChanges() {
+	const checkboxes = document.querySelectorAll('#rolesList input[type="checkbox"]');
+	const selectedRoles = Array.from(checkboxes)
+		.filter(cb => cb.checked)
+		.map(cb => cb.value);
+
+	const currentRoleIds = currentMemberRoles.map(r => r.id);
+	const rolesToAdd = selectedRoles.filter(id => !currentRoleIds.includes(id));
+	const rolesToRemove = currentRoleIds.filter(id => !selectedRoles.includes(id));
+
+	const promises = [];
+
+	for (const roleId of rolesToAdd) {
+		promises.push(
+			fetch('/api/server/add-member-role', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ memberId: currentModalMemberId, roleId })
+			})
+		);
+	}
+
+	for (const roleId of rolesToRemove) {
+		promises.push(
+			fetch('/api/server/remove-member-role', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ memberId: currentModalMemberId, roleId })
+			})
+		);
+	}
+
+	try {
+		await Promise.all(promises);
+		showNotification('Roles updated successfully!', 'success');
+		bootstrap.Modal.getInstance(document.getElementById('manageRolesModal')).hide();
+		await loadPage('server');
+		document.getElementById('members-tab').click();
+	} catch (err) {
+		showNotification('Error updating roles: ' + err.message, 'danger');
+	}
+}
+
+async function changeNickname(memberId, displayName, avatarURL, currentNickname) {
+	const memberData = membersDataCache[memberId] || {};
+	
+	currentModalMemberId = memberId;
+	currentModalMemberName = displayName || memberData.displayName;
+	currentModalMemberAvatar = avatarURL || memberData.avatarURL;
+
+	document.getElementById('nicknameModalMemberInfo').innerHTML = `
+		<img src="${currentModalMemberAvatar}" width="40" height="40" class="rounded me-2">
+		<div>
+			<strong>${currentModalMemberName}</strong>
+			<div class="text-muted small">${memberId}</div>
+		</div>
+	`;
+
+	document.getElementById('nicknameInput').value = currentNickname || memberData.nickname || '';
+
+	const modal = new bootstrap.Modal(document.getElementById('changeNicknameModal'));
+	modal.show();
+
+	setTimeout(() => document.getElementById('nicknameInput').focus(), 500);
+}
+
+async function saveNicknameChange() {
+	const nickname = document.getElementById('nicknameInput').value;
 
 	try {
 		const response = await fetch('/api/server/change-nickname', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ memberId, nickname })
+			body: JSON.stringify({ memberId: currentModalMemberId, nickname })
 		});
 
 		const data = await response.json();
 		if (data.success) {
-			showNotification('Nickname changed!', 'success');
+			showNotification('Nickname changed successfully!', 'success');
+			bootstrap.Modal.getInstance(document.getElementById('changeNicknameModal')).hide();
 			await loadPage('server');
 			document.getElementById('members-tab').click();
 		} else {
@@ -4541,22 +4642,61 @@ async function changeNickname(memberId, currentNickname) {
 	}
 }
 
-async function timeoutMember(memberId, displayName) {
-	const duration = prompt(`Timeout ${displayName} for how many minutes?`, '60');
-	if (!duration) return;
+async function timeoutMember(memberId, displayName, avatarURL) {
+	const memberData = membersDataCache[memberId] || {};
+	
+	currentModalMemberId = memberId;
+	currentModalMemberName = displayName || memberData.displayName;
+	currentModalMemberAvatar = avatarURL || memberData.avatarURL;
 
-	const reason = prompt('Reason (optional):');
+	document.getElementById('timeoutModalMemberInfo').innerHTML = `
+		<img src="${currentModalMemberAvatar}" width="40" height="40" class="rounded me-2">
+		<div>
+			<strong>${currentModalMemberName}</strong>
+			<div class="text-muted small">${memberId}</div>
+		</div>
+	`;
+
+	document.getElementById('timeoutDuration').value = '60';
+	document.getElementById('timeoutReason').value = '';
+
+	document.querySelectorAll('#timeoutModal .btn-group button').forEach(btn => {
+		btn.classList.remove('active');
+	});
+	document.querySelector('#timeoutModal .btn-group button[onclick="setTimeoutDuration(60)"]').classList.add('active');
+
+	const modal = new bootstrap.Modal(document.getElementById('timeoutModal'));
+	modal.show();
+}
+
+function setTimeoutDuration(minutes) {
+	document.getElementById('timeoutDuration').value = minutes;
+	document.querySelectorAll('#timeoutModal .btn-group button').forEach(btn => {
+		btn.classList.remove('active');
+	});
+	event.target.classList.add('active');
+}
+
+async function saveTimeout() {
+	const duration = parseInt(document.getElementById('timeoutDuration').value);
+	const reason = document.getElementById('timeoutReason').value;
+
+	if (duration < 1 || duration > 40320) {
+		showNotification('Duration must be between 1 minute and 28 days (40320 minutes)', 'warning');
+		return;
+	}
 
 	try {
 		const response = await fetch('/api/server/timeout-member', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ memberId, duration: parseInt(duration), reason })
+			body: JSON.stringify({ memberId: currentModalMemberId, duration, reason })
 		});
 
 		const data = await response.json();
 		if (data.success) {
-			showNotification(`${displayName} timed out for ${duration} minutes!`, 'success');
+			showNotification(`${currentModalMemberName} timed out for ${duration} minutes!`, 'success');
+			bootstrap.Modal.getInstance(document.getElementById('timeoutModal')).hide();
 			await loadPage('server');
 			document.getElementById('members-tab').click();
 		} else {
@@ -4567,22 +4707,46 @@ async function timeoutMember(memberId, displayName) {
 	}
 }
 
-async function kickMember(memberId, displayName) {
-	const reason = prompt(`Kick ${displayName}?\n\nReason:`);
-	if (reason === null) return;
+async function kickMember(memberId, displayName, avatarURL) {
+	const memberData = membersDataCache[memberId] || {};
+	
+	currentModalMemberId = memberId;
+	currentModalMemberName = displayName || memberData.displayName;
+	currentModalMemberAvatar = avatarURL || memberData.avatarURL;
 
-	if (!confirm(`Are you sure you want to kick ${displayName}?`)) return;
+	document.getElementById('kickModalMemberInfo').innerHTML = `
+		<img src="${currentModalMemberAvatar}" width="40" height="40" class="rounded me-2">
+		<div>
+			<strong>${currentModalMemberName}</strong>
+			<div class="text-muted small">${memberId}</div>
+		</div>
+	`;
+
+	document.getElementById('kickReason').value = '';
+
+	const modal = new bootstrap.Modal(document.getElementById('kickModal'));
+	modal.show();
+}
+
+async function confirmKick() {
+	const reason = document.getElementById('kickReason').value;
+
+	if (!reason.trim()) {
+		showNotification('Please provide a reason for the kick', 'warning');
+		return;
+	}
 
 	try {
 		const response = await fetch('/api/server/kick-member', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ memberId, reason })
+			body: JSON.stringify({ memberId: currentModalMemberId, reason })
 		});
 
 		const data = await response.json();
 		if (data.success) {
-			showNotification(`${displayName} kicked!`, 'success');
+			showNotification(`${currentModalMemberName} has been kicked!`, 'success');
+			bootstrap.Modal.getInstance(document.getElementById('kickModal')).hide();
 			await loadPage('server');
 			document.getElementById('members-tab').click();
 		} else {
@@ -4593,24 +4757,52 @@ async function kickMember(memberId, displayName) {
 	}
 }
 
-async function banMember(memberId, displayName) {
-	const reason = prompt(`Ban ${displayName}?\n\nReason:`);
-	if (reason === null) return;
+async function banMember(memberId, displayName, avatarURL) {
+	const memberData = membersDataCache[memberId] || {};
+	
+	currentModalMemberId = memberId;
+	currentModalMemberName = displayName || memberData.displayName;
+	currentModalMemberAvatar = avatarURL || memberData.avatarURL;
 
-	const deleteMessages = confirm('Delete their messages from the last 7 days?');
+	document.getElementById('banModalMemberInfo').innerHTML = `
+		<img src="${currentModalMemberAvatar}" width="40" height="40" class="rounded me-2">
+		<div>
+			<strong>${currentModalMemberName}</strong>
+			<div class="text-muted small">${memberId}</div>
+		</div>
+	`;
 
-	if (!confirm(`Are you ABSOLUTELY sure you want to BAN ${displayName}?\n\nThis is a serious action!`)) return;
+	document.getElementById('banReason').value = '';
+	document.getElementById('deleteMessages').checked = true;
+
+	const modal = new bootstrap.Modal(document.getElementById('banModal'));
+	modal.show();
+}
+
+async function confirmBan() {
+	const reason = document.getElementById('banReason').value;
+	const deleteMessages = document.getElementById('deleteMessages').checked;
+
+	if (!reason.trim()) {
+		showNotification('Please provide a reason for the ban', 'warning');
+		return;
+	}
 
 	try {
 		const response = await fetch('/api/server/ban-member', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ memberId, reason, deleteMessageDays: deleteMessages ? 7 : 0 })
+			body: JSON.stringify({ 
+				memberId: currentModalMemberId, 
+				reason, 
+				deleteMessageDays: deleteMessages ? 7 : 0 
+			})
 		});
 
 		const data = await response.json();
 		if (data.success) {
-			showNotification(`${displayName} banned!`, 'success');
+			showNotification(`${currentModalMemberName} has been banned!`, 'success');
+			bootstrap.Modal.getInstance(document.getElementById('banModal')).hide();
 			await loadPage('server');
 			document.getElementById('members-tab').click();
 		} else {

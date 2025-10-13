@@ -1445,6 +1445,37 @@ app.post('/api/test-redis', async (req, res) => {
 	}
 });
 
+app.get('/api/debug/recent-events', async (req, res) => {
+	try {
+		const { userId, limit = 20 } = req.query;
+
+		if (!global.eventsDatabase || !global.eventsDatabase.events) {
+			return res.json({
+				error: 'Events database not available',
+				eventsDatabaseExists: !!global.eventsDatabase,
+				eventsDatabaseOnline: !!global.eventsDatabaseOnline
+			});
+		}
+
+		const where = userId ? { user_id: userId } : {};
+
+		const events = await global.eventsDatabase.events.findAll({
+			where,
+			order: [['timestamp', 'DESC']],
+			limit: parseInt(limit),
+			raw: true
+		});
+
+		res.json({
+			eventsDatabaseOnline: global.eventsDatabaseOnline,
+			count: events.length,
+			events: events
+		});
+	} catch (err) {
+		res.json({ error: err.message, stack: err.stack });
+	}
+});
+
 const server = app.listen(PORT, () => {
 	console.log(`Cordium Configurator running on http://localhost:${PORT}`);
 	console.log(`Open your browser to configure your bot`);
