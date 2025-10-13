@@ -1765,23 +1765,204 @@ async function initMemberDetailsPage() {
 		}
 
 		if (member.recentActivity && member.recentActivity.length > 0) {
-			const activityHTML = member.recentActivity.slice(0, 10).map(event => {
-				const date = new Date(event.timestamp);
+			const activityHTML = member.recentActivity.slice(0, 20).map(event => {
+				const date = new Date(parseInt(event.timestamp));
+				let eventData = {};
+				try {
+					eventData = JSON.parse(event.event_data || '{}');
+				} catch (e) {
+					eventData = {};
+				}
+				
+				const icons = {
+					'MessageCreate': 'chat-left-text',
+					'MessageUpdate': 'pencil-square',
+					'MessageDelete': 'trash',
+					'MessageReactionAdd': 'emoji-smile',
+					'MessageReactionRemove': 'emoji-neutral',
+					'GuildMemberAdd': 'door-open',
+					'GuildMemberRemove': 'door-closed',
+					'GuildMemberUpdate': 'person-badge',
+					'VoiceStateUpdate': 'mic',
+					'GuildBanAdd': 'ban',
+					'GuildBanRemove': 'check-circle',
+					'InteractionCreate': 'cursor',
+					'InviteCreate': 'link-45deg',
+					'InviteDelete': 'link-45deg',
+					'GuildRoleCreate': 'plus-circle',
+					'GuildRoleUpdate': 'arrow-repeat',
+					'GuildRoleDelete': 'x-circle',
+					'ChannelCreate': 'hash-plus',
+					'ChannelUpdate': 'hash',
+					'ChannelDelete': 'hash-x'
+				};
+				
+				const icon = icons[event.event_name] || 'circle';
+				let details = '';
+				
+				switch (event.event_name) {
+					case 'MessageCreate':
+						const channelId1 = event.channel_id;
+						const messageId1 = event.message_id;
+						const messageLink1 = channelId1 && messageId1 ? `https://discord.com/channels/${event.guild_id}/${channelId1}/${messageId1}` : null;
+						details = `<div class="text-muted small mt-1">
+							${eventData.content ? `"${eventData.content}"<br>` : ''}
+							${messageLink1 ? `<a href="${messageLink1}" target="_blank" class="text-primary"><i class="bi bi-box-arrow-up-right"></i> View message</a>` : ''}
+						</div>`;
+						break;
+					case 'MessageUpdate':
+						const channelId2 = event.channel_id;
+						const messageId2 = event.message_id;
+						const messageLink2 = channelId2 && messageId2 ? `https://discord.com/channels/${event.guild_id}/${channelId2}/${messageId2}` : null;
+						details = `<div class="text-muted small mt-1">
+							<strong>Before:</strong> "${eventData.oldContent || ''}"<br>
+							<strong>After:</strong> "${eventData.newContent || ''}"<br>
+							${messageLink2 ? `<a href="${messageLink2}" target="_blank" class="text-primary"><i class="bi bi-box-arrow-up-right"></i> View message</a>` : ''}
+						</div>`;
+						break;
+					case 'MessageDelete':
+						details = `<div class="text-muted small mt-1">
+							${eventData.content ? `"${eventData.content}"<br>` : ''}
+							<span class="text-muted">Message ID: ${event.message_id}</span>
+						</div>`;
+						break;
+					case 'GuildMemberUpdate':
+						const changes = [];
+						if (eventData.nickname) {
+							changes.push(`<strong>Nickname:</strong> "${eventData.nickname.old || 'None'}" → "${eventData.nickname.new || 'None'}"`);
+						}
+						if (eventData.avatar) {
+							changes.push(`<strong>Avatar changed</strong><br>
+								<img src="${eventData.avatar.old}" width="40" height="40" class="rounded me-2"> → 
+								<img src="${eventData.avatar.new}" width="40" height="40" class="rounded">`);
+						}
+						if (eventData.boost) {
+							if (eventData.boost.action === 'started') {
+								changes.push(`<strong class="text-info">🎉 Started boosting the server!</strong>`);
+							} else {
+								changes.push(`<strong>Stopped boosting the server</strong>`);
+							}
+						}
+						if (eventData.timeout) {
+							if (eventData.timeout.removed) {
+								changes.push(`<strong class="text-success">Timeout removed</strong>`);
+							} else {
+								changes.push(`<strong class="text-warning">⏱️ Timed out for ${eventData.timeout.duration}</strong>`);
+							}
+						}
+						if (eventData.roles) {
+							if (eventData.roles.added && eventData.roles.added.length > 0) {
+								const roleNames = eventData.roles.added.map(r => r.name).join(', ');
+								changes.push(`<strong>Roles added:</strong> ${roleNames}`);
+							}
+							if (eventData.roles.removed && eventData.roles.removed.length > 0) {
+								const roleNames = eventData.roles.removed.map(r => r.name).join(', ');
+								changes.push(`<strong>Roles removed:</strong> ${roleNames}`);
+							}
+						}
+						details = changes.length > 0 ? `<div class="text-muted small mt-1">${changes.join('<br>')}</div>` : '';
+						break;
+					case 'VoiceStateUpdate':
+						if (eventData.action === 'join') {
+							details = `<div class="text-muted small mt-1">Joined <strong>#${eventData.channelName}</strong></div>`;
+						} else if (eventData.action === 'leave') {
+							details = `<div class="text-muted small mt-1">Left <strong>#${eventData.channelName}</strong></div>`;
+						} else if (eventData.action === 'move') {
+							details = `<div class="text-muted small mt-1">Moved from <strong>#${eventData.oldChannelName}</strong> to <strong>#${eventData.newChannelName}</strong></div>`;
+						}
+						const vcChanges = [];
+						if (eventData.serverMute) vcChanges.push(`Server ${eventData.serverMute.new ? 'muted' : 'unmuted'}`);
+						if (eventData.serverDeaf) vcChanges.push(`Server ${eventData.serverDeaf.new ? 'deafened' : 'undeafened'}`);
+						if (eventData.streaming) vcChanges.push(eventData.streaming.new ? 'Started streaming' : 'Stopped streaming');
+						if (eventData.camera) vcChanges.push(eventData.camera.new ? 'Turned camera on' : 'Turned camera off');
+						if (vcChanges.length > 0) details += `<div class="text-muted small">${vcChanges.join(', ')}</div>`;
+						break;
+					case 'MessageReactionAdd':
+					case 'MessageReactionRemove':
+						const channelId3 = event.channel_id;
+						const messageId3 = event.message_id;
+						const messageLink3 = channelId3 && messageId3 ? `https://discord.com/channels/${event.guild_id}/${channelId3}/${messageId3}` : null;
+						details = `<div class="text-muted small mt-1">
+							Emoji: ${eventData.emoji}<br>
+							${messageLink3 ? `<a href="${messageLink3}" target="_blank" class="text-primary"><i class="bi bi-box-arrow-up-right"></i> View message</a>` : ''}
+						</div>`;
+						break;
+					case 'GuildBanAdd':
+						details = `<div class="text-muted small mt-1">Reason: ${eventData.reason || 'No reason provided'}</div>`;
+						break;
+					case 'InteractionCreate':
+						if (eventData.commandName) {
+							const channelId4 = event.channel_id;
+							const channelLink = channelId4 ? `https://discord.com/channels/${event.guild_id}/${channelId4}` : null;
+							details = `<div class="text-muted small mt-1">
+								Command: <code>/${eventData.commandName}</code><br>
+								${channelLink ? `<a href="${channelLink}" target="_blank" class="text-primary"><i class="bi bi-box-arrow-up-right"></i> View channel</a>` : ''}
+							</div>`;
+						}
+						break;
+					case 'InviteCreate':
+						details = `<div class="text-muted small mt-1">
+							Code: <code>${eventData.code}</code><br>
+							Channel: #${eventData.channelName || 'unknown'}<br>
+							Max uses: ${eventData.maxUses || 'Unlimited'}
+						</div>`;
+						break;
+					case 'InviteDelete':
+						details = `<div class="text-muted small mt-1">
+							Code: <code>${eventData.code}</code><br>
+							Channel: #${eventData.channelName || 'unknown'}
+						</div>`;
+						break;
+					case 'GuildRoleCreate':
+					case 'GuildRoleUpdate':
+					case 'GuildRoleDelete':
+						details = `<div class="text-muted small mt-1">Role: ${eventData.roleName || eventData.name}</div>`;
+						if (eventData.changes) {
+							const roleChanges = [];
+							if (eventData.changes.name) roleChanges.push(`Name: "${eventData.changes.name.old}" → "${eventData.changes.name.new}"`);
+							if (eventData.changes.color) roleChanges.push(`Color: ${eventData.changes.color.old} → ${eventData.changes.color.new}`);
+							if (roleChanges.length > 0) details += `<div class="text-muted small">${roleChanges.join('<br>')}</div>`;
+						}
+						break;
+					case 'ChannelCreate':
+					case 'ChannelUpdate':
+					case 'ChannelDelete':
+						details = `<div class="text-muted small mt-1">Channel: #${eventData.channelName || eventData.name}</div>`;
+						break;
+				}
+				
 				const eventNames = {
 					'MessageCreate': 'Sent a message',
-					'GuildMemberAdd': 'Joined the server',
-					'GuildMemberRemove': 'Left the server',
-					'GuildMemberUpdate': 'Updated profile',
 					'MessageUpdate': 'Edited a message',
-					'MessageDelete': 'Deleted a message'
+					'MessageDelete': 'Deleted a message',
+					'MessageReactionAdd': 'Added reaction',
+					'MessageReactionRemove': 'Removed reaction',
+					'GuildMemberAdd': 'Joined server',
+					'GuildMemberRemove': 'Left server',
+					'GuildMemberUpdate': 'Updated profile',
+					'VoiceStateUpdate': 'Voice activity',
+					'GuildBanAdd': 'Banned from server',
+					'GuildBanRemove': 'Unbanned',
+					'InteractionCreate': 'Used command',
+					'InviteCreate': 'Created invite',
+					'InviteDelete': 'Deleted invite',
+					'GuildRoleCreate': 'Role created',
+					'GuildRoleUpdate': 'Role updated',
+					'GuildRoleDelete': 'Role deleted',
+					'ChannelCreate': 'Channel created',
+					'ChannelUpdate': 'Channel updated',
+					'ChannelDelete': 'Channel deleted'
 				};
 				const eventName = eventNames[event.event_name] || event.event_name;
 
 				return `
 					<div class="list-group-item">
-						<div class="d-flex justify-content-between">
-							<span><i class="bi bi-dot me-2"></i>${eventName}</span>
-							<small class="text-muted">${date.toLocaleString()}</small>
+						<div class="d-flex justify-content-between align-items-start">
+							<div class="flex-grow-1">
+								<div><i class="bi bi-${icon} me-2"></i><strong>${eventName}</strong></div>
+								${details}
+							</div>
+							<small class="text-muted text-nowrap ms-2">${date.toLocaleString()}</small>
 						</div>
 					</div>
 				`;
