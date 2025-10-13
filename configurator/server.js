@@ -1134,7 +1134,7 @@ app.get('/api/server/analytics/hourly-activity', async (req, res) => {
 app.get('/api/server/roles', async (req, res) => {
 	try {
 		const guild = global.guild;
-		
+
 		if (!guild) {
 			return res.json({ error: 'Guild not available' });
 		}
@@ -1392,28 +1392,95 @@ app.post('/api/server/delete-message', async (req, res) => {
 			return res.json({ success: false, error: 'Bot is not running' });
 		}
 
-		const channel = global.guild.channels.cache.get(channelId);
-		if (!channel) {
-			return res.json({ success: false, error: 'Channel not found' });
-		}
-
-		if (!channel.isTextBased()) {
-			return res.json({ success: false, error: 'Not a text channel' });
-		}
-
-		try {
-			const message = await channel.messages.fetch(messageId);
-			if (message) {
-				await message.delete();
+		if (channelId) {
+			const channel = global.guild.channels.cache.get(channelId);
+			if (channel && channel.isTextBased()) {
+				try {
+					const message = await channel.messages.fetch(messageId);
+					if (message) {
+						await message.delete();
+					}
+				} catch (err) {
+				}
 			}
-		} catch (err) {
-			console.reportWarn('Message not found in Discord, removing from cache only');
+		} else {
+			let messageDeleted = false;
+			for (const [cId, channel] of global.guild.channels.cache) {
+				if (!channel.isTextBased()) continue;
+				try {
+					const message = await channel.messages.fetch(messageId);
+					if (message) {
+						await message.delete();
+						messageDeleted = true;
+						break;
+					}
+				} catch (err) {
+				}
+			}
 		}
 
 		if (global.messagesCache) {
 			await global.messagesCache.deleteMessage(messageId);
 		}
 
+		res.json({ success: true });
+	} catch (err) {
+		res.json({ success: false, error: err.message });
+	}
+});
+
+app.post('/api/server/pin-message', async (req, res) => {
+	try {
+		const { messageId } = req.body;
+
+		if (!global.guild) {
+			return res.json({ success: false, error: 'Bot is not running' });
+		}
+
+		let message = null;
+		for (const [channelId, channel] of global.guild.channels.cache) {
+			if (!channel.isTextBased()) continue;
+			try {
+				message = await channel.messages.fetch(messageId);
+				if (message) break;
+			} catch (err) {
+			}
+		}
+
+		if (!message) {
+			return res.json({ success: false, error: 'Message not found' });
+		}
+
+		await message.pin();
+		res.json({ success: true });
+	} catch (err) {
+		res.json({ success: false, error: err.message });
+	}
+});
+
+app.post('/api/server/unpin-message', async (req, res) => {
+	try {
+		const { messageId } = req.body;
+
+		if (!global.guild) {
+			return res.json({ success: false, error: 'Bot is not running' });
+		}
+
+		let message = null;
+		for (const [channelId, channel] of global.guild.channels.cache) {
+			if (!channel.isTextBased()) continue;
+			try {
+				message = await channel.messages.fetch(messageId);
+				if (message) break;
+			} catch (err) {
+			}
+		}
+
+		if (!message) {
+			return res.json({ success: false, error: 'Message not found' });
+		}
+
+		await message.unpin();
 		res.json({ success: true });
 	} catch (err) {
 		res.json({ success: false, error: err.message });

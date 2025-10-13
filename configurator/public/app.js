@@ -928,6 +928,7 @@ async function reloadServerOverview() {
 }
 
 async function loadPage(page) {
+	clearSelection();
 	currentPage = page;
 	localStorage.setItem('currentPage', page);
 	const content = document.getElementById('content');
@@ -1016,6 +1017,15 @@ async function initServerPage() {
 		serverData = serverInfo;
 
 		await initServerCharts();
+
+		setTimeout(() => {
+			const tabButtons = document.querySelectorAll('#serverTabs button[data-bs-toggle="tab"]');
+			tabButtons.forEach(btn => {
+				btn.addEventListener('shown.bs.tab', () => {
+					clearSelection();
+				});
+			});
+		}, 100);
 
 	} catch (err) {
 		console.error('Error loading server page:', err);
@@ -1404,6 +1414,10 @@ function populateChannelsList(channels) {
 	const noCategory = channels.filter(c => c.type !== 4 && !c.parentId);
 
 	let html = `
+		<div class="select-all-container">
+			<input type="checkbox" class="item-checkbox" id="selectAllCheckbox" onchange="selectAllItems('channel')">
+			<label for="selectAllCheckbox">Select All</label>
+		</div>
 		<div class="list-group-item bg-primary text-white d-flex justify-content-between align-items-center">
 			<div><strong>Create New Channel/Category</strong></div>
 			<button class="btn btn-sm btn-light" onclick="createChannel()" title="Create channel">
@@ -1422,13 +1436,16 @@ function populateChannelsList(channels) {
 			</button>
 		` : '';
 		html += `
-			<div class="list-group-item d-flex justify-content-between align-items-center">
-				<div>
-					<i class="bi ${icon} me-2"></i>
-					<strong>${channel.name}</strong>
-					<span class="badge bg-secondary ms-2">${typeName}</span>
-					${channel.members !== null ? `<span class="badge bg-info ms-1">${channel.members} members</span>` : ''}
-					${channel.topic ? `<br><small class="text-muted ms-4">${channel.topic}</small>` : ''}
+			<div class="list-group-item d-flex justify-content-between align-items-center" data-item-id="${channel.id}">
+				<div class="d-flex align-items-center gap-2">
+					<input type="checkbox" class="item-checkbox" data-item-type="channel" value="${channel.id}" onchange="toggleItemSelection('${channel.id}', 'channel')" onclick="event.stopPropagation()">
+					<i class="bi ${icon}"></i>
+					<div>
+						<strong>${channel.name}</strong>
+						<span class="badge bg-secondary ms-2">${typeName}</span>
+						${channel.members !== null ? `<span class="badge bg-info ms-1">${channel.members} members</span>` : ''}
+						${channel.topic ? `<br><small class="text-muted ms-4">${channel.topic}</small>` : ''}
+					</div>
 				</div>
 				<div class="item-menu">
 					<button class="item-menu-btn" onclick="toggleMenu(this)">
@@ -1538,6 +1555,10 @@ function populateChannelsList(channels) {
 function populateRolesList(roles) {
 	const rolesList = document.getElementById('rolesList');
 	let html = `
+		<div class="select-all-container">
+			<input type="checkbox" class="item-checkbox" id="selectAllCheckbox" onchange="selectAllItems('role')">
+			<label for="selectAllCheckbox">Select All</label>
+		</div>
 		<div class="list-group-item bg-success text-white d-flex justify-content-between align-items-center">
 			<div><strong>Create New Role</strong></div>
 			<button class="btn btn-sm btn-light" onclick="createRole()" title="Create role">
@@ -1548,13 +1569,16 @@ function populateRolesList(roles) {
 
 	roles.forEach(role => {
 		html += `
-			<div class="list-group-item d-flex justify-content-between align-items-center">
-				<div>
-					<i class="bi bi-shield-fill me-2" style="color: ${role.hexColor}"></i>
-					<strong>${role.name}</strong>
-					<span class="badge bg-secondary ms-2">${role.memberCount} members</span>
-					${role.hoist ? '<span class="badge bg-primary ms-1">Hoisted</span>' : ''}
-					${role.managed ? '<span class="badge bg-warning ms-1">Managed</span>' : ''}
+			<div class="list-group-item d-flex justify-content-between align-items-center" data-item-id="${role.id}">
+				<div class="d-flex align-items-center gap-2">
+					<input type="checkbox" class="item-checkbox" data-item-type="role" value="${role.id}" onchange="toggleItemSelection('${role.id}', 'role')" onclick="event.stopPropagation()">
+					<i class="bi bi-shield-fill" style="color: ${role.hexColor}"></i>
+					<div>
+						<strong>${role.name}</strong>
+						<span class="badge bg-secondary ms-2">${role.memberCount} members</span>
+						${role.hoist ? '<span class="badge bg-primary ms-1">Hoisted</span>' : ''}
+						${role.managed ? '<span class="badge bg-warning ms-1">Managed</span>' : ''}
+					</div>
 				</div>
 				<div class="item-menu">
 					<button class="item-menu-btn" onclick="toggleMenu(this)">
@@ -1605,7 +1629,7 @@ function populateMembersList(members) {
 			nickname: member.nickname,
 			roles: member.roles || []
 		};
-		
+
 		const statusIcon = statusIcons[member.status] || statusIcons.offline;
 		const ownerBadge = member.isOwner ? '<span class="badge bg-warning ms-2"><i class="bi bi-crown"></i> Owner</span>' : '';
 		const botBadge = member.bot ? '<span class="badge bg-secondary ms-2">Bot</span>' : '';
@@ -2063,7 +2087,13 @@ async function loadCachedMessages() {
 			return;
 		}
 
-		let html = '';
+		let html = `
+			<div class="select-all-container">
+				<input type="checkbox" class="item-checkbox" id="selectAllCheckbox" onchange="selectAllItems('message')">
+				<label for="selectAllCheckbox">Select All</label>
+			</div>
+		`;
+		
 		data.messages.forEach(msg => {
 			const authorAvatar = msg.author?.avatarURL || msg.authorAvatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
 			const authorName = msg.author?.username || msg.authorName || 'Unknown';
@@ -2072,9 +2102,10 @@ async function loadCachedMessages() {
 			const messageId = msg.id || msg.messageId;
 
 			html += `
-				<div class="list-group-item" data-message-id="${messageId}">
+				<div class="list-group-item" data-message-id="${messageId}" data-item-id="${messageId}">
 					<div class="d-flex">
-						<img src="${authorAvatar}" alt="${authorName}" class="rounded-circle me-3" width="40" height="40">
+						<input type="checkbox" class="item-checkbox" data-item-type="message" value="${messageId}" onchange="toggleItemSelection('${messageId}', 'message')" onclick="event.stopPropagation()">
+						<img src="${authorAvatar}" alt="${authorName}" class="rounded-circle me-3 ms-2" width="40" height="40">
 						<div class="flex-grow-1">
 							<div class="d-flex justify-content-between">
 								<strong>${authorName}</strong>
@@ -2828,6 +2859,16 @@ async function loadMessages(reset = false) {
 			return;
 		}
 
+		if (messagesOffset === 0 || reset) {
+			const selectAllDiv = document.createElement('div');
+			selectAllDiv.className = 'select-all-container';
+			selectAllDiv.innerHTML = `
+				<input type="checkbox" class="item-checkbox" id="selectAllCheckbox" onchange="selectAllItems('message')">
+				<label for="selectAllCheckbox">Select All</label>
+			`;
+			container.appendChild(selectAllDiv);
+		}
+
 		const fragment = document.createDocumentFragment();
 
 		data.messages.forEach(msg => {
@@ -2837,11 +2878,13 @@ async function loadMessages(reset = false) {
 			const messageItem = document.createElement('div');
 			messageItem.className = 'list-group-item';
 			messageItem.setAttribute('data-message-id', msg.id);
+			messageItem.setAttribute('data-item-id', msg.id);
 
 			let contentHTML = `
 				<div class="d-flex align-items-start justify-content-between">
 					<div class="d-flex align-items-start flex-grow-1">
-						<small class="text-muted me-3 flex-shrink-0" style="min-width: 45px;">${timeStr}</small>
+						<input type="checkbox" class="item-checkbox me-2" data-item-type="message" value="${msg.id}" onchange="toggleItemSelection('${msg.id}', 'message')" onclick="event.stopPropagation()">
+						<small class="text-muted me-2 flex-shrink-0" style="min-width: 45px;">${timeStr}</small>
 						<img src="${msg.authorAvatar}" alt="${msg.authorDisplayName}" class="rounded-circle me-2" width="40" height="40" loading="lazy">
 						<div class="flex-grow-1">
 							<div class="mb-1">
@@ -4501,9 +4544,12 @@ let currentModalMemberAvatar = null;
 let currentMemberRoles = [];
 let membersDataCache = {};
 
+let selectedItems = new Set();
+let selectionMode = null;
+
 async function manageMemberRoles(memberId, displayName, avatarURL, roles) {
 	const memberData = membersDataCache[memberId] || {};
-	
+
 	currentModalMemberId = memberId;
 	currentModalMemberName = displayName || memberData.displayName;
 	currentModalMemberAvatar = avatarURL || memberData.avatarURL;
@@ -4520,7 +4566,7 @@ async function manageMemberRoles(memberId, displayName, avatarURL, roles) {
 	try {
 		const response = await fetch('/api/server/roles');
 		const data = await response.json();
-		
+
 		if (data.error) {
 			showNotification('Error loading roles: ' + data.error, 'danger');
 			return;
@@ -4597,7 +4643,7 @@ async function saveRoleChanges() {
 
 async function changeNickname(memberId, displayName, avatarURL, currentNickname) {
 	const memberData = membersDataCache[memberId] || {};
-	
+
 	currentModalMemberId = memberId;
 	currentModalMemberName = displayName || memberData.displayName;
 	currentModalMemberAvatar = avatarURL || memberData.avatarURL;
@@ -4644,7 +4690,7 @@ async function saveNicknameChange() {
 
 async function timeoutMember(memberId, displayName, avatarURL) {
 	const memberData = membersDataCache[memberId] || {};
-	
+
 	currentModalMemberId = memberId;
 	currentModalMemberName = displayName || memberData.displayName;
 	currentModalMemberAvatar = avatarURL || memberData.avatarURL;
@@ -4709,7 +4755,7 @@ async function saveTimeout() {
 
 async function kickMember(memberId, displayName, avatarURL) {
 	const memberData = membersDataCache[memberId] || {};
-	
+
 	currentModalMemberId = memberId;
 	currentModalMemberName = displayName || memberData.displayName;
 	currentModalMemberAvatar = avatarURL || memberData.avatarURL;
@@ -4759,7 +4805,7 @@ async function confirmKick() {
 
 async function banMember(memberId, displayName, avatarURL) {
 	const memberData = membersDataCache[memberId] || {};
-	
+
 	currentModalMemberId = memberId;
 	currentModalMemberName = displayName || memberData.displayName;
 	currentModalMemberAvatar = avatarURL || memberData.avatarURL;
@@ -4792,10 +4838,10 @@ async function confirmBan() {
 		const response = await fetch('/api/server/ban-member', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ 
-				memberId: currentModalMemberId, 
-				reason, 
-				deleteMessageDays: deleteMessages ? 7 : 0 
+			body: JSON.stringify({
+				memberId: currentModalMemberId,
+				reason,
+				deleteMessageDays: deleteMessages ? 7 : 0
 			})
 		});
 
@@ -4810,6 +4856,212 @@ async function confirmBan() {
 		}
 	} catch (err) {
 		showNotification('Error: ' + err.message, 'danger');
+	}
+}
+
+function toggleItemSelection(itemId, itemType) {
+	if (selectedItems.has(itemId)) {
+		selectedItems.delete(itemId);
+		document.querySelector(`[data-item-id="${itemId}"]`)?.classList.remove('selected');
+	} else {
+		selectedItems.add(itemId);
+		document.querySelector(`[data-item-id="${itemId}"]`)?.classList.add('selected');
+	}
+	
+	selectionMode = itemType;
+	updateSelectionBar();
+}
+
+function selectAllItems(itemType) {
+	const checkboxes = document.querySelectorAll(`.item-checkbox[data-item-type="${itemType}"]`);
+	const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+	
+	if (selectAllCheckbox && selectAllCheckbox.checked) {
+		checkboxes.forEach(cb => {
+			cb.checked = true;
+			selectedItems.add(cb.value);
+			document.querySelector(`[data-item-id="${cb.value}"]`)?.classList.add('selected');
+		});
+	} else {
+		checkboxes.forEach(cb => {
+			cb.checked = false;
+			selectedItems.delete(cb.value);
+			document.querySelector(`[data-item-id="${cb.value}"]`)?.classList.remove('selected');
+		});
+	}
+	
+	selectionMode = selectedItems.size > 0 ? itemType : null;
+	updateSelectionBar();
+}
+
+function clearSelection() {
+	selectedItems.clear();
+	selectionMode = null;
+	document.querySelectorAll('.item-checkbox').forEach(cb => cb.checked = false);
+	document.querySelectorAll('.list-group-item.selected').forEach(item => item.classList.remove('selected'));
+	const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+	if (selectAllCheckbox) selectAllCheckbox.checked = false;
+	updateSelectionBar();
+}
+
+function updateSelectionBar() {
+	const selectionBar = document.getElementById('selectionBar');
+	const selectionCount = document.getElementById('selectionCount');
+	const selectionActions = document.getElementById('selectionActions');
+	
+	const count = selectedItems.size;
+	
+	if (count === 0) {
+		selectionBar.classList.remove('visible');
+		return;
+	}
+	
+	selectionCount.textContent = `${count} selected`;
+	selectionBar.classList.add('visible');
+	
+	let actionsHTML = '';
+	
+	switch(selectionMode) {
+		case 'role':
+			actionsHTML = `
+				<button class="btn btn-danger" onclick="bulkDeleteRoles()">
+					<i class="bi bi-trash"></i>
+					Delete Roles
+				</button>
+			`;
+			break;
+		case 'channel':
+			actionsHTML = `
+				<button class="btn btn-danger" onclick="bulkDeleteChannels()">
+					<i class="bi bi-trash"></i>
+					Delete Channels
+				</button>
+			`;
+			break;
+		case 'message':
+			actionsHTML = `
+				<button class="btn btn-light" onclick="bulkPinMessages()">
+					<i class="bi bi-pin-angle"></i>
+					Pin Messages
+				</button>
+				<button class="btn btn-light" onclick="bulkUnpinMessages()">
+					<i class="bi bi-pin"></i>
+					Unpin Messages
+				</button>
+				<button class="btn btn-danger" onclick="bulkDeleteMessages()">
+					<i class="bi bi-trash"></i>
+					Delete Messages
+				</button>
+			`;
+			break;
+	}
+	
+	selectionActions.innerHTML = actionsHTML;
+}
+
+async function bulkDeleteRoles() {
+	if (!confirm(`Are you sure you want to delete ${selectedItems.size} role(s)?`)) return;
+	
+	const promises = Array.from(selectedItems).map(roleId =>
+		fetch('/api/server/delete-role', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ roleId })
+		})
+	);
+	
+	try {
+		await Promise.all(promises);
+		showNotification(`${selectedItems.size} role(s) deleted successfully!`, 'success');
+		clearSelection();
+		await loadPage('server');
+		document.getElementById('roles-tab').click();
+	} catch (err) {
+		showNotification('Error deleting roles: ' + err.message, 'danger');
+	}
+}
+
+async function bulkDeleteChannels() {
+	if (!confirm(`Are you sure you want to delete ${selectedItems.size} channel(s)?`)) return;
+	
+	const promises = Array.from(selectedItems).map(channelId =>
+		fetch('/api/server/delete-channel', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ channelId })
+		})
+	);
+	
+	try {
+		await Promise.all(promises);
+		showNotification(`${selectedItems.size} channel(s) deleted successfully!`, 'success');
+		clearSelection();
+		await loadPage('server');
+		document.getElementById('channels-tab').click();
+	} catch (err) {
+		showNotification('Error deleting channels: ' + err.message, 'danger');
+	}
+}
+
+async function bulkDeleteMessages() {
+	if (!confirm(`Are you sure you want to delete ${selectedItems.size} message(s)?`)) return;
+	
+	const promises = Array.from(selectedItems).map(messageId =>
+		fetch('/api/server/delete-message', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ messageId })
+		})
+	);
+	
+	try {
+		await Promise.all(promises);
+		showNotification(`${selectedItems.size} message(s) deleted successfully!`, 'success');
+		clearSelection();
+		await loadPage('server');
+		document.getElementById('messages-tab').click();
+	} catch (err) {
+		showNotification('Error deleting messages: ' + err.message, 'danger');
+	}
+}
+
+async function bulkPinMessages() {
+	const promises = Array.from(selectedItems).map(messageId =>
+		fetch('/api/server/pin-message', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ messageId })
+		})
+	);
+	
+	try {
+		await Promise.all(promises);
+		showNotification(`${selectedItems.size} message(s) pinned successfully!`, 'success');
+		clearSelection();
+		await loadPage('server');
+		document.getElementById('messages-tab').click();
+	} catch (err) {
+		showNotification('Error pinning messages: ' + err.message, 'danger');
+	}
+}
+
+async function bulkUnpinMessages() {
+	const promises = Array.from(selectedItems).map(messageId =>
+		fetch('/api/server/unpin-message', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ messageId })
+		})
+	);
+	
+	try {
+		await Promise.all(promises);
+		showNotification(`${selectedItems.size} message(s) unpinned successfully!`, 'success');
+		clearSelection();
+		await loadPage('server');
+		document.getElementById('messages-tab').click();
+	} catch (err) {
+		showNotification('Error unpinning messages: ' + err.message, 'danger');
 	}
 }
 

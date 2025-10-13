@@ -610,7 +610,7 @@ class MessagesCache {
 				try {
 					const messages = await channel.messages.fetch({ limit: 50 });
 					recentRestored += messages.size;
-					
+
 					if (!global.redisOnline) {
 						for (const [msgId, msg] of messages) {
 							await this.addMessage(msg);
@@ -656,7 +656,7 @@ class MessagesCache {
 
 						if (olderMessages.size > 0) {
 							this.loadingProgress.loaded += olderMessages.size;
-							
+
 							if (!global.redisOnline) {
 								for (const [msgId, msg] of olderMessages) {
 									await this.addMessage(msg);

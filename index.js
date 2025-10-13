@@ -164,17 +164,17 @@ const { set, walkDirSync, toCamelCase, setReportFunctions } = require(global.uti
 			await global.messagesCache.restoreToDiscordCache();
 		}
 
-	if (global.eventsDatabase) {
-		try {
-			console.report('Initializing EventsDatabase...');
-			await global.eventsDatabase.init();
-			global.eventsDatabaseOnline = true;
-			console.report('EventsDatabase initialized successfully');
-		} catch (err) {
-			console.reportError('EventsDatabase init failed:', err.message);
-			console.error(err);
+		if (global.eventsDatabase) {
+			try {
+				console.report('Initializing EventsDatabase...');
+				await global.eventsDatabase.init();
+				global.eventsDatabaseOnline = true;
+				console.report('EventsDatabase initialized successfully');
+			} catch (err) {
+				console.reportError('EventsDatabase init failed:', err.message);
+				console.error(err);
+			}
 		}
-	}
 
 		// Feed discord.js with old messages
 		// console.report('Feeding Discord.js old messages...');

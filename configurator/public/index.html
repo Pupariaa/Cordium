@@ -143,6 +143,16 @@
 		</div>
 	</div>
 
+	<div class="selection-bar" id="selectionBar">
+		<div class="selection-count" id="selectionCount">0 selected</div>
+		<div class="selection-actions" id="selectionActions">
+		</div>
+		<button class="btn btn-light" onclick="clearSelection()">
+			<i class="bi bi-x-lg"></i>
+			Cancel
+		</button>
+	</div>
+
 	<div class="modal fade" id="manageRolesModal" tabindex="-1">
 		<div class="modal-dialog modal-dialog-centered">
 			<div class="modal-content bg-dark text-white">
@@ -153,12 +163,14 @@
 				<div class="modal-body">
 					<div class="mb-3">
 						<label class="form-label">Member</label>
-						<div id="roleModalMemberInfo" class="d-flex align-items-center mb-3 p-2 rounded" style="background: rgba(255,255,255,0.05);">
+						<div id="roleModalMemberInfo" class="d-flex align-items-center mb-3 p-2 rounded"
+							style="background: rgba(255,255,255,0.05);">
 						</div>
 					</div>
 					<div class="mb-3">
 						<label class="form-label">Available Roles</label>
-						<div id="rolesList" class="border border-secondary rounded p-3" style="max-height: 300px; overflow-y: auto;">
+						<div id="rolesList" class="border border-secondary rounded p-3"
+							style="max-height: 300px; overflow-y: auto;">
 						</div>
 					</div>
 				</div>
@@ -182,12 +194,14 @@
 				<div class="modal-body">
 					<div class="mb-3">
 						<label class="form-label">Member</label>
-						<div id="nicknameModalMemberInfo" class="d-flex align-items-center mb-3 p-2 rounded" style="background: rgba(255,255,255,0.05);">
+						<div id="nicknameModalMemberInfo" class="d-flex align-items-center mb-3 p-2 rounded"
+							style="background: rgba(255,255,255,0.05);">
 						</div>
 					</div>
 					<div class="mb-3">
 						<label for="nicknameInput" class="form-label">New Nickname</label>
-						<input type="text" class="form-control bg-dark text-white border-secondary" id="nicknameInput" placeholder="Enter new nickname or leave empty to reset">
+						<input type="text" class="form-control bg-dark text-white border-secondary" id="nicknameInput"
+							placeholder="Enter new nickname or leave empty to reset">
 						<div class="form-text text-muted">Leave empty to reset to username</div>
 					</div>
 				</div>
@@ -211,31 +225,42 @@
 				<div class="modal-body">
 					<div class="mb-3">
 						<label class="form-label">Member</label>
-						<div id="timeoutModalMemberInfo" class="d-flex align-items-center mb-3 p-2 rounded" style="background: rgba(255,255,255,0.05);">
+						<div id="timeoutModalMemberInfo" class="d-flex align-items-center mb-3 p-2 rounded"
+							style="background: rgba(255,255,255,0.05);">
 						</div>
 					</div>
 					<div class="mb-3">
 						<label class="form-label">Duration</label>
 						<div class="btn-group w-100 mb-2" role="group">
-							<button type="button" class="btn btn-outline-secondary" onclick="setTimeoutDuration(5)">5 min</button>
-							<button type="button" class="btn btn-outline-secondary" onclick="setTimeoutDuration(10)">10 min</button>
-							<button type="button" class="btn btn-outline-secondary" onclick="setTimeoutDuration(30)">30 min</button>
-							<button type="button" class="btn btn-outline-secondary active" onclick="setTimeoutDuration(60)">1 hour</button>
+							<button type="button" class="btn btn-outline-secondary" onclick="setTimeoutDuration(5)">5
+								min</button>
+							<button type="button" class="btn btn-outline-secondary" onclick="setTimeoutDuration(10)">10
+								min</button>
+							<button type="button" class="btn btn-outline-secondary" onclick="setTimeoutDuration(30)">30
+								min</button>
+							<button type="button" class="btn btn-outline-secondary active"
+								onclick="setTimeoutDuration(60)">1 hour</button>
 						</div>
 						<div class="btn-group w-100 mb-2" role="group">
-							<button type="button" class="btn btn-outline-secondary" onclick="setTimeoutDuration(180)">3 hours</button>
-							<button type="button" class="btn btn-outline-secondary" onclick="setTimeoutDuration(360)">6 hours</button>
-							<button type="button" class="btn btn-outline-secondary" onclick="setTimeoutDuration(720)">12 hours</button>
-							<button type="button" class="btn btn-outline-secondary" onclick="setTimeoutDuration(1440)">1 day</button>
+							<button type="button" class="btn btn-outline-secondary" onclick="setTimeoutDuration(180)">3
+								hours</button>
+							<button type="button" class="btn btn-outline-secondary" onclick="setTimeoutDuration(360)">6
+								hours</button>
+							<button type="button" class="btn btn-outline-secondary" onclick="setTimeoutDuration(720)">12
+								hours</button>
+							<button type="button" class="btn btn-outline-secondary" onclick="setTimeoutDuration(1440)">1
+								day</button>
 						</div>
 						<div class="input-group">
-							<input type="number" class="form-control bg-dark text-white border-secondary" id="timeoutDuration" value="60" min="1" max="40320">
+							<input type="number" class="form-control bg-dark text-white border-secondary"
+								id="timeoutDuration" value="60" min="1" max="40320">
 							<span class="input-group-text bg-dark text-white border-secondary">minutes</span>
 						</div>
 					</div>
 					<div class="mb-3">
 						<label for="timeoutReason" class="form-label">Reason (optional)</label>
-						<textarea class="form-control bg-dark text-white border-secondary" id="timeoutReason" rows="2" placeholder="Enter reason..."></textarea>
+						<textarea class="form-control bg-dark text-white border-secondary" id="timeoutReason" rows="2"
+							placeholder="Enter reason..."></textarea>
 					</div>
 				</div>
 				<div class="modal-footer border-secondary">
@@ -258,7 +283,8 @@
 				<div class="modal-body">
 					<div class="mb-3">
 						<label class="form-label">Member</label>
-						<div id="kickModalMemberInfo" class="d-flex align-items-center mb-3 p-2 rounded" style="background: rgba(255,255,255,0.05);">
+						<div id="kickModalMemberInfo" class="d-flex align-items-center mb-3 p-2 rounded"
+							style="background: rgba(255,255,255,0.05);">
 						</div>
 					</div>
 					<div class="alert alert-warning">
@@ -267,7 +293,8 @@
 					</div>
 					<div class="mb-3">
 						<label for="kickReason" class="form-label">Reason</label>
-						<textarea class="form-control bg-dark text-white border-secondary" id="kickReason" rows="2" placeholder="Enter reason for kick..."></textarea>
+						<textarea class="form-control bg-dark text-white border-secondary" id="kickReason" rows="2"
+							placeholder="Enter reason for kick..."></textarea>
 					</div>
 				</div>
 				<div class="modal-footer border-secondary">
@@ -290,16 +317,19 @@
 				<div class="modal-body">
 					<div class="mb-3">
 						<label class="form-label">Member</label>
-						<div id="banModalMemberInfo" class="d-flex align-items-center mb-3 p-2 rounded" style="background: rgba(255,255,255,0.05);">
+						<div id="banModalMemberInfo" class="d-flex align-items-center mb-3 p-2 rounded"
+							style="background: rgba(255,255,255,0.05);">
 						</div>
 					</div>
 					<div class="alert alert-danger">
 						<i class="bi bi-exclamation-octagon me-2"></i>
-						<strong>This is a serious action!</strong> The member will be permanently banned and cannot rejoin unless unbanned.
+						<strong>This is a serious action!</strong> The member will be permanently banned and cannot
+						rejoin unless unbanned.
 					</div>
 					<div class="mb-3">
 						<label for="banReason" class="form-label">Reason</label>
-						<textarea class="form-control bg-dark text-white border-secondary" id="banReason" rows="2" placeholder="Enter reason for ban..." required></textarea>
+						<textarea class="form-control bg-dark text-white border-secondary" id="banReason" rows="2"
+							placeholder="Enter reason for ban..." required></textarea>
 					</div>
 					<div class="form-check">
 						<input class="form-check-input" type="checkbox" id="deleteMessages" checked>

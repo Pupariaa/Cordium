@@ -8,15 +8,15 @@ module.exports = {
 			try {
 				let reason = 'left';
 				let executor = null;
-				
+
 				try {
 					const auditLogs = await member.guild.fetchAuditLogs({
 						limit: 1,
 						type: 20
 					});
-					
+
 					const kickLog = auditLogs.entries.first();
-					
+
 					if (kickLog && kickLog.target.id === member.id && Date.now() - kickLog.createdTimestamp < 5000) {
 						reason = 'kicked';
 						executor = {
@@ -28,7 +28,7 @@ module.exports = {
 				} catch (err) {
 					console.reportError('Error fetching audit logs for GuildMemberRemove:', err.message);
 				}
-				
+
 				await global.eventsDatabase.events.create({
 					event_name: 'GuildMemberRemove',
 					user_id: member.id,

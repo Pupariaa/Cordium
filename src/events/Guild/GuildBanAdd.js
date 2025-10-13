@@ -7,15 +7,15 @@ module.exports = {
 		if (global.eventsDatabase && global.eventsDatabaseOnline) {
 			try {
 				let executor = null;
-				
+
 				try {
 					const auditLogs = await ban.guild.fetchAuditLogs({
 						limit: 1,
 						type: 22
 					});
-					
+
 					const banLog = auditLogs.entries.first();
-					
+
 					if (banLog && banLog.target.id === ban.user.id && Date.now() - banLog.createdTimestamp < 5000) {
 						executor = {
 							id: banLog.executor.id,
@@ -26,7 +26,7 @@ module.exports = {
 				} catch (err) {
 					console.reportError('Error fetching audit logs for GuildBanAdd:', err.message);
 				}
-				
+
 				await global.eventsDatabase.events.create({
 					event_name: 'GuildBanAdd',
 					user_id: ban.user.id,

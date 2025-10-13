@@ -1952,3 +1952,101 @@ body.setup-mode {
 	padding: 0.5rem 1rem;
 	font-size: 0.9rem;
 }
+
+.selection-bar {
+	position: fixed;
+	bottom: 20px;
+	left: 50%;
+	transform: translateX(-50%) translateY(100px);
+	background: linear-gradient(135deg, #5865F2 0%, #4752C4 100%);
+	border-radius: 16px;
+	padding: 1rem 1.5rem;
+	box-shadow: 0 8px 32px rgba(88, 101, 242, 0.4);
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	z-index: 1050;
+	opacity: 0;
+	transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+	pointer-events: none;
+}
+
+.selection-bar.visible {
+	opacity: 1;
+	transform: translateX(-50%) translateY(0);
+	pointer-events: all;
+}
+
+.selection-bar .selection-count {
+	font-weight: 600;
+	color: white;
+	font-size: 1rem;
+	padding: 0 0.5rem;
+	border-right: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.selection-bar .selection-actions {
+	display: flex;
+	gap: 0.5rem;
+}
+
+.selection-bar .btn {
+	padding: 0.5rem 1rem;
+	border-radius: 8px;
+	font-size: 0.875rem;
+	font-weight: 500;
+	border: none;
+	transition: all 0.2s;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.selection-bar .btn-light {
+	background: rgba(255, 255, 255, 0.2);
+	color: white;
+	backdrop-filter: blur(10px);
+}
+
+.selection-bar .btn-light:hover {
+	background: rgba(255, 255, 255, 0.3);
+	transform: translateY(-2px);
+}
+
+.selection-bar .btn-danger {
+	background: #ED4245;
+	color: white;
+}
+
+.selection-bar .btn-danger:hover {
+	background: #c9302c;
+	transform: translateY(-2px);
+}
+
+.item-checkbox {
+	width: 18px;
+	height: 18px;
+	cursor: pointer;
+	accent-color: var(--primary-color);
+}
+
+.list-group-item.selected {
+	background: rgba(88, 101, 242, 0.1) !important;
+	border-color: var(--primary-color) !important;
+}
+
+.select-all-container {
+	padding: 0.75rem 1rem;
+	background: rgba(88, 101, 242, 0.05);
+	border-bottom: 1px solid var(--bs-border-color);
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.select-all-container label {
+	margin: 0;
+	cursor: pointer;
+	user-select: none;
+	font-weight: 500;
+}
