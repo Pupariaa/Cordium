@@ -1,16 +1,38 @@
 # Cordium
 
-A production-ready Discord.js framework with advanced features for building scalable Discord bots. Cordium extends Discord.js 14.19 with hot-reload capabilities, structured logging, REST API endpoints, and enhanced prototypes.
+A production-ready Discord.js framework with advanced features for building scalable Discord bots. Cordium extends Discord.js 14.19 with hot-reload capabilities, structured logging, REST API endpoints, dual-mode deployment, and enhanced prototypes.
 
 **Developed by Pupariaa in collaboration with [@lakazatong](https://github.com/lakazatong)**
+
+## Deployment Modes
+
+Cordium supports two operational modes to fit different needs:
+
+### Standalone Mode
+- **Database**: SQLite (local file)
+- **Cache**: RAM (volatile, lost on restart)
+- **Best for**: Development, testing, small servers
+- **Setup**: Zero external dependencies
+- **Performance**: Good
+
+### Component Mode
+- **Database**: MySQL/MariaDB (remote server)
+- **Cache**: Redis (persistent)
+- **Best for**: Production, large servers
+- **Setup**: Requires MySQL and Redis servers
+- **Performance**: Excellent
+
+Both modes provide identical functionality - only performance and persistence differ.
 
 ## Features
 
 ### Core Systems
 
 - **Hot-Reload Development** - Commands, events, and endpoints automatically reload on file changes during development without restarting the bot
+- **Dual-Mode Architecture** - Choose between Standalone (SQLite + RAM) or Component (MySQL + Redis) deployment
 - **Advanced Logging** - Structured console reporting with file context, line numbers, function names, and customizable formatting via `extend-console`
 - **REST API Integration** - Built-in Express server for creating HTTP endpoints alongside Discord commands
+- **Web Dashboard** - Modern web interface for configuration, monitoring, and management
 - **Configuration Management** - Environment-based configuration with validation, type checking, and automatic hot-reload
 - **Extended Prototypes** - Enhanced Discord.js classes with utility methods for Guild, Channel, Member, and more
 
@@ -20,7 +42,18 @@ A production-ready Discord.js framework with advanced features for building scal
 - **EventsManager** - Event listener registration with detailed logging and change tracking for Discord events
 - **EndpointsManager** - RESTful API endpoint management with public/private routing
 - **AttachmentsManager** - File upload and attachment indexing system
-- **ConfigManager** - Dynamic configuration loading with type validation and watch mode
+- **MessagesCache** - Smart message caching with Redis or RAM fallback
+- **EventsDatabase** - Automatic event recording and analytics with SQLite or MySQL
+
+### Dashboard Features
+
+- **Server Overview** - Real-time statistics and activity graphs
+- **Channel Management** - View and manage all server channels
+- **Role Management** - Monitor roles and permissions
+- **Member Tracking** - View all members including departed ones
+- **Message Cache** - Browse cached messages with search
+- **Configuration** - Live settings management
+- **Modern UI** - Dark/light theme, responsive design, custom Cordium branding
 
 ### Developer Experience
 
@@ -29,6 +62,7 @@ A production-ready Discord.js framework with advanced features for building scal
 - **Error Handling** - Centralized error reporting with stack trace formatting
 - **Graceful Shutdown** - SIGINT handler with cleanup subscriber system
 - **CLI Tools** - Command-line utilities for project initialization and management
+- **Setup Wizard** - Interactive configuration with mode selection and progress persistence
 
 ## Installation
 
@@ -38,55 +72,28 @@ npm install
 
 ## Quick Start
 
-Cordium includes a web-based configuration panel that launches automatically on first run:
+Cordium includes an interactive setup wizard that launches automatically on first run:
 
 ```bash
 npm start
 ```
 
 This will:
-1. Check if your bot is configured (Discord credentials present)
-2. If **not configured**: Launch the Configuration Panel at `http://localhost:3001`
-3. If **configured**: Start the Discord bot directly
+1. Launch the Setup Wizard at `http://localhost:3001`
+2. Guide you through mode selection (Standalone or Component)
+3. Configure Discord bot credentials
+4. Set up database and cache (Component mode)
+5. Create all necessary tables automatically
 
-**Note:** Once configured, `npm start` will launch the bot. To access the configuration panel after setup, use `npm run config`.
-
-### Configuration Panel
-
-The web interface provides:
-
-- **Initial Setup** - Configure Discord credentials and database settings
-- **Advanced Configuration** - Adjust events, endpoints, folders, and development mode
-- **Commands Manager** - Create and edit slash commands
-- **Events Manager** - Modify event handlers
-- **Endpoints Manager** - Edit API endpoints
-- **Sandbox** - Test and develop code snippets
-
-The panel features:
-- Responsive Bootstrap design
-- Dark/Light theme toggle
-- Live code editor with syntax highlighting
-- Real-time configuration status
-- Secure file management
-
-### Manual Configuration
-
-Alternatively, configure manually in `config/config.env`:
-
-```env
-client_token=your_bot_token_here
-client_id=your_client_id_here
-discord_guild_id=your_guild_id_here
-```
+See [QUICKSTART.md](QUICKSTART.md) for detailed instructions.
 
 ### Available Commands
 
 ```bash
-npm start          # Auto-detect: config panel or bot
+npm start          # Auto-detect: setup wizard or bot
 npm run config     # Force launch configuration panel
 npm run bot        # Force launch bot (if configured)
 npm run prod       # Production mode
-node index.js      # Direct bot launch
 ```
 
 ## Project Structure
@@ -99,14 +106,18 @@ Cordium/
 │   └── config.env        # Environment variables
 ├── configurator/         # Web configuration panel
 │   ├── public/           # Frontend assets
+│   │   ├── pages/        # HTML page templates
 │   │   ├── index.html    # Main UI
-│   │   └── app.js        # Frontend logic
+│   │   ├── app.js        # Frontend logic
+│   │   └── style.css     # Dashboard styling
 │   └── server.js         # Configuration API server
 ├── internals/            # Core framework files
 │   ├── prototypes/       # Discord.js class extensions
 │   ├── CommandsManager.js
 │   ├── EventsManager.js
 │   ├── EndpointsManager.js
+│   ├── EventsDatabase.js # Event recording system
+│   ├── MessagesCache.js  # Message caching system
 │   ├── ConfigManager.js
 │   ├── FilesManager.js
 │   └── Utils.js
@@ -124,6 +135,7 @@ Cordium/
 │   │   └── private/      # Authentication required
 │   ├── config/           # User configuration
 │   ├── sandbox/          # Code testing area
+│   ├── cordium.sqlite    # SQLite database (Standalone mode)
 │   └── index.js          # User entry point
 ├── start.js              # Entry point with auto-detection
 └── index.js              # Framework entry point
@@ -160,6 +172,9 @@ module.exports = {
     listen: true,
     report: true,
     callback: async function (message) {
+        if (global.messagesCache) {
+            await global.messagesCache.addMessage(message);
+        }
     }
 };
 ```
@@ -184,32 +199,6 @@ module.exports = {
 
 Access endpoints at `http://localhost:8080/private/get_data` or `http://localhost:8080/public/endpoint_name`.
 
-### Configuration Management
-
-Create custom configuration schemas with type validation:
-
-```javascript
-const myConfig = {
-    api_key: { 
-        required: true, 
-        type: 'string' 
-    },
-    max_retries: { 
-        required: false, 
-        type: 'number', 
-        defaultValue: 3 
-    }
-};
-
-class MyConfigManager extends ConfigManager {
-    constructor() {
-        super(path.join(global.projectRoot, 'src/config/config.env'), myConfig);
-    }
-}
-```
-
-Values are automatically loaded to `global.apiKey` and `global.maxRetries` using camelCase transformation.
-
 ### Using Extended Prototypes
 
 Cordium extends Discord.js classes with utility methods:
@@ -219,6 +208,36 @@ const allAuditLogs = await guild.fetchAllAuditLogs();
 const latestLog = await guild.latestAuditLog();
 const channelName = textChannel.nameWithParents();
 const member = await textChannel.fetchMember(userId);
+```
+
+## Configuration
+
+### Standalone Mode Configuration
+
+```env
+client_token=your_bot_token
+client_id=your_client_id
+discord_guild_id=your_guild_id
+db_type=sqlite
+db_path=./src/cordium.sqlite
+```
+
+### Component Mode Configuration
+
+```env
+client_token=your_bot_token
+client_id=your_client_id
+discord_guild_id=your_guild_id
+db_type=mysql
+db_host=localhost
+db_port=3306
+db_name=cordium_events
+db_user=cordium
+db_pass=your_password
+redis_host=localhost
+redis_port=6379
+redis_password=
+redis_db=0
 ```
 
 ## Technical Details
@@ -253,7 +272,36 @@ The framework establishes a global context accessible throughout your code:
 - `global.commandsManager` - Command system
 - `global.eventsManager` - Event system
 - `global.endpointsManager` - API system
+- `global.eventsDatabase` - Events database (SQLite or MySQL)
+- `global.messagesCache` - Messages cache (RAM or Redis)
 - Path helpers: `global.commandsFolder`, `global.eventsFolder`, etc.
+
+### Database System
+
+**EventsDatabase** automatically records all Discord activity:
+- Messages (create, update, delete)
+- Members (join, leave, update)
+- Roles (create, update, delete)
+- Voice states (join, leave, mute, deafen)
+- Reactions, invites, emojis, and more
+
+All tables are created automatically on first run. Works identically with SQLite or MySQL.
+
+### Message Caching
+
+**MessagesCache** provides fast access to recent messages:
+
+**Component Mode (Redis)**:
+- Unlimited storage capacity
+- Persistent across restarts
+- Fast queries and searches
+- Priority message system
+
+**Standalone Mode (RAM)**:
+- Up to 10,000 messages in memory
+- Lost on bot restart
+- Automatic reload from Discord on startup
+- Same API as Redis mode
 
 ## Version Compatibility
 
@@ -261,15 +309,18 @@ Currently compatible with **Discord.js 14.19.1**.
 
 Support for Discord.js 14.22 with its new features is planned for a future release.
 
-## Development
+## Dependencies
 
-Initialize a new development environment:
-
-```bash
-npm run init
-```
-
-This creates necessary configuration files and folder structure.
+- `discord.js` ^14.19.1 - Discord API wrapper
+- `sequelize` ^6.37.7 - ORM for database management
+- `sqlite3` ^5.1.7 - SQLite database driver
+- `mysql2` ^3.15.2 - MySQL database driver
+- `redis` ^4.7.1 - Redis client
+- `express` ^5.1.0 - HTTP server framework
+- `extend-console` ^7.4.7 - Advanced console logging
+- `chokidar` ^4.0.3 - File system watcher
+- `sanitize-filename` ^1.6.3 - Safe filename handling
+- `spectraget` ^1.1.0 - HTTP request library
 
 ## License
 
@@ -279,12 +330,3 @@ MIT
 
 - **Pupariaa** - Core development
 - **[@lakazatong](https://github.com/lakazatong)** - Collaboration and tooling
-
-## Dependencies
-
-- `discord.js` ^14.19.1 - Discord API wrapper
-- `extend-console` ^7.4.7 - Advanced console logging
-- `express` ^5.1.0 - HTTP server framework
-- `chokidar` ^4.0.3 - File system watcher
-- `sanitize-filename` ^1.6.3 - Safe filename handling
-- `spectraget` ^1.1.0 - HTTP request library
