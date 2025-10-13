@@ -1774,34 +1774,34 @@ async function initMemberDetailsPage() {
 					eventData = {};
 				}
 
-			const icons = {
-				'MessageCreate': 'chat-left-text',
-				'MessageUpdate': 'pencil-square',
-				'MessageDelete': 'trash',
-				'MessageReactionAdd': 'emoji-smile',
-				'MessageReactionRemove': 'emoji-neutral',
-				'GuildMemberAdd': 'door-open',
-				'GuildMemberRemove': 'door-closed',
-				'GuildMemberUpdate': 'person-badge',
-				'VoiceStateUpdate': 'mic',
-				'GuildBanAdd': 'ban',
-				'GuildBanRemove': 'check-circle',
-				'InteractionCreate': 'cursor',
-				'InviteCreate': 'link-45deg',
-				'InviteDelete': 'link-45deg',
-				'GuildRoleCreate': 'plus-circle',
-				'GuildRoleUpdate': 'arrow-repeat',
-				'GuildRoleDelete': 'x-circle',
-				'ChannelCreate': 'hash-plus',
-				'ChannelUpdate': 'hash',
-				'ChannelDelete': 'hash-x'
-			};
+				const icons = {
+					'MessageCreate': 'chat-left-text',
+					'MessageUpdate': 'pencil-square',
+					'MessageDelete': 'trash',
+					'MessageReactionAdd': 'emoji-smile',
+					'MessageReactionRemove': 'emoji-neutral',
+					'GuildMemberAdd': 'door-open',
+					'GuildMemberRemove': 'door-closed',
+					'GuildMemberUpdate': 'person-badge',
+					'VoiceStateUpdate': 'mic',
+					'GuildBanAdd': 'ban',
+					'GuildBanRemove': 'check-circle',
+					'InteractionCreate': 'cursor',
+					'InviteCreate': 'link-45deg',
+					'InviteDelete': 'link-45deg',
+					'GuildRoleCreate': 'plus-circle',
+					'GuildRoleUpdate': 'arrow-repeat',
+					'GuildRoleDelete': 'x-circle',
+					'ChannelCreate': 'hash-plus',
+					'ChannelUpdate': 'hash',
+					'ChannelDelete': 'hash-x'
+				};
 
-			let icon = icons[event.event_name] || 'circle';
-			if (event.event_name === 'GuildMemberRemove' && eventData.reason === 'kicked') {
-				icon = 'person-x';
-			}
-			let details = '';
+				let icon = icons[event.event_name] || 'circle';
+				if (event.event_name === 'GuildMemberRemove' && eventData.reason === 'kicked') {
+					icon = 'person-x';
+				}
+				let details = '';
 
 				switch (event.event_name) {
 					case 'MessageCreate':
@@ -1912,22 +1912,30 @@ async function initMemberDetailsPage() {
 						</div>`;
 						break;
 				case 'GuildBanAdd':
-					details = `<div class="text-muted small mt-1">Reason: ${eventData.reason || 'No reason provided'}</div>`;
-					break;
-				case 'GuildMemberRemove':
-					if (eventData.reason === 'kicked' && eventData.executor) {
+					if (eventData.executor) {
 						details = `<div class="text-muted small mt-1">
+							<strong class="text-danger">🔨 Banned from server</strong><br>
+							By: <img src="${eventData.executor.avatar}" width="20" height="20" class="rounded me-1">${eventData.executor.username}<br>
+							Reason: ${eventData.reason || 'No reason provided'}
+						</div>`;
+					} else {
+						details = `<div class="text-muted small mt-1">Reason: ${eventData.reason || 'No reason provided'}</div>`;
+					}
+					break;
+					case 'GuildMemberRemove':
+						if (eventData.reason === 'kicked' && eventData.executor) {
+							details = `<div class="text-muted small mt-1">
 							<strong class="text-warning">⚠️ Kicked from server</strong><br>
 							By: <img src="${eventData.executor.avatar}" width="20" height="20" class="rounded me-1">${eventData.executor.username}<br>
 							${eventData.roles && eventData.roles.length > 0 ? `Had roles: ${eventData.roles.map(r => r.name).join(', ')}` : ''}
 						</div>`;
-					} else {
-						details = `<div class="text-muted small mt-1">
+						} else {
+							details = `<div class="text-muted small mt-1">
 							${eventData.roles && eventData.roles.length > 0 ? `Had roles: ${eventData.roles.map(r => r.name).join(', ')}` : ''}
 						</div>`;
-					}
-					break;
-				case 'InteractionCreate':
+						}
+						break;
+					case 'InteractionCreate':
 						if (eventData.commandName) {
 							const channelId4 = event.channel_id;
 							const channelLink = channelId4 ? `https://discord.com/channels/${event.guild_id}/${channelId4}` : null;
@@ -1968,33 +1976,33 @@ async function initMemberDetailsPage() {
 						break;
 				}
 
-			const eventNames = {
-				'MessageCreate': 'Sent a message',
-				'MessageUpdate': 'Edited a message',
-				'MessageDelete': 'Deleted a message',
-				'MessageReactionAdd': 'Added reaction',
-				'MessageReactionRemove': 'Removed reaction',
-				'GuildMemberAdd': 'Joined server',
-				'GuildMemberRemove': 'Left server',
-				'GuildMemberUpdate': 'Updated profile',
-				'VoiceStateUpdate': 'Voice activity',
-				'GuildBanAdd': 'Banned from server',
-				'GuildBanRemove': 'Unbanned',
-				'InteractionCreate': 'Used command',
-				'InviteCreate': 'Created invite',
-				'InviteDelete': 'Deleted invite',
-				'GuildRoleCreate': 'Role created',
-				'GuildRoleUpdate': 'Role updated',
-				'GuildRoleDelete': 'Role deleted',
-				'ChannelCreate': 'Channel created',
-				'ChannelUpdate': 'Channel updated',
-				'ChannelDelete': 'Channel deleted'
-			};
-			let eventName = eventNames[event.event_name] || event.event_name;
-			
-			if (event.event_name === 'GuildMemberRemove' && eventData.reason === 'kicked') {
-				eventName = 'Kicked from server';
-			}
+				const eventNames = {
+					'MessageCreate': 'Sent a message',
+					'MessageUpdate': 'Edited a message',
+					'MessageDelete': 'Deleted a message',
+					'MessageReactionAdd': 'Added reaction',
+					'MessageReactionRemove': 'Removed reaction',
+					'GuildMemberAdd': 'Joined server',
+					'GuildMemberRemove': 'Left server',
+					'GuildMemberUpdate': 'Updated profile',
+					'VoiceStateUpdate': 'Voice activity',
+					'GuildBanAdd': 'Banned from server',
+					'GuildBanRemove': 'Unbanned',
+					'InteractionCreate': 'Used command',
+					'InviteCreate': 'Created invite',
+					'InviteDelete': 'Deleted invite',
+					'GuildRoleCreate': 'Role created',
+					'GuildRoleUpdate': 'Role updated',
+					'GuildRoleDelete': 'Role deleted',
+					'ChannelCreate': 'Channel created',
+					'ChannelUpdate': 'Channel updated',
+					'ChannelDelete': 'Channel deleted'
+				};
+				let eventName = eventNames[event.event_name] || event.event_name;
+
+				if (event.event_name === 'GuildMemberRemove' && eventData.reason === 'kicked') {
+					eventName = 'Kicked from server';
+				}
 
 				return `
 					<div class="list-group-item">
