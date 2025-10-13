@@ -43,7 +43,26 @@ function isConfigured() {
 	if (!fs.existsSync(configPath)) return false;
 	const content = fs.readFileSync(configPath, 'utf8');
 	const config = parseEnvFile(content);
-	return !!(config.client_token && config.client_id && config.discord_guild_id);
+
+	const hasBasicConfig = !!(
+		config.client_token &&
+		config.client_id &&
+		config.discord_guild_id
+	);
+
+	if (!hasBasicConfig) return false;
+
+	if (config.db_type === 'sqlite') {
+		return true;
+	}
+
+	return !!(
+		config.db_host &&
+		config.db_name &&
+		config.db_user &&
+		config.redis_host &&
+		config.redis_port
+	);
 }
 
 app.get('/', (req, res) => {
@@ -51,6 +70,15 @@ app.get('/', (req, res) => {
 });
 
 app.get('/api/config/status', (req, res) => {
+	if (fs.existsSync(configPath)) {
+		const content = fs.readFileSync(configPath, 'utf8');
+		const config = parseEnvFile(content);
+
+		if (config.wizard_step) {
+			return res.json({ configured: false });
+		}
+	}
+
 	res.json({ configured: isConfigured() });
 });
 
@@ -67,11 +95,177 @@ app.get('/api/config', (req, res) => {
 	}
 });
 
-app.post('/api/config', (req, res) => {
+app.post('/api/config/test-database', async (req, res) => {
+	try {
+		const { db_host, db_port, db_name, db_user, db_pass } = req.body;
+
+		if (!db_host || !db_port || !db_name || !db_user || !db_pass) {
+			return res.json({ success: false, error: 'All database fields are required' });
+		}
+
+		const { Sequelize } = require('sequelize');
+		const testDb = new Sequelize(db_name, db_user, db_pass, {
+			host: db_host,
+			port: db_port,
+			dialect: 'mysql',
+			logging: false
+		});
+
+		await testDb.authenticate();
+		await testDb.close();
+
+		res.json({ success: true, message: 'Database connection successful' });
+	} catch (err) {
+		res.json({ success: false, error: err.message });
+	}
+});
+
+app.post('/api/config/test-redis', async (req, res) => {
+	try {
+		const { redis_host, redis_port, redis_password, redis_db } = req.body;
+
+		if (!redis_host || !redis_port) {
+			return res.json({ success: false, error: 'Redis host and port are required' });
+		}
+
+		const { createClient } = require('redis');
+		const testRedis = createClient({
+			socket: {
+				host: redis_host,
+				port: parseInt(redis_port)
+			},
+			password: redis_password || undefined,
+			database: parseInt(redis_db) || 0
+		});
+
+		await testRedis.connect();
+		await testRedis.ping();
+		await testRedis.quit();
+
+		res.json({ success: true, message: 'Redis connection successful' });
+	} catch (err) {
+		res.json({ success: false, error: err.message });
+	}
+});
+
+app.post('/api/config/create-database', async (req, res) => {
+	const progress = [];
+
+	try {
+		const { db_host, db_port, db_name, db_user, db_pass } = req.body;
+
+		if (!db_host || !db_port || !db_name || !db_user || !db_pass) {
+			return res.json({ success: false, error: 'All database fields are required' });
+		}
+
+		const { Sequelize } = require('sequelize');
+
+		progress.push({ step: 'Connecting to MySQL server', status: 'pending' });
+
+		const connection = new Sequelize('', db_user, db_pass, {
+			host: db_host,
+			port: db_port,
+			dialect: 'mysql',
+			logging: false
+		});
+
+		await connection.authenticate();
+		progress[0].status = 'success';
+
+		progress.push({ step: `Creating database "${db_name}"`, status: 'pending' });
+		await connection.query(`CREATE DATABASE IF NOT EXISTS \`${db_name}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
+		progress[1].status = 'success';
+
+		await connection.close();
+
+		const db = new Sequelize(db_name, db_user, db_pass, {
+			host: db_host,
+			port: db_port,
+			dialect: 'mysql',
+			logging: false
+		});
+
+		await db.authenticate();
+
+		const EventsDatabase = require(path.join(projectRoot, 'internals', 'EventsDatabase.js'));
+		const tempEnv = {
+			db_host: db_host,
+			db_port: db_port,
+			db_name: db_name,
+			db_user: db_user,
+			db_pass: db_pass
+		};
+
+		Object.keys(tempEnv).forEach(key => {
+			process.env[key] = tempEnv[key];
+		});
+
+		process.env.db_type = 'mysql';
+
+		const eventsDb = new EventsDatabase();
+		eventsDb.sequelize = db;
+		eventsDb.defineModels();
+
+		progress.push({ step: 'Synchronizing all tables', status: 'pending' });
+
+		const allModels = [];
+		for (const key in eventsDb) {
+			if (eventsDb.hasOwnProperty(key)) {
+				const item = eventsDb[key];
+				if (item && typeof item === 'object' && typeof item.sync === 'function') {
+					allModels.push(key);
+				}
+			}
+		}
+
+		console.log(`Found ${allModels.length} models to sync:`, allModels);
+		progress[2].step = `Synchronizing ${allModels.length} tables`;
+
+		let successCount = 0;
+		let errorCount = 0;
+
+		for (const modelKey of allModels) {
+			const model = eventsDb[modelKey];
+			const tableName = model.tableName || model.name;
+
+			try {
+				await model.sync({ alter: true });
+				successCount++;
+			} catch (tableErr) {
+				errorCount++;
+				console.error(`Error syncing ${tableName}:`, tableErr.message);
+			}
+		}
+
+		if (errorCount === 0) {
+			progress[2].status = 'success';
+			progress[2].step = `All ${successCount} tables created successfully`;
+		} else {
+			progress[2].status = 'error';
+			progress[2].step = `${successCount} tables created, ${errorCount} errors`;
+		}
+
+		await db.close();
+
+		const allSuccess = progress.every(p => p.status === 'success');
+
+		res.json({
+			success: allSuccess,
+			progress: progress,
+			tablesCreated: successCount,
+			message: allSuccess ? `All ${successCount} tables created successfully` : 'Some tables failed to create'
+		});
+	} catch (err) {
+		res.json({ success: false, error: err.message, progress: progress });
+	}
+});
+
+app.post('/api/config', async (req, res) => {
 	try {
 		const newConfig = req.body;
 		const content = stringifyEnvConfig(newConfig);
 		fs.writeFileSync(configPath, content, 'utf8');
+
 		res.json({ success: true, configured: isConfigured() });
 	} catch (err) {
 		res.status(500).json({ error: err.message });
@@ -353,6 +547,13 @@ app.get('/api/server/info', (req, res) => {
 			return a.displayName.localeCompare(b.displayName);
 		});
 
+		const memoryUsage = process.memoryUsage();
+		const uptime = process.uptime();
+		const cpuUsage = process.cpuUsage();
+
+		const totalCpuTime = (cpuUsage.user + cpuUsage.system) / 1000000;
+		const cpuPercent = totalCpuTime / uptime * 100;
+
 		res.json({
 			guildName: guild.name,
 			guildId: guild.id,
@@ -360,7 +561,12 @@ app.get('/api/server/info', (req, res) => {
 			ownerId: guild.ownerId,
 			channels: channels,
 			roles: roles,
-			members: members
+			members: members,
+			process: {
+				uptime: uptime,
+				memoryUsage: memoryUsage.heapUsed / 1024 / 1024,
+				cpuUsage: cpuPercent
+			}
 		});
 	} catch (err) {
 		res.status(500).json({ error: err.message });
@@ -772,11 +978,7 @@ app.post('/api/test-db', async (req, res) => {
 app.get('/api/server/messages', async (req, res) => {
 	try {
 		if (!global.messagesCache) {
-			return res.json({ error: 'Messages cache not initialized' });
-		}
-
-		if (!global.redisOnline) {
-			return res.json({ error: 'Redis is not configured. Enable Redis in Settings to use this feature.' });
+			return res.json({ error: 'Messages cache not initialized', messages: [] });
 		}
 
 		const { limit, offset } = req.query;
@@ -787,7 +989,7 @@ app.get('/api/server/messages', async (req, res) => {
 
 		res.json(result);
 	} catch (err) {
-		res.json({ error: err.message });
+		res.json({ error: err.message, messages: [] });
 	}
 });
 
@@ -826,6 +1028,333 @@ app.get('/api/server/messages-stats', async (req, res) => {
 
 		const stats = await global.messagesCache.getStats();
 		res.json(stats);
+	} catch (err) {
+		res.json({ error: err.message });
+	}
+});
+
+app.get('/api/server/analytics/messages-by-day', async (req, res) => {
+	try {
+		if (!global.eventsDatabase) {
+			return res.json({ error: 'Database not initialized', data: [] });
+		}
+
+		const days = 7;
+		const data = [];
+
+		for (let i = days - 1; i >= 0; i--) {
+			const date = new Date();
+			date.setDate(date.getDate() - i);
+			date.setHours(0, 0, 0, 0);
+			const nextDate = new Date(date);
+			nextDate.setDate(nextDate.getDate() + 1);
+
+			const count = await global.eventsDatabase.events.count({
+				where: {
+					event_name: 'MessageCreate',
+					timestamp: {
+						[global.eventsDatabase.sequelize.Op.gte]: date.getTime(),
+						[global.eventsDatabase.sequelize.Op.lt]: nextDate.getTime()
+					}
+				}
+			});
+
+			data.push({
+				date: date.toISOString().split('T')[0],
+				count: count || 0
+			});
+		}
+
+		res.json({ data });
+	} catch (err) {
+		res.json({ error: err.message, data: [] });
+	}
+});
+
+app.get('/api/server/analytics/member-activity', async (req, res) => {
+	try {
+		if (!global.eventsDatabase) {
+			return res.json({ error: 'Database not initialized', joins: [], leaves: [] });
+		}
+
+		const days = 7;
+		const joins = [];
+		const leaves = [];
+
+		for (let i = days - 1; i >= 0; i--) {
+			const date = new Date();
+			date.setDate(date.getDate() - i);
+			date.setHours(0, 0, 0, 0);
+			const nextDate = new Date(date);
+			nextDate.setDate(nextDate.getDate() + 1);
+
+			const joinCount = await global.eventsDatabase.events.count({
+				where: {
+					event_name: 'GuildMemberAdd',
+					timestamp: {
+						[global.eventsDatabase.sequelize.Op.gte]: date.getTime(),
+						[global.eventsDatabase.sequelize.Op.lt]: nextDate.getTime()
+					}
+				}
+			});
+
+			const leaveCount = await global.eventsDatabase.events.count({
+				where: {
+					event_name: 'GuildMemberRemove',
+					timestamp: {
+						[global.eventsDatabase.sequelize.Op.gte]: date.getTime(),
+						[global.eventsDatabase.sequelize.Op.lt]: nextDate.getTime()
+					}
+				}
+			});
+
+			joins.push({
+				date: date.toISOString().split('T')[0],
+				count: joinCount || 0
+			});
+
+			leaves.push({
+				date: date.toISOString().split('T')[0],
+				count: leaveCount || 0
+			});
+		}
+
+		res.json({ joins, leaves });
+	} catch (err) {
+		res.json({ error: err.message, joins: [], leaves: [] });
+	}
+});
+
+app.get('/api/server/analytics/messages-by-channel', async (req, res) => {
+	try {
+		if (!global.messagesCache) {
+			return res.json({ error: 'Messages cache not initialized', data: [] });
+		}
+
+		const stats = await global.messagesCache.getChannelStats();
+		res.json({ data: stats || [] });
+	} catch (err) {
+		res.json({ error: err.message, data: [] });
+	}
+});
+
+app.get('/api/server/analytics/hourly-activity', async (req, res) => {
+	try {
+		if (!global.eventsDatabase) {
+			return res.json({ error: 'Database not initialized', data: [] });
+		}
+
+		const data = [];
+		const now = new Date();
+		const startOfDay = new Date(now);
+		startOfDay.setHours(0, 0, 0, 0);
+
+		for (let hour = 0; hour < 24; hour++) {
+			const hourStart = new Date(startOfDay);
+			hourStart.setHours(hour);
+			const hourEnd = new Date(startOfDay);
+			hourEnd.setHours(hour + 1);
+
+			const count = await global.eventsDatabase.events.count({
+				where: {
+					event_name: 'MessageCreate',
+					timestamp: {
+						[global.eventsDatabase.sequelize.Op.gte]: hourStart.getTime(),
+						[global.eventsDatabase.sequelize.Op.lt]: hourEnd.getTime()
+					}
+				}
+			});
+
+			data.push({
+				hour: hour,
+				count: count || 0
+			});
+		}
+
+		res.json({ data });
+	} catch (err) {
+		res.json({ error: err.message, data: [] });
+	}
+});
+
+app.get('/api/server/all-members', async (req, res) => {
+	try {
+		const guild = global.guild;
+		const allMembers = [];
+
+		if (!guild) {
+			return res.json({ error: 'Bot is not running or not connected to a guild', members: [] });
+		}
+
+		const currentMemberIds = new Set();
+
+		guild.members.cache.forEach(member => {
+			currentMemberIds.add(member.id);
+
+			const memberRoles = [];
+			member.roles.cache.forEach(role => {
+				if (role.name !== '@everyone') {
+					memberRoles.push({
+						id: role.id,
+						name: role.name,
+						color: role.hexColor
+					});
+				}
+			});
+
+			allMembers.push({
+				id: member.id,
+				username: member.user.username,
+				discriminator: member.user.discriminator,
+				displayName: member.displayName,
+				nickname: member.nickname,
+				avatarURL: member.user.displayAvatarURL({ size: 128 }),
+				bot: member.user.bot,
+				joinedAt: member.joinedTimestamp,
+				accountCreatedAt: member.user.createdTimestamp,
+				premiumSince: member.premiumSinceTimestamp,
+				roles: memberRoles,
+				status: member.presence?.status || 'offline',
+				activities: member.presence?.activities?.map(a => a.name) || [],
+				color: member.displayHexColor,
+				isOwner: member.id === guild.ownerId,
+				permissions: member.permissions.toArray(),
+				isActive: true
+			});
+		});
+
+		if (global.eventsDatabase && global.eventsDatabase.events) {
+			try {
+				const dbMembers = await global.eventsDatabase.events.findAll({
+					attributes: [
+						[global.eventsDatabase.sequelize.fn('DISTINCT', global.eventsDatabase.sequelize.col('user_id')), 'user_id'],
+						'user_name',
+						'user_avatar'
+					],
+					where: {
+						user_id: { [global.eventsDatabase.sequelize.Op.ne]: null }
+					},
+					raw: true
+				});
+
+				dbMembers.forEach(dbMember => {
+					if (!currentMemberIds.has(dbMember.user_id)) {
+						allMembers.push({
+							id: dbMember.user_id,
+							username: dbMember.user_name || 'Unknown',
+							displayName: dbMember.user_name || 'Unknown',
+							avatarURL: dbMember.user_avatar || 'https://cdn.discordapp.com/embed/avatars/0.png',
+							isActive: false,
+							status: 'left',
+							roles: [],
+							bot: false
+						});
+					}
+				});
+			} catch (dbErr) {
+				console.error('Error fetching DB members:', dbErr);
+			}
+		}
+
+		allMembers.sort((a, b) => {
+			if (a.isActive !== b.isActive) return b.isActive - a.isActive;
+			if (a.isOwner) return -1;
+			if (b.isOwner) return 1;
+			return (a.displayName || a.username).localeCompare(b.displayName || b.username);
+		});
+
+		res.json({ members: allMembers });
+	} catch (err) {
+		res.json({ error: err.message, members: [] });
+	}
+});
+
+app.get('/api/server/member-details', async (req, res) => {
+	try {
+		const { memberId } = req.query;
+
+		if (!memberId) {
+			return res.json({ error: 'Member ID required' });
+		}
+
+		const guild = global.guild;
+		let memberData = null;
+
+		if (guild) {
+			const member = await guild.members.fetch(memberId).catch(() => null);
+
+			if (member) {
+				const memberRoles = [];
+				member.roles.cache.forEach(role => {
+					if (role.name !== '@everyone') {
+						memberRoles.push({
+							id: role.id,
+							name: role.name,
+							color: role.hexColor
+						});
+					}
+				});
+
+				memberData = {
+					id: member.id,
+					username: member.user.username,
+					discriminator: member.user.discriminator,
+					displayName: member.displayName,
+					nickname: member.nickname,
+					avatarURL: member.user.displayAvatarURL({ size: 256 }),
+					bot: member.user.bot,
+					joinedAt: member.joinedTimestamp,
+					accountCreatedAt: member.user.createdTimestamp,
+					premiumSince: member.premiumSinceTimestamp,
+					roles: memberRoles,
+					status: member.presence?.status || 'offline',
+					activities: member.presence?.activities?.map(a => ({
+						name: a.name,
+						type: a.type
+					})) || [],
+					color: member.displayHexColor,
+					isOwner: member.id === guild.ownerId,
+					permissions: member.permissions.toArray(),
+					isActive: true
+				};
+			}
+		}
+
+		if (!memberData && global.eventsDatabase && global.eventsDatabase.events) {
+			const dbData = await global.eventsDatabase.events.findOne({
+				where: { user_id: memberId },
+				raw: true
+			});
+
+			if (dbData) {
+				memberData = {
+					id: dbData.user_id,
+					username: dbData.user_name || 'Unknown',
+					displayName: dbData.user_name || 'Unknown',
+					avatarURL: dbData.user_avatar || 'https://cdn.discordapp.com/embed/avatars/0.png',
+					isActive: false,
+					status: 'left',
+					roles: [],
+					bot: false
+				};
+			}
+		}
+
+		if (memberData && global.eventsDatabase && global.eventsDatabase.events) {
+			const recentEvents = await global.eventsDatabase.events.findAll({
+				where: { user_id: memberId },
+				order: [['timestamp', 'DESC']],
+				limit: 50,
+				raw: true
+			});
+			memberData.recentActivity = recentEvents;
+		}
+
+		if (!memberData) {
+			return res.json({ error: 'Member not found' });
+		}
+
+		res.json(memberData);
 	} catch (err) {
 		res.json({ error: err.message });
 	}
