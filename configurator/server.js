@@ -1131,6 +1131,32 @@ app.get('/api/server/analytics/hourly-activity', async (req, res) => {
 	}
 });
 
+app.get('/api/server/roles', async (req, res) => {
+	try {
+		const guild = global.guild;
+		
+		if (!guild) {
+			return res.json({ error: 'Guild not available' });
+		}
+
+		const roles = guild.roles.cache
+			.filter(role => role.name !== '@everyone')
+			.map(role => ({
+				id: role.id,
+				name: role.name,
+				color: role.hexColor,
+				position: role.position,
+				memberCount: role.members.size,
+				permissions: role.permissions.toArray()
+			}))
+			.sort((a, b) => b.position - a.position);
+
+		res.json({ roles });
+	} catch (err) {
+		res.json({ error: err.message });
+	}
+});
+
 app.get('/api/server/all-members', async (req, res) => {
 	try {
 		const guild = global.guild;
