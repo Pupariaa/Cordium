@@ -1039,6 +1039,7 @@ app.get('/api/server/analytics/messages-by-day', async (req, res) => {
 			return res.json({ error: 'Database not initialized', data: [] });
 		}
 
+		const { Op } = require('sequelize');
 		const days = 7;
 		const data = [];
 
@@ -1053,8 +1054,8 @@ app.get('/api/server/analytics/messages-by-day', async (req, res) => {
 				where: {
 					event_name: 'MessageCreate',
 					timestamp: {
-						[global.eventsDatabase.sequelize.Op.gte]: date.getTime(),
-						[global.eventsDatabase.sequelize.Op.lt]: nextDate.getTime()
+						[Op.gte]: date.getTime(),
+						[Op.lt]: nextDate.getTime()
 					}
 				}
 			});
@@ -1077,6 +1078,7 @@ app.get('/api/server/analytics/member-activity', async (req, res) => {
 			return res.json({ error: 'Database not initialized', joins: [], leaves: [] });
 		}
 
+		const { Op } = require('sequelize');
 		const days = 7;
 		const joins = [];
 		const leaves = [];
@@ -1092,8 +1094,8 @@ app.get('/api/server/analytics/member-activity', async (req, res) => {
 				where: {
 					event_name: 'GuildMemberAdd',
 					timestamp: {
-						[global.eventsDatabase.sequelize.Op.gte]: date.getTime(),
-						[global.eventsDatabase.sequelize.Op.lt]: nextDate.getTime()
+						[Op.gte]: date.getTime(),
+						[Op.lt]: nextDate.getTime()
 					}
 				}
 			});
@@ -1102,8 +1104,8 @@ app.get('/api/server/analytics/member-activity', async (req, res) => {
 				where: {
 					event_name: 'GuildMemberRemove',
 					timestamp: {
-						[global.eventsDatabase.sequelize.Op.gte]: date.getTime(),
-						[global.eventsDatabase.sequelize.Op.lt]: nextDate.getTime()
+						[Op.gte]: date.getTime(),
+						[Op.lt]: nextDate.getTime()
 					}
 				}
 			});
@@ -1144,6 +1146,7 @@ app.get('/api/server/analytics/hourly-activity', async (req, res) => {
 			return res.json({ error: 'Database not initialized', data: [] });
 		}
 
+		const { Op } = require('sequelize');
 		const data = [];
 		const now = new Date();
 		const startOfDay = new Date(now);
@@ -1159,8 +1162,8 @@ app.get('/api/server/analytics/hourly-activity', async (req, res) => {
 				where: {
 					event_name: 'MessageCreate',
 					timestamp: {
-						[global.eventsDatabase.sequelize.Op.gte]: hourStart.getTime(),
-						[global.eventsDatabase.sequelize.Op.lt]: hourEnd.getTime()
+						[Op.gte]: hourStart.getTime(),
+						[Op.lt]: hourEnd.getTime()
 					}
 				}
 			});
@@ -1225,6 +1228,7 @@ app.get('/api/server/all-members', async (req, res) => {
 
 		if (global.eventsDatabase && global.eventsDatabase.events) {
 			try {
+				const { Op } = require('sequelize');
 				const dbMembers = await global.eventsDatabase.events.findAll({
 					attributes: [
 						[global.eventsDatabase.sequelize.fn('DISTINCT', global.eventsDatabase.sequelize.col('user_id')), 'user_id'],
@@ -1232,7 +1236,7 @@ app.get('/api/server/all-members', async (req, res) => {
 						'user_avatar'
 					],
 					where: {
-						user_id: { [global.eventsDatabase.sequelize.Op.ne]: null }
+						user_id: { [Op.ne]: null }
 					},
 					raw: true
 				});
