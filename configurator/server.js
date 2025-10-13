@@ -775,55 +775,6 @@ app.post('/api/server/assign-role', async (req, res) => {
 	}
 });
 
-app.get('/api/server/member-details', async (req, res) => {
-	try {
-		const { memberId } = req.query;
-
-		if (!global.guild) {
-			return res.json({ error: 'Bot is not running' });
-		}
-
-		const member = await global.guild.members.fetch(memberId);
-		if (!member) {
-			return res.json({ error: 'Member not found' });
-		}
-
-		const memberRoles = [];
-		member.roles.cache.forEach(role => {
-			if (role.name !== '@everyone') {
-				memberRoles.push({
-					id: role.id,
-					name: role.name,
-					color: role.hexColor
-				});
-			}
-		});
-
-		res.json({
-			member: {
-				id: member.id,
-				username: member.user.username,
-				discriminator: member.user.discriminator,
-				displayName: member.displayName,
-				nickname: member.nickname,
-				avatarURL: member.user.displayAvatarURL({ size: 256 }),
-				bot: member.user.bot,
-				joinedAt: member.joinedTimestamp,
-				accountCreatedAt: member.user.createdTimestamp,
-				premiumSince: member.premiumSinceTimestamp,
-				roles: memberRoles,
-				status: member.presence?.status || 'offline',
-				activities: member.presence?.activities?.map(a => a.name) || [],
-				color: member.displayHexColor,
-				isOwner: member.id === global.guild.ownerId,
-				permissions: member.permissions.toArray()
-			}
-		});
-	} catch (err) {
-		res.json({ error: err.message });
-	}
-});
-
 app.post('/api/server/add-member-role', async (req, res) => {
 	try {
 		const { memberId, roleId } = req.body;
