@@ -12,11 +12,20 @@ class MessagesCache {
 			currentDate: null,
 			loaded: 0
 		};
+
+		this.ramCache = {
+			messages: [],
+			priority: new Set(),
+			history: new Map(),
+			reactions: new Map(),
+			replies: new Map()
+		};
+
+		const isStandalone = process.env.db_type === 'sqlite' && !process.env.redis_host;
+		console.report(`MessagesCache mode: ${isStandalone ? 'RAM (Standalone)' : 'Redis (Component)'}`);
 	}
 
 	async addMessage(message) {
-		if (!global.redisOnline) return false;
-
 		try {
 			const reactions = [];
 			if (message.reactions && message.reactions.cache.size > 0) {
@@ -29,7 +38,6 @@ class MessagesCache {
 						emojiUrl: reaction.emoji.id ? `https://cdn.discordapp.com/emojis/${reaction.emoji.id}.png` : null
 					});
 
-					// Also store initial reactions in history
 					if (reaction.count > 0) {
 						const reactionEvent = {
 							userId: 'BULK',
@@ -43,10 +51,17 @@ class MessagesCache {
 							count: reaction.count
 						};
 
-						global.redisManager.client.rPush(
-							this.messageReactions + message.id,
-							JSON.stringify(reactionEvent)
-						).catch(err => console.reportError('Error storing initial reactions:', err));
+						if (global.redisOnline) {
+							global.redisManager.client.rPush(
+								this.messageReactions + message.id,
+								JSON.stringify(reactionEvent)
+							).catch(err => console.reportError('Error storing initial reactions:', err));
+						} else {
+							if (!this.ramCache.reactions.has(message.id)) {
+								this.ramCache.reactions.set(message.id, []);
+							}
+							this.ramCache.reactions.get(message.id).push(reactionEvent);
+						}
 					}
 				});
 			}
@@ -90,10 +105,19 @@ class MessagesCache {
 				reactions: reactions
 			};
 
-			await global.redisManager.client.zAdd(this.messagesList, {
-				score: message.createdTimestamp,
-				value: JSON.stringify(messageData)
-			});
+			if (global.redisOnline) {
+				await global.redisManager.client.zAdd(this.messagesList, {
+					score: message.createdTimestamp,
+					value: JSON.stringify(messageData)
+				});
+			} else {
+				this.ramCache.messages.push(messageData);
+				this.ramCache.messages.sort((a, b) => b.timestamp - a.timestamp);
+
+				if (this.ramCache.messages.length > 10000) {
+					this.ramCache.messages = this.ramCache.messages.slice(0, 10000);
+				}
+			}
 
 			return true;
 		} catch (err) {
@@ -103,31 +127,39 @@ class MessagesCache {
 	}
 
 	async getMessages(limit = 30, before = null) {
-		if (!global.redisOnline) {
-			return { messages: [], hasMore: false };
-		}
-
 		try {
-			const start = before ? before + 1 : 0;
-			const end = start + limit - 1;
+			if (global.redisOnline) {
+				const start = before ? before + 1 : 0;
+				const end = start + limit - 1;
 
-			const messages = await global.redisManager.client.zRange(
-				this.messagesList,
-				start,
-				end,
-				{
-					REV: true
-				}
-			);
+				const messages = await global.redisManager.client.zRange(
+					this.messagesList,
+					start,
+					end,
+					{
+						REV: true
+					}
+				);
 
-			const parsedMessages = messages.map(m => JSON.parse(m));
-			const hasMore = messages.length === limit;
+				const parsedMessages = messages.map(m => JSON.parse(m));
+				const hasMore = messages.length === limit;
 
-			return {
-				messages: parsedMessages,
-				hasMore: hasMore,
-				offset: before ? before + limit : limit
-			};
+				return {
+					messages: parsedMessages,
+					hasMore: hasMore,
+					offset: before ? before + limit : limit
+				};
+			} else {
+				const start = before || 0;
+				const messages = this.ramCache.messages.slice(start, start + limit);
+				const hasMore = this.ramCache.messages.length > start + limit;
+
+				return {
+					messages: messages,
+					hasMore: hasMore,
+					offset: start + limit
+				};
+			}
 		} catch (err) {
 			console.reportError('Error getting messages from cache:', err);
 			return { messages: [], hasMore: false };
@@ -135,19 +167,81 @@ class MessagesCache {
 	}
 
 	async updateMessage(message) {
-		if (!global.redisOnline) return false;
-
 		try {
-			// Find and remove old message
-			const allMessages = await global.redisManager.client.zRange(this.messagesList, 0, -1);
+			if (global.redisOnline) {
+				const allMessages = await global.redisManager.client.zRange(this.messagesList, 0, -1);
 
-			for (const msg of allMessages) {
-				const parsed = JSON.parse(msg);
-				if (parsed.id === message.id) {
-					// Remove old version
-					await global.redisManager.client.zRem(this.messagesList, msg);
+				for (const msg of allMessages) {
+					const parsed = JSON.parse(msg);
+					if (parsed.id === message.id) {
+						await global.redisManager.client.zRem(this.messagesList, msg);
 
-					// Add updated version
+						// Add updated version
+						const reactions = [];
+						if (message.reactions && message.reactions.cache.size > 0) {
+							message.reactions.cache.forEach(reaction => {
+								reactions.push({
+									emoji: reaction.emoji.name,
+									count: reaction.count,
+									isCustom: reaction.emoji.id !== null,
+									emojiId: reaction.emoji.id,
+									emojiUrl: reaction.emoji.id ? `https://cdn.discordapp.com/emojis/${reaction.emoji.id}.png` : null
+								});
+							});
+						}
+
+						const attachments = message.attachments.map(a => {
+							const attachment = {
+								url: a.url,
+								name: a.name,
+								contentType: a.contentType,
+								width: a.width,
+								height: a.height,
+								isImage: a.contentType && a.contentType.startsWith('image/')
+							};
+
+							if (global.saveAttachments && global.attachmentsManager) {
+								const savedInfo = global.attachmentsManager.getAttachments(message.id);
+								if (savedInfo) {
+									attachment.localPath = `/files/${savedInfo.filename}`;
+									attachment.savedLocally = true;
+								}
+							}
+
+							return attachment;
+						});
+
+						const messageData = {
+							id: message.id,
+							content: message.content,
+							authorId: message.author.id,
+							authorUsername: message.author.username,
+							authorDisplayName: message.author.displayName || message.author.username,
+							authorAvatar: message.author.displayAvatarURL({ size: 64 }),
+							channelId: message.channel.id,
+							channelName: message.channel.name,
+							timestamp: message.createdTimestamp,
+							attachments: attachments,
+							embeds: message.embeds.length,
+							hasThread: message.hasThread,
+							pinned: message.pinned,
+							type: message.type,
+							reactions: reactions,
+							edited: message.editedTimestamp ? true : false,
+							editedAt: message.editedTimestamp
+						};
+
+						await global.redisManager.client.zAdd(this.messagesList, {
+							score: message.createdTimestamp,
+							value: JSON.stringify(messageData)
+						});
+
+						return true;
+					}
+				}
+			} else {
+				const idx = this.ramCache.messages.findIndex(m => m.id === message.id);
+				if (idx !== -1) {
 					const reactions = [];
 					if (message.reactions && message.reactions.cache.size > 0) {
 						message.reactions.cache.forEach(reaction => {
@@ -202,11 +296,7 @@ class MessagesCache {
 						editedAt: message.editedTimestamp
 					};
 
-					await global.redisManager.client.zAdd(this.messagesList, {
-						score: message.createdTimestamp,
-						value: JSON.stringify(messageData)
-					});
-
+					this.ramCache.messages[idx] = messageData;
 					return true;
 				}
 			}
@@ -219,15 +309,21 @@ class MessagesCache {
 	}
 
 	async deleteMessage(messageId) {
-		if (!global.redisOnline) return false;
-
 		try {
-			const allMessages = await global.redisManager.client.zRange(this.messagesList, 0, -1);
+			if (global.redisOnline) {
+				const allMessages = await global.redisManager.client.zRange(this.messagesList, 0, -1);
 
-			for (const msg of allMessages) {
-				const parsed = JSON.parse(msg);
-				if (parsed.id === messageId) {
-					await global.redisManager.client.zRem(this.messagesList, msg);
+				for (const msg of allMessages) {
+					const parsed = JSON.parse(msg);
+					if (parsed.id === messageId) {
+						await global.redisManager.client.zRem(this.messagesList, msg);
+						return true;
+					}
+				}
+			} else {
+				const idx = this.ramCache.messages.findIndex(m => m.id === messageId);
+				if (idx !== -1) {
+					this.ramCache.messages.splice(idx, 1);
 					return true;
 				}
 			}
@@ -240,28 +336,82 @@ class MessagesCache {
 	}
 
 	async getStats() {
-		if (!global.redisOnline) return { total: 0, enabled: false };
-
 		try {
-			const total = await global.redisManager.client.zCard(this.messagesList);
-			const oldest = await global.redisManager.client.zRange(this.messagesList, 0, 0);
-			const newest = await global.redisManager.client.zRange(this.messagesList, -1, -1);
+			if (global.redisOnline) {
+				const total = await global.redisManager.client.zCard(this.messagesList);
+				const oldest = await global.redisManager.client.zRange(this.messagesList, 0, 0);
+				const newest = await global.redisManager.client.zRange(this.messagesList, -1, -1);
 
-			return {
-				total,
-				enabled: true,
-				oldest: oldest.length > 0 ? JSON.parse(oldest[0]) : null,
-				newest: newest.length > 0 ? JSON.parse(newest[0]) : null
-			};
+				return {
+					totalMessages: total,
+					total,
+					enabled: true,
+					oldest: oldest.length > 0 ? JSON.parse(oldest[0]) : null,
+					newest: newest.length > 0 ? JSON.parse(newest[0]) : null
+				};
+			} else {
+				const total = this.ramCache.messages.length;
+				return {
+					totalMessages: total,
+					total,
+					enabled: true,
+					oldest: total > 0 ? this.ramCache.messages[total - 1] : null,
+					newest: total > 0 ? this.ramCache.messages[0] : null
+				};
+			}
 		} catch (err) {
 			console.reportError('Error getting messages stats:', err);
 			return { total: 0, enabled: false };
 		}
 	}
 
-	async addMessageEdit(messageId, oldContent, newContent, editedAt) {
-		if (!global.redisOnline) return false;
+	async getChannelStats() {
+		try {
+			const channelCounts = {};
 
+			if (global.redisOnline) {
+				const messages = await global.redisManager.client.zRange(this.messagesList, 0, -1);
+				messages.forEach(msgStr => {
+					try {
+						const msg = JSON.parse(msgStr);
+						const channelId = msg.channelId || msg.channel;
+						const channelName = msg.channelName || msg.channel || 'Unknown';
+
+						if (!channelCounts[channelId]) {
+							channelCounts[channelId] = {
+								channelId: channelId,
+								channelName: channelName,
+								count: 0
+							};
+						}
+						channelCounts[channelId].count++;
+					} catch (e) {
+					}
+				});
+			} else {
+				this.ramCache.messages.forEach(msg => {
+					const channelId = msg.channelId || msg.channel;
+					const channelName = msg.channelName || msg.channel || 'Unknown';
+
+					if (!channelCounts[channelId]) {
+						channelCounts[channelId] = {
+							channelId: channelId,
+							channelName: channelName,
+							count: 0
+						};
+					}
+					channelCounts[channelId].count++;
+				});
+			}
+
+			return Object.values(channelCounts).sort((a, b) => b.count - a.count);
+		} catch (err) {
+			console.reportError('Error getting channel stats:', err);
+			return [];
+		}
+	}
+
+	async addMessageEdit(messageId, oldContent, newContent, editedAt) {
 		try {
 			const edit = {
 				oldContent,
@@ -270,10 +420,17 @@ class MessagesCache {
 				type: 'edit'
 			};
 
-			await global.redisManager.client.rPush(
-				this.messageHistory + messageId,
-				JSON.stringify(edit)
-			);
+			if (global.redisOnline) {
+				await global.redisManager.client.rPush(
+					this.messageHistory + messageId,
+					JSON.stringify(edit)
+				);
+			} else {
+				if (!this.ramCache.history.has(messageId)) {
+					this.ramCache.history.set(messageId, []);
+				}
+				this.ramCache.history.get(messageId).push(edit);
+			}
 
 			return true;
 		} catch (err) {
@@ -283,8 +440,6 @@ class MessagesCache {
 	}
 
 	async addReactionEvent(messageId, userId, username, emoji, emojiId, action, timestamp) {
-		if (!global.redisOnline) return false;
-
 		try {
 			const reactionEvent = {
 				userId,
@@ -292,15 +447,22 @@ class MessagesCache {
 				emoji,
 				emojiId,
 				emojiUrl: emojiId ? `https://cdn.discordapp.com/emojis/${emojiId}.png` : null,
-				action, // 'add' or 'remove'
+				action,
 				timestamp,
 				type: 'reaction'
 			};
 
-			await global.redisManager.client.rPush(
-				this.messageReactions + messageId,
-				JSON.stringify(reactionEvent)
-			);
+			if (global.redisOnline) {
+				await global.redisManager.client.rPush(
+					this.messageReactions + messageId,
+					JSON.stringify(reactionEvent)
+				);
+			} else {
+				if (!this.ramCache.reactions.has(messageId)) {
+					this.ramCache.reactions.set(messageId, []);
+				}
+				this.ramCache.reactions.get(messageId).push(reactionEvent);
+			}
 
 			return true;
 		} catch (err) {
@@ -310,13 +472,18 @@ class MessagesCache {
 	}
 
 	async addReply(messageId, replyData) {
-		if (!global.redisOnline) return false;
-
 		try {
-			await global.redisManager.client.rPush(
-				this.messageReplies + messageId,
-				JSON.stringify(replyData)
-			);
+			if (global.redisOnline) {
+				await global.redisManager.client.rPush(
+					this.messageReplies + messageId,
+					JSON.stringify(replyData)
+				);
+			} else {
+				if (!this.ramCache.replies.has(messageId)) {
+					this.ramCache.replies.set(messageId, []);
+				}
+				this.ramCache.replies.get(messageId).push(replyData);
+			}
 
 			return true;
 		} catch (err) {
@@ -326,32 +493,38 @@ class MessagesCache {
 	}
 
 	async getMessageHistory(messageId) {
-		if (!global.redisOnline) return { edits: [], reactions: [], replies: [] };
-
 		try {
-			const edits = await global.redisManager.client.lRange(
-				this.messageHistory + messageId,
-				0,
-				-1
-			);
+			if (global.redisOnline) {
+				const edits = await global.redisManager.client.lRange(
+					this.messageHistory + messageId,
+					0,
+					-1
+				);
 
-			const reactions = await global.redisManager.client.lRange(
-				this.messageReactions + messageId,
-				0,
-				-1
-			);
+				const reactions = await global.redisManager.client.lRange(
+					this.messageReactions + messageId,
+					0,
+					-1
+				);
 
-			const replies = await global.redisManager.client.lRange(
-				this.messageReplies + messageId,
-				0,
-				-1
-			);
+				const replies = await global.redisManager.client.lRange(
+					this.messageReplies + messageId,
+					0,
+					-1
+				);
 
-			return {
-				edits: edits.map(e => JSON.parse(e)),
-				reactions: reactions.map(r => JSON.parse(r)),
-				replies: replies.map(r => JSON.parse(r))
-			};
+				return {
+					edits: edits.map(e => JSON.parse(e)),
+					reactions: reactions.map(r => JSON.parse(r)),
+					replies: replies.map(r => JSON.parse(r))
+				};
+			} else {
+				return {
+					edits: this.ramCache.history.get(messageId) || [],
+					reactions: this.ramCache.reactions.get(messageId) || [],
+					replies: this.ramCache.replies.get(messageId) || []
+				};
+			}
 		} catch (err) {
 			console.reportError('Error getting message history:', err);
 			return { edits: [], reactions: [], replies: [] };
@@ -359,13 +532,19 @@ class MessagesCache {
 	}
 
 	async setPriority(messageId, isPriority = true) {
-		if (!global.redisOnline) return false;
-
 		try {
-			if (isPriority) {
-				await global.redisManager.client.sAdd(this.priorityMessages, messageId);
+			if (global.redisOnline) {
+				if (isPriority) {
+					await global.redisManager.client.sAdd(this.priorityMessages, messageId);
+				} else {
+					await global.redisManager.client.sRem(this.priorityMessages, messageId);
+				}
 			} else {
-				await global.redisManager.client.sRem(this.priorityMessages, messageId);
+				if (isPriority) {
+					this.ramCache.priority.add(messageId);
+				} else {
+					this.ramCache.priority.delete(messageId);
+				}
 			}
 			return true;
 		} catch (err) {
@@ -375,52 +554,55 @@ class MessagesCache {
 	}
 
 	async isPriority(messageId) {
-		if (!global.redisOnline) return false;
 		try {
-			return await global.redisManager.client.sIsMember(this.priorityMessages, messageId);
+			if (global.redisOnline) {
+				return await global.redisManager.client.sIsMember(this.priorityMessages, messageId);
+			} else {
+				return this.ramCache.priority.has(messageId);
+			}
 		} catch (err) {
 			return false;
 		}
 	}
 
 	async restoreToDiscordCache() {
-		if (!global.redisOnline) return;
-
 		try {
-			console.report('Starting progressive message restoration...');
-
-			const priorityIds = await global.redisManager.client.sMembers(this.priorityMessages);
-			console.report(`Loading ${priorityIds.length} priority messages first...`);
+			console.report('Starting message cache loading...');
 
 			let priorityRestored = 0;
+			let recentRestored = 0;
 			const channelCache = new Map();
 
-			for (const msgId of priorityIds) {
-				const allMessages = await global.redisManager.client.zRange(this.messagesList, 0, -1);
-				const msgData = allMessages.find(m => JSON.parse(m).id === msgId);
+			if (global.redisOnline) {
+				const priorityIds = await global.redisManager.client.sMembers(this.priorityMessages);
+				console.report(`Loading ${priorityIds.length} priority messages first...`);
 
-				if (!msgData) continue;
+				for (const msgId of priorityIds) {
+					const allMessages = await global.redisManager.client.zRange(this.messagesList, 0, -1);
+					const msgData = allMessages.find(m => JSON.parse(m).id === msgId);
 
-				const msg = JSON.parse(msgData);
-				let channel = channelCache.get(msg.channelId);
+					if (!msgData) continue;
 
-				if (!channel) {
-					channel = global.guild.channels.cache.get(msg.channelId);
-					if (!channel || !channel.isTextBased()) continue;
-					channelCache.set(msg.channelId, channel);
+					const msg = JSON.parse(msgData);
+					let channel = channelCache.get(msg.channelId);
+
+					if (!channel) {
+						channel = global.guild.channels.cache.get(msg.channelId);
+						if (!channel || !channel.isTextBased()) continue;
+						channelCache.set(msg.channelId, channel);
+					}
+
+					try {
+						await channel.messages.fetch(msg.id);
+						priorityRestored++;
+					} catch (err) {
+					}
 				}
 
-				try {
-					await channel.messages.fetch(msg.id);
-					priorityRestored++;
-				} catch (err) {
-				}
+				console.report(`Priority messages restored: ${priorityRestored}`);
 			}
 
-			console.report(`Priority messages restored: ${priorityRestored}`);
-
 			console.report('Loading recent messages from all channels...');
-			let recentRestored = 0;
 
 			for (const [channelId, channel] of global.guild.channels.cache) {
 				if (!channel.isTextBased()) continue;
@@ -428,12 +610,18 @@ class MessagesCache {
 				try {
 					const messages = await channel.messages.fetch({ limit: 50 });
 					recentRestored += messages.size;
+					
+					if (!global.redisOnline) {
+						for (const [msgId, msg] of messages) {
+							await this.addMessage(msg);
+						}
+					}
 				} catch (err) {
 				}
 			}
 
-			console.report(`Recent messages restored: ${recentRestored}`);
-			console.report(`Total restored: ${priorityRestored + recentRestored} messages`);
+			console.report(`Recent messages loaded: ${recentRestored}`);
+			console.report(`Total messages in cache: ${priorityRestored + recentRestored}`);
 
 			this.startProgressiveLoading();
 		} catch (err) {
@@ -450,11 +638,6 @@ class MessagesCache {
 		console.report('Starting background progressive loading (3 month window)...');
 
 		setInterval(async () => {
-			if (!global.redisOnline) {
-				this.loadingProgress.isLoading = false;
-				return;
-			}
-
 			try {
 				for (const [channelId, channel] of global.guild.channels.cache) {
 					if (!channel.isTextBased()) continue;
@@ -473,6 +656,12 @@ class MessagesCache {
 
 						if (olderMessages.size > 0) {
 							this.loadingProgress.loaded += olderMessages.size;
+							
+							if (!global.redisOnline) {
+								for (const [msgId, msg] of olderMessages) {
+									await this.addMessage(msg);
+								}
+							}
 						}
 					} catch (err) {
 					}
