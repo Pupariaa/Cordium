@@ -127,13 +127,8 @@ const { set, walkDirSync, toCamelCase, setReportFunctions } = require(global.uti
 		const MessagesCache = require(global.messagesCachePath);
 		global.messagesCache = new MessagesCache();
 
-		// Databases
-
-		// const EventsDatabase = require(global.eventsDatabasePath);
-		// global.eventsDatabase = new EventsDatabase();
-
-		// const MessagesDatabase = require(global.messagesDatabasePath);
-		// global.messagesDatabase = new MessagesDatabase();
+		const EventsDatabase = require(global.eventsDatabasePath);
+		global.eventsDatabase = new EventsDatabase();
 
 		// TODO:
 		// require(global.getDatabasePath);
@@ -164,14 +159,21 @@ const { set, walkDirSync, toCamelCase, setReportFunctions } = require(global.uti
 			console.reportWarn('Redis init failed, continuing without cache');
 		}
 
-		// Restore messages from Redis to Discord.js cache
-		if (global.redisOnline && global.messagesCache) {
+		// Restore messages cache (Redis or load from Discord)
+		if (global.messagesCache) {
 			await global.messagesCache.restoreToDiscordCache();
 		}
 
-		// Init databases
-		// await Promise.all([global.eventsDatabase.init(), global.messagesDatabase.init()]);
-		// await global.messagesDatabase.init();
+		if (global.eventsDatabase) {
+			try {
+				console.report('Initializing EventsDatabase...');
+				await global.eventsDatabase.init();
+				console.report('EventsDatabase initialized successfully');
+			} catch (err) {
+				console.reportError('EventsDatabase init failed:', err.message);
+				console.error(err);
+			}
+		}
 
 		// Feed discord.js with old messages
 		// console.report('Feeding Discord.js old messages...');
