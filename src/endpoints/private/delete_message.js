@@ -28,41 +28,22 @@ module.exports = {
 				return { status_code: 404, error: 'Message not found' };
 			}
 
-			const reactions = [];
-			message.reactions.cache.forEach(reaction => {
-				reactions.push({
-					emoji: reaction.emoji.name,
-					emojiId: reaction.emoji.id,
-					count: reaction.count
-				});
-			});
+			await message.delete();
+
+			// Also remove from cache
+			if (global.messagesCache) {
+				await global.messagesCache.deleteMessage(params.messageId);
+			}
 
 			return {
 				status_code: 200,
-				message: {
-					id: message.id,
-					content: message.content,
-					authorId: message.author.id,
-					authorUsername: message.author.username,
-					channelId: message.channel.id,
-					channelName: message.channel.name,
-					timestamp: message.createdTimestamp,
-					editedTimestamp: message.editedTimestamp,
-					pinned: message.pinned,
-					attachments: message.attachments.map(a => ({
-						id: a.id,
-						name: a.name,
-						url: a.url,
-						contentType: a.contentType,
-						size: a.size
-					})),
-					embeds: message.embeds.length,
-					reactions: reactions,
-					url: message.url
+				deleted: {
+					id: params.messageId,
+					channelId: params.channelId
 				}
 			};
 		} catch (err) {
-			console.reportError('Error in get_message:', err);
+			console.reportError('Error in delete_message:', err);
 			return { status_code: 500, error: err.message };
 		}
 	},

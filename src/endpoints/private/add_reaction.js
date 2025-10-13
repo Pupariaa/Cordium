@@ -7,6 +7,7 @@ module.exports = {
 		{ name: "key", type: "string", mandatory: false, length: 32 },
 		{ name: "channelId", type: "string", mandatory: true, range: [17, 20] },
 		{ name: "messageId", type: "string", mandatory: true, range: [17, 20] },
+		{ name: "emoji", type: "string", mandatory: true, range: [1, 100] },
 	],
 	handler: async function (params) {
 		try {
@@ -28,41 +29,18 @@ module.exports = {
 				return { status_code: 404, error: 'Message not found' };
 			}
 
-			const reactions = [];
-			message.reactions.cache.forEach(reaction => {
-				reactions.push({
-					emoji: reaction.emoji.name,
-					emojiId: reaction.emoji.id,
-					count: reaction.count
-				});
-			});
+			await message.react(params.emoji);
 
 			return {
 				status_code: 200,
-				message: {
-					id: message.id,
-					content: message.content,
-					authorId: message.author.id,
-					authorUsername: message.author.username,
-					channelId: message.channel.id,
-					channelName: message.channel.name,
-					timestamp: message.createdTimestamp,
-					editedTimestamp: message.editedTimestamp,
-					pinned: message.pinned,
-					attachments: message.attachments.map(a => ({
-						id: a.id,
-						name: a.name,
-						url: a.url,
-						contentType: a.contentType,
-						size: a.size
-					})),
-					embeds: message.embeds.length,
-					reactions: reactions,
-					url: message.url
+				reaction: {
+					messageId: params.messageId,
+					emoji: params.emoji,
+					added: true
 				}
 			};
 		} catch (err) {
-			console.reportError('Error in get_message:', err);
+			console.reportError('Error in add_reaction:', err);
 			return { status_code: 500, error: err.message };
 		}
 	},
