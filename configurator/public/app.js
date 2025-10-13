@@ -40,6 +40,49 @@ function initDashboard() {
 	document.getElementById('dashboard').style.display = 'block';
 	checkConfigStatus();
 	initNavigation();
+	updateNavbarStats();
+	setInterval(updateNavbarStats, 5000);
+}
+
+async function updateNavbarStats() {
+	try {
+		const response = await fetch('/api/server/info');
+		const data = await response.json();
+
+		if (!data.error && data.process) {
+			const cpuElement = document.getElementById('cpuUsage');
+			const ramElement = document.getElementById('ramUsage');
+			const uptimeElement = document.getElementById('uptimeDisplay');
+
+			if (cpuElement && data.process.cpuUsage !== undefined) {
+				cpuElement.textContent = `${data.process.cpuUsage.toFixed(1)}%`;
+			}
+
+			if (ramElement && data.process.memoryUsage !== undefined) {
+				ramElement.textContent = `${Math.round(data.process.memoryUsage)}MB`;
+			}
+
+			if (uptimeElement && data.process.uptime !== undefined) {
+				uptimeElement.textContent = formatUptime(data.process.uptime);
+			}
+		}
+	} catch (error) {
+		console.log('Failed to update navbar stats:', error);
+	}
+}
+
+function formatUptime(seconds) {
+	const days = Math.floor(seconds / 86400);
+	const hours = Math.floor((seconds % 86400) / 3600);
+	const minutes = Math.floor((seconds % 3600) / 60);
+
+	if (days > 0) {
+		return `${days}d ${hours}h`;
+	} else if (hours > 0) {
+		return `${hours}h ${minutes}m`;
+	} else {
+		return `${minutes}m`;
+	}
 }
 
 function initTheme() {
@@ -67,7 +110,9 @@ function setTheme(theme) {
 async function renderSetupWizard() {
 	const response = await fetch('/api/config');
 	const config = await response.json();
-	let setupStep = 1;
+	const savedStep = parseInt(config.wizard_step) || 1;
+	const savedMode = config.wizard_mode || '';
+	let setupStep = savedStep;
 
 	const wizardContainer = document.getElementById('setupWizard');
 	wizardContainer.innerHTML = `
@@ -75,30 +120,30 @@ async function renderSetupWizard() {
 			<div class="wizard-header">
 				<div class="container">
 					<div class="text-center">
-						<i class="bi bi-lightning-charge-fill text-warning" style="font-size: 2.5rem;"></i>
-						<h1 class="fw-bold mt-2 text-gradient" style="font-size: 2rem;">Welcome to Cordium</h1>
-						<p class="text-muted mb-0" style="font-size: 0.95rem;">Let's get your Discord bot up and running in just a few steps</p>
+						<img src="cordium-1000x700.png" alt="Cordium" style="height: 80px; width: auto; margin-bottom: 1rem;">
+						<h1 class="fw-bold mt-2" style="font-size: 2rem; color: white;">Welcome to Cordium</h1>
+						<p class="mb-0" style="font-size: 0.95rem; color: rgba(255, 255, 255, 0.8);">Let's get your Discord bot up and running in just a few steps</p>
 					</div>
 				</div>
 			</div>
 			
-			<div class="container py-3" style="flex: 1; display: flex; flex-direction: column;">
+			<div class="container py-3" style="flex: 1; display: flex; flex-direction: column; max-width: 1000px;">
 				<div class="row justify-content-center" style="flex: 1;">
-					<div class="col-lg-8" style="display: flex; flex-direction: column;">
-						<div class="wizard-steps mb-3">
+					<div class="col-12" style="display: flex; flex-direction: column;">
+						<div class="wizard-steps mb-2">
 							<div class="step active" data-step="1">
 								<div class="step-number">1</div>
-								<div class="step-label">Discord Setup</div>
+								<div class="step-label">Mode</div>
 							</div>
 							<div class="step-line"></div>
 							<div class="step" data-step="2">
 								<div class="step-number">2</div>
-								<div class="step-label">Database</div>
+								<div class="step-label">Discord</div>
 							</div>
 							<div class="step-line"></div>
 							<div class="step" data-step="3">
 								<div class="step-number">3</div>
-								<div class="step-label">Redis</div>
+								<div class="step-label">Configuration</div>
 							</div>
 							<div class="step-line"></div>
 							<div class="step" data-step="4">
@@ -111,31 +156,84 @@ async function renderSetupWizard() {
 							<div id="wizardStep1" style="width: 100%;">
 								<div class="card shadow-lg">
 									<div class="card-body">
+										<h3>Choose Your Setup Mode</h3>
+										<p class="text-muted">Select how you want to run Cordium</p>
+										
+										<div class="row g-3">
+											<div class="col-md-6">
+												<div class="mode-card" onclick="selectMode('standalone')" id="modeStandalone">
+													<div class="mode-icon">
+														<i class="bi bi-laptop"></i>
+													</div>
+													<h5>Standalone</h5>
+													<p class="small mb-2">Simple local setup</p>
+													<ul class="small text-start">
+														<li>SQLite database (local file)</li>
+														<li>No Redis required</li>
+														<li>Easy setup, slower performance</li>
+														<li>Perfect for testing</li>
+													</ul>
+												</div>
+											</div>
+											<div class="col-md-6">
+												<div class="mode-card" onclick="selectMode('component')" id="modeComponent">
+													<div class="mode-icon">
+														<i class="bi bi-server"></i>
+													</div>
+													<h5>Component</h5>
+													<p class="small mb-2">Production-ready setup</p>
+													<ul class="small text-start">
+														<li>MySQL/MariaDB database</li>
+														<li>Redis cache layer</li>
+														<li>Fast, scalable performance</li>
+														<li>Recommended for production</li>
+													</ul>
+												</div>
+											</div>
+										</div>
+										
+										<input type="hidden" id="selectedMode" value="">
+										
+										<div class="d-grid mt-3">
+											<button type="button" class="btn btn-primary" id="continueFromModeBtn" disabled>
+												Continue <i class="bi bi-arrow-right ms-2"></i>
+											</button>
+										</div>
+									</div>
+								</div>
+							</div>
+
+							<div id="wizardStep2" style="display: none; width: 100%;">
+								<div class="card shadow-lg">
+									<div class="card-body">
 										<h3>Discord Bot Configuration</h3>
-										<p class="text-muted">Connect your Discord bot credentials</p>
+										<p class="text-muted mb-3">Connect your Discord bot credentials</p>
 										
 										<form id="wizardDiscordForm">
-											<div class="mb-3">
-												<label class="form-label fw-bold">Bot Token</label>
+											<div class="mb-2">
+												<label class="form-label">Bot Token</label>
 												<input type="password" class="form-control" id="wizard_client_token" value="${config.client_token || ''}" required>
 												<small class="form-text text-muted">Developer Portal > Bot > Reset Token</small>
 											</div>
-											<div class="mb-3">
-												<label class="form-label fw-bold">Client ID</label>
-												<input type="text" class="form-control" id="wizard_client_id" value="${config.client_id || ''}" required>
-												<small class="form-text text-muted">Developer Portal > General Information</small>
-											</div>
-											<div class="mb-3">
-												<label class="form-label fw-bold">Guild ID (Server ID)</label>
-												<input type="text" class="form-control" id="wizard_discord_guild_id" value="${config.discord_guild_id || ''}" required>
-												<small class="form-text text-muted">Right-click server > Copy Server ID</small>
+											<div class="row g-2 mb-2">
+												<div class="col-md-6">
+													<label class="form-label">Client ID</label>
+													<input type="text" class="form-control" id="wizard_client_id" value="${config.client_id || ''}" required>
+													<small class="form-text text-muted">General Information</small>
+												</div>
+												<div class="col-md-6">
+													<label class="form-label">Guild ID (Server ID)</label>
+													<input type="text" class="form-control" id="wizard_discord_guild_id" value="${config.discord_guild_id || ''}" required>
+													<small class="form-text text-muted">Right-click server</small>
+												</div>
 											</div>
 											
-											<div class="alert alert-warning py-2">
+											<div class="alert alert-warning py-2 mb-2">
+												<i class="bi bi-exclamation-triangle me-2"></i>
 												<small><strong>Enable Intents:</strong> Presence, Server Members, Message Content</small>
 											</div>
 
-											<div id="wizardInviteLink" class="alert alert-info py-2" style="display: none;">
+											<div id="wizardInviteLink" class="alert alert-info py-2 mb-2" style="display: none;">
 												<small><strong>Invite Link:</strong></small>
 												<div class="input-group input-group-sm mt-1">
 													<input type="text" class="form-control" id="wizardInviteLinkInput" readonly>
@@ -145,9 +243,12 @@ async function renderSetupWizard() {
 												</div>
 											</div>
 
-											<div class="d-grid mt-3">
-												<button type="submit" class="btn btn-primary">
-													Continue to Database Setup <i class="bi bi-arrow-right ms-2"></i>
+											<div class="d-flex gap-2 mt-3 pt-2 border-top">
+												<button type="button" class="btn btn-outline-light" onclick="wizardBack(1)">
+													<i class="bi bi-arrow-left me-2"></i> Back
+												</button>
+												<button type="submit" class="btn btn-primary flex-fill">
+													Continue <i class="bi bi-arrow-right ms-2"></i>
 												</button>
 											</div>
 										</form>
@@ -155,107 +256,87 @@ async function renderSetupWizard() {
 								</div>
 							</div>
 
-							<div id="wizardStep2" style="display: none; width: 100%;">
-								<div class="card shadow-lg">
-									<div class="card-body">
-										<h3>Database Configuration</h3>
-										<p class="text-muted">Optional: MySQL/MariaDB for event logging</p>
-										
-										<form id="wizardDatabaseForm">
-											<div class="row">
-												<div class="col-md-6 mb-2">
-													<label class="form-label fw-bold">Host</label>
-													<input type="text" class="form-control" id="wizard_db_host" value="${config.db_host || ''}" placeholder="localhost">
-												</div>
-												<div class="col-md-6 mb-2">
-													<label class="form-label fw-bold">Database Name</label>
-													<input type="text" class="form-control" id="wizard_db_name" value="${config.db_name || ''}" placeholder="cordium_events">
-												</div>
-											</div>
-											<div class="row">
-												<div class="col-md-4 mb-2">
-													<label class="form-label fw-bold">Port</label>
-													<input type="number" class="form-control" id="wizard_db_port" value="${config.db_port || ''}" placeholder="3306">
-												</div>
-												<div class="col-md-4 mb-2">
-													<label class="form-label fw-bold">User</label>
-													<input type="text" class="form-control" id="wizard_db_user" value="${config.db_user || ''}" placeholder="username">
-												</div>
-												<div class="col-md-4 mb-2">
-													<label class="form-label fw-bold">Password</label>
-													<input type="password" class="form-control" id="wizard_db_pass" value="${config.db_pass || ''}" placeholder="password">
-												</div>
-											</div>
-											
-											<div id="wizardDbTestResult" class="mb-2" style="display: none; font-size: 0.85rem;"></div>
-											
-											<div class="d-flex gap-2 mt-3">
-												<button type="button" class="btn btn-outline-light" onclick="wizardGoToStep(1)">
-													<i class="bi bi-arrow-left"></i>
-												</button>
-												<button type="button" class="btn btn-info flex-fill" id="wizardTestDbBtn">
-													<i class="bi bi-wifi me-1"></i> Test
-												</button>
-												<button type="submit" class="btn btn-primary flex-fill">
-													Continue <i class="bi bi-arrow-right"></i>
-												</button>
-											</div>
-											<button type="button" class="btn btn-link w-100 p-1 mt-1" onclick="wizardSkipDatabase()" style="font-size: 0.85rem;">
-												Skip database
-											</button>
-										</form>
-									</div>
-								</div>
-							</div>
 
 							<div id="wizardStep3" style="display: none; width: 100%;">
 								<div class="card shadow-lg">
 									<div class="card-body">
-										<h3>Redis Cache Configuration</h3>
-										<p class="text-muted">Optional: Redis for ultra-fast caching</p>
+										<h3 class="mb-2">Infrastructure Setup</h3>
+										<p class="text-muted mb-3" style="font-size: 0.85rem;">Configure MySQL database and Redis cache</p>
 										
-										<form id="wizardRedisForm">
-											<div class="row">
-												<div class="col-md-6 mb-2">
-													<label class="form-label fw-bold">Host</label>
-													<input type="text" class="form-control" id="wizard_redis_host" value="${config.redis_host || ''}" placeholder="localhost">
+										
+										<form id="wizardComponentForm">
+											<div class="row g-2">
+												<div class="col-lg-6">
+													<div class="wizard-config-card mb-2">
+														<div class="wizard-config-header">
+															<i class="bi bi-database me-1"></i>MySQL
+														</div>
+														<div class="wizard-config-body">
+															<input type="text" class="form-control form-control-sm mb-2" id="wizard_db_host" value="${config.db_host || ''}" placeholder="Host (localhost)" required>
+															<input type="text" class="form-control form-control-sm mb-2" id="wizard_db_name" value="${config.db_name || ''}" placeholder="Database Name" required>
+															<div class="row g-2 mb-2">
+																<div class="col-4">
+																	<input type="number" class="form-control form-control-sm" id="wizard_db_port" value="${config.db_port || ''}" placeholder="Port" required>
+																</div>
+																<div class="col-4">
+																	<input type="text" class="form-control form-control-sm" id="wizard_db_user" value="${config.db_user || ''}" placeholder="User" required>
+																</div>
+																<div class="col-4">
+																	<input type="password" class="form-control form-control-sm" id="wizard_db_pass" value="${config.db_pass || ''}" placeholder="Pass" required>
+																</div>
+															</div>
+															<div id="wizardDbTestResult" style="display: none;" class="mb-2"></div>
+															<div class="d-flex gap-1">
+																<button type="button" class="btn btn-xs btn-outline-primary flex-fill" id="wizardTestDbBtn">
+																	<i class="bi bi-wifi"></i> Test
+																</button>
+																<button type="button" class="btn btn-xs btn-primary flex-fill" id="wizardCreateDbBtn">
+																	<i class="bi bi-database-add"></i> Create
+																</button>
+															</div>
+														</div>
+													</div>
 												</div>
-												<div class="col-md-6 mb-2">
-													<label class="form-label fw-bold">Port</label>
-													<input type="number" class="form-control" id="wizard_redis_port" value="${config.redis_port || ''}" placeholder="6379">
-												</div>
-											</div>
-											<div class="row">
-												<div class="col-md-6 mb-2">
-													<label class="form-label fw-bold">Password</label>
-													<input type="password" class="form-control" id="wizard_redis_password" value="${config.redis_password || ''}" placeholder="Optional">
-												</div>
-												<div class="col-md-6 mb-2">
-													<label class="form-label fw-bold">Database Number</label>
-													<input type="number" class="form-control" id="wizard_redis_db" value="${config.redis_db || ''}" placeholder="0">
+												
+												<div class="col-lg-6">
+													<div class="wizard-config-card mb-2">
+														<div class="wizard-config-header">
+															<i class="bi bi-lightning-charge me-1"></i>Redis
+														</div>
+														<div class="wizard-config-body">
+															<div class="row g-2 mb-2">
+																<div class="col-8">
+																	<input type="text" class="form-control form-control-sm" id="wizard_redis_host" value="${config.redis_host || ''}" placeholder="Host (localhost)" required>
+																</div>
+																<div class="col-4">
+																	<input type="number" class="form-control form-control-sm" id="wizard_redis_port" value="${config.redis_port || ''}" placeholder="Port" required>
+																</div>
+															</div>
+															<div class="row g-2 mb-2">
+																<div class="col-8">
+																	<input type="password" class="form-control form-control-sm" id="wizard_redis_password" value="${config.redis_password || ''}" placeholder="Password (optional)">
+																</div>
+																<div class="col-4">
+																	<input type="number" class="form-control form-control-sm" id="wizard_redis_db" value="${config.redis_db || '0'}" placeholder="DB">
+																</div>
+															</div>
+															<div id="wizardRedisTestResult" style="display: none;" class="mb-2"></div>
+															<button type="button" class="btn btn-xs btn-outline-info w-100" id="wizardTestRedisBtn">
+																<i class="bi bi-wifi"></i> Test Connection
+															</button>
+														</div>
+													</div>
 												</div>
 											</div>
 											
-											<div class="alert alert-info py-2">
-												<small><strong>What is Redis?</strong> In-memory cache for faster data access and reduced database load</small>
-											</div>
-											
-											<div id="wizardRedisTestResult" class="mb-2" style="display: none; font-size: 0.85rem;"></div>
-											
-											<div class="d-flex gap-2 mt-3">
-												<button type="button" class="btn btn-outline-light" onclick="wizardGoToStep(2)">
+											<div class="d-flex gap-2 mt-2 pt-2 border-top">
+												<button type="button" class="btn btn-sm btn-outline-light" onclick="wizardBack(2)">
 													<i class="bi bi-arrow-left"></i>
 												</button>
-												<button type="button" class="btn btn-info flex-fill" id="wizardTestRedisBtn">
-													<i class="bi bi-wifi me-1"></i> Test
-												</button>
 												<button type="submit" class="btn btn-success flex-fill">
-													Complete <i class="bi bi-check"></i>
+													<i class="bi bi-check-circle me-1"></i> Complete Setup
 												</button>
 											</div>
-											<button type="button" class="btn btn-link w-100 p-1 mt-1" onclick="wizardSkipRedis()" style="font-size: 0.85rem;">
-												Skip Redis
-											</button>
 										</form>
 									</div>
 								</div>
@@ -302,26 +383,88 @@ async function renderSetupWizard() {
 		showNotification('Invite link copied to clipboard!', 'success');
 	});
 
-	document.getElementById('wizardDiscordForm').addEventListener('submit', async (e) => {
-		e.preventDefault();
-		await saveWizardConfig(['client_token', 'client_id', 'discord_guild_id'], 'wizard_');
-		wizardGoToStep(2);
+	if (savedMode) {
+		document.getElementById('selectedMode').value = savedMode;
+		const modeCard = document.getElementById(`mode${savedMode.charAt(0).toUpperCase() + savedMode.slice(1)}`);
+		if (modeCard) {
+			modeCard.classList.add('selected');
+			document.getElementById('continueFromModeBtn').disabled = false;
+		}
+	}
+
+	wizardGoToStep(savedStep);
+
+	document.getElementById('continueFromModeBtn').addEventListener('click', async () => {
+		const mode = document.getElementById('selectedMode').value;
+		if (mode) {
+			await saveWizardProgress(2, mode);
+			wizardGoToStep(2);
+		}
 	});
 
-	document.getElementById('wizardDatabaseForm').addEventListener('submit', async (e) => {
+	document.getElementById('wizardDiscordForm').addEventListener('submit', async (e) => {
 		e.preventDefault();
-		await saveWizardConfig(['db_host', 'db_name', 'db_port', 'db_user', 'db_pass'], 'wizard_');
-		wizardGoToStep(3);
+
+		try {
+			await saveWizardConfig(['client_token', 'client_id', 'discord_guild_id'], 'wizard_');
+
+			const response = await fetch('/api/config');
+			const config = await response.json();
+			const mode = config.wizard_mode || 'component';
+
+			console.log('Wizard mode:', mode);
+
+			if (mode === 'standalone') {
+				await saveStandaloneConfig();
+				await clearWizardProgress();
+				wizardGoToStep(4);
+			} else {
+				await saveWizardProgress(3, mode);
+				wizardGoToStep(3);
+			}
+		} catch (err) {
+			console.error('Error in wizard step 2:', err);
+			showNotification('Error: ' + err.message, 'danger');
+		}
+	});
+
+	document.getElementById('wizardComponentForm').addEventListener('submit', async (e) => {
+		e.preventDefault();
+
+		const response = await fetch('/api/config');
+		const currentConfig = await response.json();
+
+		currentConfig.db_type = 'mysql';
+		currentConfig.db_host = document.getElementById('wizard_db_host').value;
+		currentConfig.db_name = document.getElementById('wizard_db_name').value;
+		currentConfig.db_port = document.getElementById('wizard_db_port').value;
+		currentConfig.db_user = document.getElementById('wizard_db_user').value;
+		currentConfig.db_pass = document.getElementById('wizard_db_pass').value;
+		currentConfig.redis_host = document.getElementById('wizard_redis_host').value;
+		currentConfig.redis_port = document.getElementById('wizard_redis_port').value;
+		currentConfig.redis_password = document.getElementById('wizard_redis_password').value;
+		currentConfig.redis_db = document.getElementById('wizard_redis_db').value;
+
+		delete currentConfig.db_path;
+
+		await fetch('/api/config', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(currentConfig)
+		});
+
+		await clearWizardProgress();
+		wizardGoToStep(4);
 	});
 
 	document.getElementById('wizardTestDbBtn').addEventListener('click', async () => {
 		await testWizardDatabaseConnection();
 	});
 
-	document.getElementById('wizardRedisForm').addEventListener('submit', async (e) => {
-		e.preventDefault();
-		await saveWizardConfig(['redis_host', 'redis_port', 'redis_password', 'redis_db'], 'wizard_');
-		wizardGoToStep(4);
+	document.getElementById('wizardCreateDbBtn').addEventListener('click', async () => {
+		showLoading('Creating database and tables...');
+		await createWizardDatabase();
+		hideLoading();
 	});
 
 	document.getElementById('wizardTestRedisBtn').addEventListener('click', async () => {
@@ -345,6 +488,50 @@ function updateWizardInviteLink() {
 	}
 }
 
+window.selectMode = function (mode) {
+	document.getElementById('selectedMode').value = mode;
+	document.querySelectorAll('.mode-card').forEach(card => {
+		card.classList.remove('selected');
+	});
+	document.getElementById(`mode${mode.charAt(0).toUpperCase() + mode.slice(1)}`).classList.add('selected');
+	document.getElementById('continueFromModeBtn').disabled = false;
+};
+
+async function saveStandaloneConfig() {
+	try {
+		const response = await fetch('/api/config');
+		const currentConfig = await response.json();
+
+		currentConfig.db_type = 'sqlite';
+		currentConfig.db_path = './src/cordium.sqlite';
+
+		delete currentConfig.db_host;
+		delete currentConfig.db_port;
+		delete currentConfig.db_name;
+		delete currentConfig.db_user;
+		delete currentConfig.db_pass;
+		delete currentConfig.redis_host;
+		delete currentConfig.redis_port;
+		delete currentConfig.redis_password;
+		delete currentConfig.redis_db;
+		delete currentConfig.wizard_step;
+		delete currentConfig.wizard_mode;
+
+		const saveResponse = await fetch('/api/config', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(currentConfig)
+		});
+
+		const result = await saveResponse.json();
+		if (result.success) {
+			showNotification('Standalone configuration saved', 'success');
+		}
+	} catch (err) {
+		console.error('Error saving standalone config:', err);
+	}
+}
+
 function wizardGoToStep(step) {
 	document.getElementById('wizardStep1').style.display = step === 1 ? 'block' : 'none';
 	document.getElementById('wizardStep2').style.display = step === 2 ? 'block' : 'none';
@@ -353,20 +540,57 @@ function wizardGoToStep(step) {
 
 	document.querySelectorAll('.wizard-steps .step').forEach(s => {
 		const stepNum = parseInt(s.getAttribute('data-step'));
-		s.classList.toggle('active', stepNum <= step);
+		s.classList.toggle('active', stepNum === step);
 		s.classList.toggle('completed', stepNum < step);
 	});
 }
 
-async function wizardSkipDatabase() {
-	if (confirm('Skip database configuration? You can add it later in Settings.')) {
-		wizardGoToStep(3);
+window.wizardGoToStep = wizardGoToStep;
+
+async function wizardBack(step) {
+	const response = await fetch('/api/config');
+	const config = await response.json();
+	await saveWizardProgress(step, config.wizard_mode);
+	wizardGoToStep(step);
+}
+
+window.wizardBack = wizardBack;
+
+async function saveWizardProgress(step, mode) {
+	try {
+		const response = await fetch('/api/config');
+		const config = await response.json();
+
+		config.wizard_step = step.toString();
+		if (mode) {
+			config.wizard_mode = mode;
+		}
+
+		await fetch('/api/config', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(config)
+		});
+	} catch (err) {
+		console.error('Error saving wizard progress:', err);
 	}
 }
 
-async function wizardSkipRedis() {
-	if (confirm('Skip Redis configuration? You can add it later in Settings.')) {
-		wizardGoToStep(4);
+async function clearWizardProgress() {
+	try {
+		const response = await fetch('/api/config');
+		const config = await response.json();
+
+		delete config.wizard_step;
+		delete config.wizard_mode;
+
+		await fetch('/api/config', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(config)
+		});
+	} catch (err) {
+		console.error('Error clearing wizard progress:', err);
 	}
 }
 
@@ -443,6 +667,39 @@ async function testWizardDatabaseConnection() {
 	}
 }
 
+async function createWizardDatabase() {
+	const dbConfig = {
+		db_host: document.getElementById('wizard_db_host').value,
+		db_name: document.getElementById('wizard_db_name').value,
+		db_port: document.getElementById('wizard_db_port').value,
+		db_user: document.getElementById('wizard_db_user').value,
+		db_pass: document.getElementById('wizard_db_pass').value
+	};
+
+	if (!dbConfig.db_host || !dbConfig.db_name || !dbConfig.db_user || !dbConfig.db_pass) {
+		showNotification('Please fill in all database fields', 'warning');
+		return;
+	}
+
+	try {
+		const response = await fetch('/api/config/create-database', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(dbConfig)
+		});
+
+		const result = await response.json();
+
+		if (result.success) {
+			showNotification(`Database created! ${result.tablesCreated} tables synchronized`, 'success');
+		} else {
+			showNotification('Database creation failed: ' + (result.error || 'Unknown error'), 'danger');
+		}
+	} catch (err) {
+		showNotification('Error creating database: ' + err.message, 'danger');
+	}
+}
+
 async function testWizardRedisConnection() {
 	const redisConfig = {
 		host: document.getElementById('wizard_redis_host').value,
@@ -501,7 +758,7 @@ function initNavigation() {
 			document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
 			link.classList.add('active');
 
-			loadPage(page);
+			await loadPage(page);
 		});
 	});
 }
@@ -677,24 +934,46 @@ async function loadPage(page) {
 	showLoading();
 
 	try {
+		const templateResponse = await fetch(`pages/${page}.html`);
+		if (!templateResponse.ok) {
+			throw new Error(`Failed to load template: ${templateResponse.statusText}`);
+		}
+		const templateHTML = await templateResponse.text();
+		content.innerHTML = templateHTML;
+
 		switch (page) {
 			case 'config':
-				await renderConfigPage(content);
+				await initConfigPage();
 				break;
 			case 'server':
-				await renderServerPage(content);
+				await initServerPage();
+				break;
+			case 'channels':
+				await initChannelsPage();
+				break;
+			case 'roles':
+				await initRolesPage();
+				break;
+			case 'members':
+				await initMembersPage();
+				break;
+			case 'messages':
+				await initMessagesPage();
+				break;
+			case 'member-details':
+				await initMemberDetailsPage();
 				break;
 			case 'commands':
-				await renderFilesPage(content, 'commands', 'Commands');
+				await initFilesPage('commands', 'Commands');
 				break;
 			case 'events':
-				await renderFilesPage(content, 'events', 'Events');
+				await initFilesPage('events', 'Events');
 				break;
 			case 'endpoints':
-				await renderFilesPage(content, 'endpoints', 'Endpoints');
+				await initFilesPage('endpoints', 'Endpoints');
 				break;
 			case 'sandbox':
-				await renderFilesPage(content, 'sandbox', 'Sandbox');
+				await initFilesPage('sandbox', 'Sandbox');
 				break;
 		}
 	} catch (err) {
@@ -708,6 +987,957 @@ async function loadPage(page) {
 		hideLoading();
 	}
 }
+
+let serverData = null;
+
+async function initServerPage() {
+	try {
+		const response = await fetch('/api/server/info');
+		const serverInfo = await response.json();
+
+		if (serverInfo.error) {
+			document.getElementById('serverError').style.display = 'block';
+			document.getElementById('serverErrorMessage').textContent = serverInfo.error;
+			document.getElementById('serverContent').style.display = 'none';
+			return;
+		}
+
+		document.getElementById('serverError').style.display = 'none';
+		document.getElementById('serverContent').style.display = 'block';
+
+		document.getElementById('serverMemberCount').textContent = serverInfo.memberCount;
+		document.getElementById('serverChannelCount').textContent = serverInfo.channels.length;
+		document.getElementById('serverRoleCount').textContent = serverInfo.roles.length;
+
+		const statsResponse = await fetch('/api/server/messages-stats');
+		const stats = await statsResponse.json();
+		document.getElementById('serverMessageCount').textContent = stats.totalMessages || 0;
+
+		serverData = serverInfo;
+
+		await initServerCharts();
+
+	} catch (err) {
+		console.error('Error loading server page:', err);
+		document.getElementById('serverError').style.display = 'block';
+		document.getElementById('serverErrorMessage').textContent = err.message;
+		document.getElementById('serverContent').style.display = 'none';
+	}
+}
+
+async function initServerCharts() {
+	await createMessagesChart();
+	await createMemberActivityChart();
+	await createChannelDistributionChart();
+	await createHourlyActivityChart();
+}
+
+async function createMessagesChart() {
+	const ctx = document.getElementById('messagesChart');
+	if (!ctx) return;
+
+	try {
+		const response = await fetch('/api/server/analytics/messages-by-day');
+		const result = await response.json();
+
+		const labels = result.data.map(d => {
+			const date = new Date(d.date);
+			return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+		});
+		const data = result.data.map(d => d.count);
+
+		new Chart(ctx, {
+			type: 'line',
+			data: {
+				labels: labels,
+				datasets: [{
+					label: 'Messages',
+					data: data,
+					borderColor: '#5865F2',
+					backgroundColor: 'rgba(88, 101, 242, 0.1)',
+					tension: 0.4,
+					fill: true,
+					borderWidth: 2
+				}]
+			},
+			options: {
+				responsive: true,
+				maintainAspectRatio: false,
+				plugins: {
+					legend: {
+						display: false
+					}
+				},
+				scales: {
+					y: {
+						beginAtZero: true,
+						grid: {
+							color: 'rgba(255, 255, 255, 0.1)'
+						},
+						ticks: {
+							color: 'rgba(255, 255, 255, 0.7)'
+						}
+					},
+					x: {
+						grid: {
+							display: false
+						},
+						ticks: {
+							color: 'rgba(255, 255, 255, 0.7)'
+						}
+					}
+				}
+			}
+		});
+	} catch (err) {
+		console.error('Error creating messages chart:', err);
+	}
+}
+
+async function createMemberActivityChart() {
+	const ctx = document.getElementById('memberActivityChart');
+	if (!ctx) return;
+
+	try {
+		const response = await fetch('/api/server/analytics/member-activity');
+		const result = await response.json();
+
+		const labels = result.joins.map(d => {
+			const date = new Date(d.date);
+			return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+		});
+		const joinsData = result.joins.map(d => d.count);
+		const leavesData = result.leaves.map(d => d.count);
+
+		new Chart(ctx, {
+			type: 'bar',
+			data: {
+				labels: labels,
+				datasets: [{
+					label: 'Joins',
+					data: joinsData,
+					backgroundColor: '#57F287',
+					borderRadius: 4
+				}, {
+					label: 'Leaves',
+					data: leavesData,
+					backgroundColor: '#ED4245',
+					borderRadius: 4
+				}]
+			},
+			options: {
+				responsive: true,
+				maintainAspectRatio: false,
+				plugins: {
+					legend: {
+						position: 'top',
+						labels: {
+							color: 'rgba(255, 255, 255, 0.9)'
+						}
+					}
+				},
+				scales: {
+					y: {
+						beginAtZero: true,
+						grid: {
+							color: 'rgba(255, 255, 255, 0.1)'
+						},
+						ticks: {
+							color: 'rgba(255, 255, 255, 0.7)'
+						}
+					},
+					x: {
+						grid: {
+							display: false
+						},
+						ticks: {
+							color: 'rgba(255, 255, 255, 0.7)'
+						}
+					}
+				}
+			}
+		});
+	} catch (err) {
+		console.error('Error creating member activity chart:', err);
+	}
+}
+
+async function createChannelDistributionChart() {
+	const ctx = document.getElementById('channelDistributionChart');
+	if (!ctx) return;
+
+	try {
+		const response = await fetch('/api/server/analytics/messages-by-channel');
+		const result = await response.json();
+
+		if (!result.data || result.data.length === 0) {
+			ctx.parentElement.innerHTML = '<p class="text-muted text-center p-4">No data available</p>';
+			return;
+		}
+
+		const top10 = result.data.slice(0, 10);
+		const labels = top10.map(d => d.channelName || d.channel || 'Unknown');
+		const data = top10.map(d => d.count || 0);
+
+		const colors = ['#5865F2', '#57F287', '#FEE75C', '#EB459E', '#00b4d8', '#f59e0b', '#8b5cf6', '#ec4899', '#10b981', '#6b7280'];
+
+		new Chart(ctx, {
+			type: 'doughnut',
+			data: {
+				labels: labels,
+				datasets: [{
+					data: data,
+					backgroundColor: colors
+				}]
+			},
+			options: {
+				responsive: true,
+				maintainAspectRatio: false,
+				plugins: {
+					legend: {
+						position: 'right',
+						labels: {
+							color: 'rgba(255, 255, 255, 0.9)'
+						}
+					}
+				}
+			}
+		});
+	} catch (err) {
+		console.error('Error creating channel distribution chart:', err);
+	}
+}
+
+async function createHourlyActivityChart() {
+	const ctx = document.getElementById('hourlyActivityChart');
+	if (!ctx) return;
+
+	try {
+		const response = await fetch('/api/server/analytics/hourly-activity');
+		const result = await response.json();
+
+		const labels = result.data.map(d => `${d.hour}:00`);
+		const data = result.data.map(d => d.count);
+
+		new Chart(ctx, {
+			type: 'bar',
+			data: {
+				labels: labels,
+				datasets: [{
+					label: 'Messages',
+					data: data,
+					backgroundColor: '#5865F2',
+					borderRadius: 4
+				}]
+			},
+			options: {
+				responsive: true,
+				maintainAspectRatio: false,
+				plugins: {
+					legend: {
+						display: false
+					}
+				},
+				scales: {
+					y: {
+						beginAtZero: true,
+						grid: {
+							color: 'rgba(255, 255, 255, 0.1)'
+						},
+						ticks: {
+							color: 'rgba(255, 255, 255, 0.7)'
+						}
+					},
+					x: {
+						grid: {
+							display: false
+						},
+						ticks: {
+							color: 'rgba(255, 255, 255, 0.7)',
+							maxRotation: 45,
+							minRotation: 45
+						}
+					}
+				}
+			}
+		});
+	} catch (err) {
+		console.error('Error creating hourly activity chart:', err);
+	}
+}
+
+async function initChannelsPage() {
+	try {
+		const response = await fetch('/api/server/info');
+		const serverInfo = await response.json();
+
+		if (serverInfo.error) {
+			throw new Error(serverInfo.error);
+		}
+
+		const textChannels = serverInfo.channels.filter(c => c.type === 0).length;
+		const voiceChannels = serverInfo.channels.filter(c => c.type === 2).length;
+		const categories = serverInfo.channels.filter(c => c.type === 4).length;
+		const forumChannels = serverInfo.channels.filter(c => c.type === 15).length;
+
+		document.getElementById('textChannelCount').textContent = textChannels;
+		document.getElementById('voiceChannelCount').textContent = voiceChannels;
+		document.getElementById('categoryCount').textContent = categories;
+		document.getElementById('forumChannelCount').textContent = forumChannels;
+
+		populateChannelsList(serverInfo.channels);
+	} catch (err) {
+		console.error('Error loading channels page:', err);
+	}
+}
+
+async function initRolesPage() {
+	try {
+		const response = await fetch('/api/server/info');
+		const serverInfo = await response.json();
+
+		if (serverInfo.error) {
+			throw new Error(serverInfo.error);
+		}
+
+		const hoistedRoles = serverInfo.roles.filter(r => r.hoist).length;
+		const managedRoles = serverInfo.roles.filter(r => r.managed).length;
+
+		document.getElementById('totalRoleCount').textContent = serverInfo.roles.length;
+		document.getElementById('hoistedRoleCount').textContent = hoistedRoles;
+		document.getElementById('managedRoleCount').textContent = managedRoles;
+
+		populateRolesList(serverInfo.roles);
+	} catch (err) {
+		console.error('Error loading roles page:', err);
+	}
+}
+
+async function initMembersPage() {
+	try {
+		const response = await fetch('/api/server/all-members');
+		const result = await response.json();
+
+		console.log('Members API response:', result);
+
+		if (result.error) {
+			console.error('Members API error:', result.error);
+			showNotification(result.error, 'warning');
+		}
+
+		if (!result.members || result.members.length === 0) {
+			const membersList = document.getElementById('membersList');
+			if (membersList) {
+				membersList.innerHTML = '<div class="text-center p-4 text-muted">No members found</div>';
+			}
+			return;
+		}
+
+		const activeMembers = result.members.filter(m => m.isActive);
+		const onlineMembers = activeMembers.filter(m => m.status === 'online').length;
+		const bots = result.members.filter(m => m.bot).length;
+		const boosters = activeMembers.filter(m => m.premiumSince).length;
+
+		document.getElementById('totalMemberCount').textContent = result.members.length;
+		document.getElementById('onlineMemberCount').textContent = onlineMembers;
+		document.getElementById('botCount').textContent = bots;
+		document.getElementById('boosterCount').textContent = boosters;
+
+		populateMembersList(result.members);
+		initServerSearch();
+	} catch (err) {
+		console.error('Error loading members page:', err);
+		showNotification('Error loading members: ' + err.message, 'danger');
+	}
+}
+
+async function initMessagesPage() {
+	try {
+		const statsResponse = await fetch('/api/server/messages-stats');
+		const stats = await statsResponse.json();
+
+		document.getElementById('totalMessageCount').textContent = stats.totalMessages || 0;
+		document.getElementById('recentMessageCount').textContent = stats.last24h || 0;
+		document.getElementById('attachmentCount').textContent = stats.withAttachments || 0;
+
+		await loadCachedMessages();
+		initMessageSearch();
+	} catch (err) {
+		console.error('Error loading messages page:', err);
+	}
+}
+
+function initMessageSearch() {
+	setTimeout(() => {
+		const searchInput = document.getElementById('messageSearch');
+		const clearBtn = document.getElementById('clearMessageSearch');
+
+		if (searchInput) {
+			searchInput.addEventListener('input', (e) => {
+				const query = e.target.value.toLowerCase();
+				const messages = document.querySelectorAll('#messagesContainer .list-group-item');
+				messages.forEach(message => {
+					const text = message.textContent.toLowerCase();
+					message.style.display = text.includes(query) ? '' : 'none';
+				});
+			});
+		}
+
+		if (clearBtn) {
+			clearBtn.addEventListener('click', () => {
+				if (searchInput) {
+					searchInput.value = '';
+					const messages = document.querySelectorAll('#messagesContainer .list-group-item');
+					messages.forEach(message => message.style.display = '');
+				}
+			});
+		}
+	}, 100);
+}
+
+function populateChannelsList(channels) {
+	const channelsList = document.getElementById('channelsList');
+	const channelTypeNames = { 0: 'Text', 2: 'Voice', 4: 'Category', 5: 'News', 13: 'Stage', 15: 'Forum' };
+	const channelTypeIcons = { 0: 'bi-hash', 2: 'bi-volume-up', 4: 'bi-folder', 5: 'bi-megaphone', 13: 'bi-broadcast', 15: 'bi-chat-square-text' };
+
+	const categories = channels.filter(c => c.type === 4);
+	const noCategory = channels.filter(c => c.type !== 4 && !c.parentId);
+
+	let html = `
+		<div class="list-group-item bg-primary text-white d-flex justify-content-between align-items-center">
+			<div><strong>Create New Channel/Category</strong></div>
+			<button class="btn btn-sm btn-light" onclick="createChannel()" title="Create channel">
+				<i class="bi bi-plus-circle"></i> New Channel
+			</button>
+		</div>
+	`;
+
+	noCategory.forEach(channel => {
+		const icon = channelTypeIcons[channel.type] || 'bi-circle';
+		const typeName = channelTypeNames[channel.type] || 'Unknown';
+		const sendAction = channel.type === 0 ? `
+			<button onclick="sendMessageToChannel('${channel.id}', '${channel.name}')">
+				<i class="bi bi-send"></i>
+				<span>Send Message</span>
+			</button>
+		` : '';
+		html += `
+			<div class="list-group-item d-flex justify-content-between align-items-center">
+				<div>
+					<i class="bi ${icon} me-2"></i>
+					<strong>${channel.name}</strong>
+					<span class="badge bg-secondary ms-2">${typeName}</span>
+					${channel.members !== null ? `<span class="badge bg-info ms-1">${channel.members} members</span>` : ''}
+					${channel.topic ? `<br><small class="text-muted ms-4">${channel.topic}</small>` : ''}
+				</div>
+				<div class="item-menu">
+					<button class="item-menu-btn" onclick="toggleMenu(this)">
+						<i class="bi bi-three-dots-vertical"></i>
+					</button>
+					<div class="item-menu-dropdown">
+						${sendAction}
+						${sendAction ? '<div class="divider"></div>' : ''}
+						<button onclick="editChannel('${channel.id}', '${channel.name}', '${channel.type}', '${(channel.topic || '').replace(/'/g, "\\'")}')">
+							<i class="bi bi-pencil"></i>
+							<span>Edit</span>
+						</button>
+						<button onclick="copyChannelId('${channel.id}')">
+							<i class="bi bi-clipboard"></i>
+							<span>Copy ID</span>
+						</button>
+						<div class="divider"></div>
+						<button class="text-danger" onclick="deleteChannel('${channel.id}', '${channel.name}')">
+							<i class="bi bi-trash"></i>
+							<span>Delete</span>
+						</button>
+					</div>
+				</div>
+			</div>
+		`;
+	});
+
+	categories.forEach(category => {
+		const childChannels = channels.filter(c => c.parentId === category.id);
+		html += `
+			<div class="list-group-item bg-body-secondary d-flex justify-content-between align-items-center">
+				<div>
+					<i class="bi bi-folder me-2"></i>
+					<strong>${category.name.toUpperCase()}</strong>
+					<span class="badge bg-secondary ms-2">${childChannels.length} channels</span>
+				</div>
+				<div class="item-menu">
+					<button class="item-menu-btn" onclick="toggleMenu(this)">
+						<i class="bi bi-three-dots-vertical"></i>
+					</button>
+					<div class="item-menu-dropdown">
+						<button onclick="createChannel('${category.id}')">
+							<i class="bi bi-plus-circle"></i>
+							<span>Add Channel</span>
+						</button>
+						<button onclick="editChannel('${category.id}', '${category.name}', '4', '')">
+							<i class="bi bi-pencil"></i>
+							<span>Edit Category</span>
+						</button>
+						<div class="divider"></div>
+						<button class="text-danger" onclick="deleteChannel('${category.id}', '${category.name}')">
+							<i class="bi bi-trash"></i>
+							<span>Delete Category</span>
+						</button>
+					</div>
+				</div>
+			</div>
+		`;
+		childChannels.forEach(channel => {
+			const icon = channelTypeIcons[channel.type] || 'bi-circle';
+			const typeName = channelTypeNames[channel.type] || 'Unknown';
+			const sendAction = channel.type === 0 ? `
+				<button onclick="sendMessageToChannel('${channel.id}', '${channel.name}')">
+					<i class="bi bi-send"></i>
+					<span>Send Message</span>
+				</button>
+			` : '';
+			html += `
+				<div class="list-group-item ps-5 d-flex justify-content-between align-items-center">
+					<div>
+						<i class="bi ${icon} me-2"></i>
+						${channel.name}
+						<span class="badge bg-secondary ms-2">${typeName}</span>
+						${channel.members !== null ? `<span class="badge bg-info ms-1">${channel.members} members</span>` : ''}
+						${channel.topic ? `<br><small class="text-muted ms-4">${channel.topic}</small>` : ''}
+					</div>
+					<div class="item-menu">
+						<button class="item-menu-btn" onclick="toggleMenu(this)">
+							<i class="bi bi-three-dots-vertical"></i>
+						</button>
+						<div class="item-menu-dropdown">
+							${sendAction}
+							${sendAction ? '<div class="divider"></div>' : ''}
+							<button onclick="editChannel('${channel.id}', '${channel.name}', '${channel.type}', '${(channel.topic || '').replace(/'/g, "\\'")}')">
+								<i class="bi bi-pencil"></i>
+								<span>Edit</span>
+							</button>
+							<button onclick="copyChannelId('${channel.id}')">
+								<i class="bi bi-clipboard"></i>
+								<span>Copy ID</span>
+							</button>
+							<div class="divider"></div>
+							<button class="text-danger" onclick="deleteChannel('${channel.id}', '${channel.name}')">
+								<i class="bi bi-trash"></i>
+								<span>Delete</span>
+							</button>
+						</div>
+					</div>
+				</div>
+			`;
+		});
+	});
+
+	channelsList.innerHTML = html;
+}
+
+function populateRolesList(roles) {
+	const rolesList = document.getElementById('rolesList');
+	let html = `
+		<div class="list-group-item bg-success text-white d-flex justify-content-between align-items-center">
+			<div><strong>Create New Role</strong></div>
+			<button class="btn btn-sm btn-light" onclick="createRole()" title="Create role">
+				<i class="bi bi-plus-circle"></i> New Role
+			</button>
+		</div>
+	`;
+
+	roles.forEach(role => {
+		html += `
+			<div class="list-group-item d-flex justify-content-between align-items-center">
+				<div>
+					<i class="bi bi-shield-fill me-2" style="color: ${role.hexColor}"></i>
+					<strong>${role.name}</strong>
+					<span class="badge bg-secondary ms-2">${role.memberCount} members</span>
+					${role.hoist ? '<span class="badge bg-primary ms-1">Hoisted</span>' : ''}
+					${role.managed ? '<span class="badge bg-warning ms-1">Managed</span>' : ''}
+				</div>
+				<div class="item-menu">
+					<button class="item-menu-btn" onclick="toggleMenu(this)">
+						<i class="bi bi-three-dots-vertical"></i>
+					</button>
+					<div class="item-menu-dropdown">
+						<button onclick="viewRoleMembers('${role.id}', '${role.name}')">
+							<i class="bi bi-people"></i>
+							<span>View Members</span>
+						</button>
+						<button onclick="editRole('${role.id}', '${role.name}', '${role.hexColor}')">
+							<i class="bi bi-pencil"></i>
+							<span>Edit</span>
+						</button>
+						<button onclick="copyRoleId('${role.id}')">
+							<i class="bi bi-clipboard"></i>
+							<span>Copy ID</span>
+						</button>
+						<div class="divider"></div>
+						<button class="text-danger" onclick="deleteRole('${role.id}', '${role.name}')">
+							<i class="bi bi-trash"></i>
+							<span>Delete</span>
+						</button>
+					</div>
+				</div>
+			</div>
+		`;
+	});
+
+	rolesList.innerHTML = html;
+}
+
+function populateMembersList(members) {
+	const membersList = document.getElementById('membersList');
+	const statusIcons = {
+		online: '<i class="bi bi-circle-fill text-success"></i>',
+		idle: '<i class="bi bi-circle-fill text-warning"></i>',
+		dnd: '<i class="bi bi-circle-fill text-danger"></i>',
+		offline: '<i class="bi bi-circle text-secondary"></i>',
+		left: '<i class="bi bi-door-closed text-danger"></i>'
+	};
+
+	let html = '';
+	members.forEach(member => {
+		const statusIcon = statusIcons[member.status] || statusIcons.offline;
+		const ownerBadge = member.isOwner ? '<span class="badge bg-warning ms-2"><i class="bi bi-crown"></i> Owner</span>' : '';
+		const botBadge = member.bot ? '<span class="badge bg-secondary ms-2">Bot</span>' : '';
+		const boosterBadge = member.premiumSince ? '<span class="badge bg-info ms-2"><i class="bi bi-gem"></i> Booster</span>' : '';
+		const leftBadge = !member.isActive ? '<span class="badge bg-danger ms-2"><i class="bi bi-door-closed"></i> Left</span>' : '';
+
+		html += `
+			<div class="list-group-item d-flex align-items-center ${!member.isActive ? 'opacity-75' : ''}" style="cursor: pointer;" onclick="viewMemberDetailsPage('${member.id}')">
+				<img src="${member.avatarURL}" alt="${member.displayName}" class="rounded-circle me-3" width="40" height="40">
+				<div class="flex-grow-1">
+					<div>
+						${statusIcon}
+						<strong class="ms-2">${member.displayName || member.username}</strong>
+						${ownerBadge}
+						${botBadge}
+						${boosterBadge}
+						${leftBadge}
+					</div>
+					<small class="text-muted">${member.username}</small>
+				</div>
+				<div class="item-menu" onclick="event.stopPropagation()">
+					<button class="item-menu-btn" onclick="toggleMenu(this)">
+						<i class="bi bi-three-dots-vertical"></i>
+					</button>
+					<div class="item-menu-dropdown">
+						<button onclick="viewMemberDetailsPage('${member.id}')">
+							<i class="bi bi-person-circle"></i>
+							<span>View Profile</span>
+						</button>
+						${member.isActive ? `
+							<button onclick="manageMemberRoles('${member.id}', '${member.displayName}')">
+								<i class="bi bi-shield"></i>
+								<span>Manage Roles</span>
+							</button>
+							<button onclick="changeNickname('${member.id}', '${member.displayName}')">
+								<i class="bi bi-pencil"></i>
+								<span>Change Nickname</span>
+							</button>
+						` : ''}
+						<button onclick="copyMemberId('${member.id}')">
+							<i class="bi bi-clipboard"></i>
+							<span>Copy ID</span>
+						</button>
+						${member.isActive ? `
+							<div class="divider"></div>
+							<button class="text-warning" onclick="timeoutMember('${member.id}', '${member.displayName}')">
+								<i class="bi bi-clock"></i>
+								<span>Timeout</span>
+							</button>
+							<button class="text-danger" onclick="kickMember('${member.id}', '${member.displayName}')">
+								<i class="bi bi-door-open"></i>
+								<span>Kick</span>
+							</button>
+							<button class="text-danger" onclick="banMember('${member.id}', '${member.displayName}')">
+								<i class="bi bi-ban"></i>
+								<span>Ban</span>
+							</button>
+						` : ''}
+					</div>
+				</div>
+			</div>
+		`;
+	});
+
+	membersList.innerHTML = html;
+}
+
+window.viewMemberDetailsPage = function (memberId) {
+	sessionStorage.setItem('selectedMemberId', memberId);
+	loadPage('member-details');
+};
+
+async function initMemberDetailsPage() {
+	const memberId = sessionStorage.getItem('selectedMemberId');
+
+	if (!memberId) {
+		document.getElementById('content').innerHTML = `
+			<div class="alert alert-warning">
+				<i class="bi bi-exclamation-triangle me-2"></i>
+				No member selected
+			</div>
+		`;
+		return;
+	}
+
+	try {
+		const response = await fetch(`/api/server/member-details?memberId=${memberId}`);
+		const member = await response.json();
+
+		if (member.error) {
+			throw new Error(member.error);
+		}
+
+		document.getElementById('memberDetailsName').textContent = member.displayName || member.username;
+		document.getElementById('memberAvatar').src = member.avatarURL;
+		document.getElementById('memberDisplayName').textContent = member.displayName || member.username;
+		document.getElementById('memberUsername').textContent = `@${member.username}`;
+		document.getElementById('memberUserId').textContent = member.id;
+
+		const badges = [];
+		if (member.isOwner) badges.push('<span class="badge bg-warning"><i class="bi bi-crown"></i> Server Owner</span>');
+		if (member.bot) badges.push('<span class="badge bg-secondary">Bot</span>');
+		if (member.premiumSince) badges.push('<span class="badge bg-info"><i class="bi bi-gem"></i> Server Booster</span>');
+		if (!member.isActive) badges.push('<span class="badge bg-danger"><i class="bi bi-door-closed"></i> Left Server</span>');
+		document.getElementById('memberBadges').innerHTML = badges.join(' ');
+
+		const statusIcons = {
+			online: '<span class="badge bg-success"><i class="bi bi-circle-fill"></i> Online</span>',
+			idle: '<span class="badge bg-warning"><i class="bi bi-circle-fill"></i> Idle</span>',
+			dnd: '<span class="badge bg-danger"><i class="bi bi-circle-fill"></i> Do Not Disturb</span>',
+			offline: '<span class="badge bg-secondary"><i class="bi bi-circle"></i> Offline</span>',
+			left: '<span class="badge bg-danger"><i class="bi bi-door-closed"></i> Left Server</span>'
+		};
+		document.getElementById('memberStatus').innerHTML = statusIcons[member.status] || statusIcons.offline;
+
+		if (member.joinedAt) {
+			const joinDate = new Date(member.joinedAt);
+			document.getElementById('memberJoinedAt').textContent = joinDate.toLocaleString();
+			const daysOnServer = Math.floor((Date.now() - member.joinedAt) / (1000 * 60 * 60 * 24));
+			document.getElementById('memberDaysOnServer').textContent = `${daysOnServer} days`;
+		} else {
+			document.getElementById('memberJoinedAt').textContent = 'Unknown';
+			document.getElementById('memberDaysOnServer').textContent = 'Unknown';
+		}
+
+		if (member.accountCreatedAt) {
+			const createDate = new Date(member.accountCreatedAt);
+			document.getElementById('memberCreatedAt').textContent = createDate.toLocaleString();
+			const accountDays = Math.floor((Date.now() - member.accountCreatedAt) / (1000 * 60 * 60 * 24));
+			document.getElementById('memberAccountAge').textContent = `${accountDays} days`;
+		} else {
+			document.getElementById('memberCreatedAt').textContent = 'Unknown';
+			document.getElementById('memberAccountAge').textContent = 'Unknown';
+		}
+
+		if (member.nickname) {
+			document.getElementById('memberNicknameRow').style.display = 'flex';
+			document.getElementById('memberNickname').textContent = member.nickname;
+		}
+
+		if (member.premiumSince) {
+			document.getElementById('memberBoostRow').style.display = 'flex';
+			const boostDate = new Date(member.premiumSince);
+			document.getElementById('memberBoostingSince').textContent = boostDate.toLocaleString();
+		}
+
+		if (member.roles && member.roles.length > 0) {
+			const rolesHTML = member.roles.map(r =>
+				`<span class="badge me-1 mb-1" style="background-color: ${r.color};">${r.name}</span>`
+			).join('');
+			document.getElementById('memberRolesDisplay').innerHTML = rolesHTML;
+		} else {
+			document.getElementById('memberRolesDisplay').innerHTML = '<span class="text-muted">No roles</span>';
+		}
+
+		if (member.activities && member.activities.length > 0) {
+			document.getElementById('memberActivitiesCard').style.display = 'block';
+			const activitiesHTML = member.activities.map(a =>
+				`<div class="mb-2"><i class="bi bi-controller me-2"></i>${a.name || a}</div>`
+			).join('');
+			document.getElementById('memberActivities').innerHTML = activitiesHTML;
+		}
+
+		if (member.recentActivity && member.recentActivity.length > 0) {
+			const activityHTML = member.recentActivity.slice(0, 10).map(event => {
+				const date = new Date(event.timestamp);
+				const eventNames = {
+					'MessageCreate': 'Sent a message',
+					'GuildMemberAdd': 'Joined the server',
+					'GuildMemberRemove': 'Left the server',
+					'GuildMemberUpdate': 'Updated profile',
+					'MessageUpdate': 'Edited a message',
+					'MessageDelete': 'Deleted a message'
+				};
+				const eventName = eventNames[event.event_name] || event.event_name;
+
+				return `
+					<div class="list-group-item">
+						<div class="d-flex justify-content-between">
+							<span><i class="bi bi-dot me-2"></i>${eventName}</span>
+							<small class="text-muted">${date.toLocaleString()}</small>
+						</div>
+					</div>
+				`;
+			}).join('');
+			document.getElementById('memberRecentActivity').innerHTML = activityHTML;
+		}
+
+		window.manageMemberRolesAction = () => manageMemberRoles(member.id, member.displayName);
+		window.changeNicknameAction = () => changeNickname(member.id, member.displayName);
+		window.timeoutMemberAction = () => timeoutMember(member.id, member.displayName);
+		window.kickMemberAction = () => kickMember(member.id, member.displayName);
+		window.banMemberAction = () => banMember(member.id, member.displayName);
+
+	} catch (err) {
+		console.error('Error loading member details:', err);
+		showNotification('Error loading member details: ' + err.message, 'danger');
+	}
+}
+
+async function loadCachedMessages() {
+	try {
+		const response = await fetch('/api/server/messages?limit=30');
+		const data = await response.json();
+		const messagesContainer = document.getElementById('messagesContainer');
+
+		if (data.error) {
+			messagesContainer.innerHTML = `
+				<div class="alert alert-warning m-3">
+					<i class="bi bi-exclamation-triangle me-2"></i>
+					${data.error}
+				</div>
+			`;
+			const statsElement = document.getElementById('messagesStats');
+			if (statsElement) statsElement.textContent = '0 messages';
+			return;
+		}
+
+		if (!data.messages || data.messages.length === 0) {
+			messagesContainer.innerHTML = '<div class="text-center p-4 text-muted">No cached messages</div>';
+			const statsElement = document.getElementById('messagesStats');
+			if (statsElement) statsElement.textContent = '0 messages';
+			return;
+		}
+
+		let html = '';
+		data.messages.forEach(msg => {
+			const authorAvatar = msg.author?.avatarURL || msg.authorAvatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
+			const authorName = msg.author?.username || msg.authorName || 'Unknown';
+			const timestamp = msg.createdTimestamp || msg.timestamp || Date.now();
+			const content = msg.content || '<em>No content</em>';
+			const messageId = msg.id || msg.messageId;
+
+			html += `
+				<div class="list-group-item" data-message-id="${messageId}">
+					<div class="d-flex">
+						<img src="${authorAvatar}" alt="${authorName}" class="rounded-circle me-3" width="40" height="40">
+						<div class="flex-grow-1">
+							<div class="d-flex justify-content-between">
+								<strong>${authorName}</strong>
+								<small class="text-muted">${new Date(timestamp).toLocaleString()}</small>
+							</div>
+							<div class="message-content">${content}</div>
+						</div>
+						<div class="item-menu">
+							<button class="item-menu-btn" onclick="toggleMenu(this)">
+								<i class="bi bi-three-dots-vertical"></i>
+							</button>
+							<div class="item-menu-dropdown">
+								<button onclick="viewMessageHistory('${messageId}')">
+									<i class="bi bi-clock-history"></i>
+									<span>View History</span>
+								</button>
+								<button onclick="copyMessageId('${messageId}')">
+									<i class="bi bi-clipboard"></i>
+									<span>Copy ID</span>
+								</button>
+								<button onclick="copyMessageContent('${content.replace(/'/g, "\\'")}')">
+									<i class="bi bi-clipboard-check"></i>
+									<span>Copy Content</span>
+								</button>
+								<div class="divider"></div>
+								<button onclick="addReactionToMessage('${messageId}')">
+									<i class="bi bi-emoji-smile"></i>
+									<span>Add Reaction</span>
+								</button>
+								<button class="text-warning" onclick="toggleMessagePriority('${messageId}')">
+									<i class="bi bi-star"></i>
+									<span>Toggle Priority</span>
+								</button>
+								<div class="divider"></div>
+								<button class="text-danger" onclick="deleteMessage('${messageId}')">
+									<i class="bi bi-trash"></i>
+									<span>Delete</span>
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+			`;
+		});
+
+		messagesContainer.innerHTML = html;
+		const statsElement = document.getElementById('messagesStats');
+		if (statsElement) statsElement.textContent = `${data.messages.length} messages`;
+	} catch (err) {
+		console.error('Error loading messages:', err);
+		const messagesContainer = document.getElementById('messagesContainer');
+		if (messagesContainer) {
+			messagesContainer.innerHTML = `
+				<div class="alert alert-danger m-3">
+					<i class="bi bi-x-circle me-2"></i>
+					Error loading messages: ${err.message}
+				</div>
+			`;
+		}
+	}
+}
+
+function initServerSearch() {
+	setTimeout(() => {
+		const searchInput = document.getElementById('serverSearch');
+		const clearBtn = document.getElementById('clearSearch');
+
+		if (searchInput) {
+			searchInput.addEventListener('input', (e) => {
+				const query = e.target.value.toLowerCase();
+				const members = document.querySelectorAll('#membersList .list-group-item');
+				members.forEach(member => {
+					const text = member.textContent.toLowerCase();
+					member.style.display = text.includes(query) ? '' : 'none';
+				});
+			});
+		}
+
+		if (clearBtn) {
+			clearBtn.addEventListener('click', () => {
+				if (searchInput) {
+					searchInput.value = '';
+					const members = document.querySelectorAll('#membersList .list-group-item');
+					members.forEach(member => member.style.display = '');
+				}
+			});
+		}
+	}, 100);
+}
+
+window.loadMoreMessages = async function () {
+	await loadCachedMessages();
+	showNotification('Messages reloaded', 'success');
+};
+
+window.createChannel = function () {
+	showNotification('Channel creation not implemented yet', 'info');
+};
+
+window.createRole = function () {
+	showNotification('Role creation not implemented yet', 'info');
+};
 
 async function renderServerPage(container) {
 	try {
@@ -1761,6 +2991,312 @@ async function deleteMessageFromCache(messageId, channelId) {
 	}
 }
 
+async function initConfigPage() {
+	try {
+		const response = await fetch('/api/config');
+		const config = await response.json();
+		currentConfig = config;
+
+		updateConfigStatus(config);
+
+		if (document.getElementById('config_client_token')) {
+			document.getElementById('config_client_token').value = config.client_token || '';
+		}
+		if (document.getElementById('config_client_id')) {
+			document.getElementById('config_client_id').value = config.client_id || '';
+		}
+		if (document.getElementById('config_discord_guild_id')) {
+			document.getElementById('config_discord_guild_id').value = config.discord_guild_id || '';
+		}
+
+		const isStandalone = config.db_type === 'sqlite';
+
+		if (isStandalone) {
+			document.getElementById('sqliteConfigSection').style.display = 'block';
+			document.getElementById('mysqlConfigForm').style.display = 'none';
+			document.getElementById('redisNotAvailableSection').style.display = 'block';
+			document.getElementById('redisConfigForm').style.display = 'none';
+			if (document.getElementById('config_db_path')) {
+				document.getElementById('config_db_path').value = config.db_path || './src/cordium.sqlite';
+			}
+		} else {
+			document.getElementById('sqliteConfigSection').style.display = 'none';
+			document.getElementById('mysqlConfigForm').style.display = 'block';
+			document.getElementById('redisNotAvailableSection').style.display = 'none';
+			document.getElementById('redisConfigForm').style.display = 'block';
+
+			if (document.getElementById('config_db_host')) {
+				document.getElementById('config_db_host').value = config.db_host || '';
+				document.getElementById('config_db_port').value = config.db_port || '3306';
+				document.getElementById('config_db_name').value = config.db_name || '';
+				document.getElementById('config_db_user').value = config.db_user || '';
+				document.getElementById('config_db_pass').value = config.db_pass || '';
+			}
+
+			if (document.getElementById('config_redis_host')) {
+				document.getElementById('config_redis_host').value = config.redis_host || '';
+				document.getElementById('config_redis_port').value = config.redis_port || '6379';
+				document.getElementById('config_redis_password').value = config.redis_password || '';
+				document.getElementById('config_redis_db').value = config.redis_db || '0';
+			}
+		}
+
+		if (document.getElementById('config_configurator_port')) {
+			document.getElementById('config_configurator_port').value = config.configurator_port || '3001';
+		}
+		if (document.getElementById('config_save_attachments')) {
+			document.getElementById('config_save_attachments').checked = config.save_attachments === 'true';
+		}
+
+		const discordForm = document.getElementById('discordConfigForm');
+		if (discordForm) {
+			discordForm.addEventListener('submit', async (e) => {
+				e.preventDefault();
+				await saveConfigFields(['client_token', 'client_id', 'discord_guild_id'], 'config_');
+			});
+		}
+
+		const mysqlForm = document.getElementById('mysqlConfigForm');
+		if (mysqlForm) {
+			mysqlForm.addEventListener('submit', async (e) => {
+				e.preventDefault();
+				await saveConfigFields(['db_host', 'db_port', 'db_name', 'db_user', 'db_pass'], 'config_');
+			});
+		}
+
+		const redisForm = document.getElementById('redisConfigForm');
+		if (redisForm) {
+			redisForm.addEventListener('submit', async (e) => {
+				e.preventDefault();
+				await saveConfigFields(['redis_host', 'redis_port', 'redis_password', 'redis_db'], 'config_');
+			});
+		}
+
+		const advancedForm = document.getElementById('advancedConfigForm');
+		if (advancedForm) {
+			advancedForm.addEventListener('submit', async (e) => {
+				e.preventDefault();
+				const response = await fetch('/api/config');
+				const currentConfig = await response.json();
+
+				currentConfig.configurator_port = document.getElementById('config_configurator_port').value;
+				currentConfig.save_attachments = document.getElementById('config_save_attachments').checked ? 'true' : 'false';
+
+				await fetch('/api/config', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(currentConfig)
+				});
+
+				showNotification('Advanced settings saved', 'success');
+			});
+		}
+	} catch (err) {
+		console.error('Error initializing config page:', err);
+		showNotification('Error loading configuration', 'danger');
+	}
+}
+
+async function updateConfigStatus(config) {
+	const isStandalone = config.db_type === 'sqlite';
+
+	document.getElementById('currentModeInfo').innerHTML = `
+		<span class="badge ${isStandalone ? 'bg-info' : 'bg-primary'}">${isStandalone ? 'Standalone' : 'Component'}</span>
+		<p class="text-muted mb-0 mt-2 small">
+			${isStandalone ? 'SQLite + RAM caching' : 'MySQL + Redis caching'}
+		</p>
+	`;
+
+	document.getElementById('databaseStatus').innerHTML = `
+		<span class="status-indicator status-${config.db_type ? 'online' : 'offline'}">
+			${config.db_type === 'sqlite' ? 'SQLite' : config.db_type === 'mysql' ? 'MySQL' : 'Not configured'}
+		</span>
+	`;
+
+	document.getElementById('redisStatus').innerHTML = `
+		<span class="status-indicator status-${config.redis_host ? 'online' : 'offline'}">
+			${config.redis_host ? 'Configured' : 'Not available'}
+		</span>
+	`;
+
+	document.getElementById('databaseTypeBadge').textContent = isStandalone ? 'SQLite' : 'MySQL';
+	document.getElementById('databaseTypeBadge').className = `badge bg-${isStandalone ? 'info' : 'success'}`;
+
+	document.getElementById('redisModeBadge').textContent = isStandalone ? 'RAM Cache' : 'Redis';
+	document.getElementById('redisModeBadge').className = `badge bg-${isStandalone ? 'warning' : 'danger'}`;
+
+	try {
+		const infoResponse = await fetch('/api/server/info');
+		const serverInfo = await infoResponse.json();
+		const discordBadge = document.getElementById('discordStatusBadge');
+
+		if (discordBadge) {
+			if (!serverInfo.error && serverInfo.guildName) {
+				discordBadge.textContent = 'Connected';
+				discordBadge.className = 'badge bg-success';
+				discordBadge.title = `Connected to ${serverInfo.guildName}`;
+			} else {
+				discordBadge.textContent = 'Disconnected';
+				discordBadge.className = 'badge bg-secondary';
+				discordBadge.title = 'Bot not connected';
+			}
+		}
+	} catch (err) {
+		const discordBadge = document.getElementById('discordStatusBadge');
+		if (discordBadge) {
+			discordBadge.textContent = 'Not Connected';
+			discordBadge.className = 'badge bg-secondary';
+		}
+	}
+}
+
+async function saveConfigFields(fields, prefix) {
+	try {
+		showLoading();
+		const response = await fetch('/api/config');
+		const currentConfig = await response.json();
+
+		fields.forEach(field => {
+			const element = document.getElementById(prefix + field);
+			if (element) {
+				currentConfig[field] = element.value;
+			}
+		});
+
+		const saveResponse = await fetch('/api/config', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(currentConfig)
+		});
+
+		const data = await saveResponse.json();
+		if (data.success) {
+			showNotification('Configuration saved', 'success');
+		} else {
+			showNotification('Error saving configuration', 'danger');
+		}
+	} catch (err) {
+		showNotification('Error: ' + err.message, 'danger');
+	} finally {
+		hideLoading();
+	}
+}
+
+window.togglePasswordVisibility = function (fieldId) {
+	const field = document.getElementById(fieldId);
+	const icon = field.nextElementSibling.querySelector('i');
+	if (field.type === 'password') {
+		field.type = 'text';
+		icon.className = 'bi bi-eye-slash';
+	} else {
+		field.type = 'password';
+		icon.className = 'bi bi-eye';
+	}
+};
+
+window.testDatabaseConnection = async function () {
+	const result = document.getElementById('dbTestResult');
+	result.style.display = 'block';
+	result.innerHTML = '<div class="spinner-border spinner-border-sm me-2"></div>Testing connection...';
+
+	try {
+		const response = await fetch('/api/config/test-database', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				db_host: document.getElementById('config_db_host').value,
+				db_port: document.getElementById('config_db_port').value,
+				db_name: document.getElementById('config_db_name').value,
+				db_user: document.getElementById('config_db_user').value,
+				db_pass: document.getElementById('config_db_pass').value
+			})
+		});
+
+		const data = await response.json();
+		if (data.success) {
+			result.className = 'alert alert-success py-2';
+			result.innerHTML = '<i class="bi bi-check-circle me-2"></i>Connection successful!';
+		} else {
+			result.className = 'alert alert-danger py-2';
+			result.innerHTML = '<i class="bi bi-x-circle me-2"></i>' + (data.error || 'Connection failed');
+		}
+	} catch (err) {
+		result.className = 'alert alert-danger py-2';
+		result.innerHTML = '<i class="bi bi-x-circle me-2"></i>Error: ' + err.message;
+	}
+};
+
+window.testRedisConnection = async function () {
+	const result = document.getElementById('redisTestResult');
+	result.style.display = 'block';
+	result.innerHTML = '<div class="spinner-border spinner-border-sm me-2"></div>Testing connection...';
+
+	try {
+		const response = await fetch('/api/config/test-redis', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				redis_host: document.getElementById('config_redis_host').value,
+				redis_port: document.getElementById('config_redis_port').value,
+				redis_password: document.getElementById('config_redis_password').value,
+				redis_db: document.getElementById('config_redis_db').value
+			})
+		});
+
+		const data = await response.json();
+		if (data.success) {
+			result.className = 'alert alert-success py-2';
+			result.innerHTML = '<i class="bi bi-check-circle me-2"></i>Connection successful!';
+		} else {
+			result.className = 'alert alert-danger py-2';
+			result.innerHTML = '<i class="bi bi-x-circle me-2"></i>' + (data.error || 'Connection failed');
+		}
+	} catch (err) {
+		result.className = 'alert alert-danger py-2';
+		result.innerHTML = '<i class="bi bi-x-circle me-2"></i>Error: ' + err.message;
+	}
+};
+
+window.reconfigureWizard = async function () {
+	if (confirm('This will restart the setup wizard. Your current configuration will be kept until you complete the wizard. Continue?')) {
+		try {
+			const response = await fetch('/api/config');
+			const config = await response.json();
+
+			config.wizard_step = '1';
+			config.wizard_mode = '';
+
+			await fetch('/api/config', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(config)
+			});
+
+			window.location.reload();
+		} catch (err) {
+			console.error('Error restarting wizard:', err);
+			showNotification('Error: ' + err.message, 'danger');
+		}
+	}
+};
+
+async function saveConfigSection(data) {
+	try {
+		const response = await fetch('/api/config', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(data)
+		});
+		if (response.ok) {
+			showNotification('Configuration saved successfully', 'success');
+		} else {
+			showNotification('Failed to save configuration', 'danger');
+		}
+	} catch (err) {
+		showNotification('Error saving configuration: ' + err.message, 'danger');
+	}
+}
+
 async function renderConfigPage(container) {
 	const response = await fetch('/api/config');
 	const config = await response.json();
@@ -2047,6 +3583,82 @@ async function renderConfigPage(container) {
 	});
 }
 
+async function initFilesPage(category, title) {
+	const response = await fetch(`/api/files/${category}`);
+	const files = await response.json();
+
+	document.getElementById('pageTitle').textContent = title;
+
+	const filesList = document.getElementById('filesList');
+	const fileNameDisplay = document.getElementById('currentFileName');
+	const saveBtn = document.getElementById('saveBtn');
+	const deleteBtn = document.getElementById('deleteBtn');
+	const editorContainer = document.getElementById('editorContainer');
+
+	filesList.innerHTML = files.length === 0 ? '<p class="text-muted p-3 text-center">No files found</p>' : '';
+
+	const textarea = document.createElement('textarea');
+	textarea.id = 'fileEditor';
+	editorContainer.innerHTML = '';
+	editorContainer.appendChild(textarea);
+
+	currentEditor = CodeMirror.fromTextArea(textarea, {
+		mode: 'javascript',
+		theme: currentTheme === 'dark' ? 'dracula' : 'elegant',
+		lineNumbers: true,
+		autoCloseBrackets: true,
+		matchBrackets: true,
+		indentUnit: 4,
+		tabSize: 4,
+		indentWithTabs: true
+	});
+
+	let currentFile = null;
+
+	files.forEach(file => {
+		const fileItem = document.createElement('div');
+		fileItem.className = 'file-item';
+		fileItem.innerHTML = `
+            <i class="bi bi-file-code me-2"></i>
+            ${file.path}
+        `;
+		fileItem.addEventListener('click', async () => {
+			document.querySelectorAll('.file-item').forEach(item => item.classList.remove('active'));
+			fileItem.classList.add('active');
+			await loadFile(category, file.path);
+			currentFile = file.path;
+			fileNameDisplay.textContent = file.path;
+			saveBtn.disabled = false;
+			deleteBtn.disabled = false;
+		});
+		filesList.appendChild(fileItem);
+	});
+
+	saveBtn.addEventListener('click', async () => {
+		if (currentFile) {
+			await saveFile(category, currentFile, currentEditor.getValue());
+		}
+	});
+
+	if (deleteBtn) {
+		deleteBtn.addEventListener('click', async () => {
+			if (currentFile && confirm(`Are you sure you want to delete ${currentFile}?`)) {
+				await deleteFile(category, currentFile);
+				await loadPage(currentPage);
+			}
+		});
+	}
+
+	window.createNewFile = async () => {
+		const fileName = prompt('Enter file name (without .js extension):');
+		if (fileName) {
+			const fullName = fileName.endsWith('.js') ? fileName : `${fileName}.js`;
+			await saveFile(category, fullName, '');
+			await loadPage(currentPage);
+		}
+	};
+}
+
 async function renderFilesPage(container, category, title) {
 	const response = await fetch(`/api/files/${category}`);
 	const files = await response.json();
@@ -2268,9 +3880,17 @@ async function saveFullConfig() {
 	}
 }
 
-function showLoading() {
-	document.querySelector('.loading-overlay').style.display = 'block';
-	document.querySelector('.loading-spinner').style.display = 'block';
+function showLoading(message = 'Loading...') {
+	const overlay = document.querySelector('.loading-overlay');
+	const spinner = document.querySelector('.loading-spinner');
+	const messageEl = spinner.querySelector('.loading-message');
+
+	if (messageEl) {
+		messageEl.textContent = message;
+	}
+
+	overlay.style.display = 'flex';
+	spinner.style.display = 'flex';
 }
 
 function hideLoading() {
@@ -2278,29 +3898,47 @@ function hideLoading() {
 	document.querySelector('.loading-spinner').style.display = 'none';
 }
 
-function showNotification(message, type) {
-	const alertDiv = document.createElement('div');
-	alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
-	alertDiv.style.cssText = `
-		position: fixed;
-		top: 20px;
-		left: 50%;
-		transform: translateX(-50%);
-		z-index: 9999;
-		min-width: 300px;
-		max-width: 600px;
-		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+function showNotification(message, type = 'info') {
+	const container = document.getElementById('notificationContainer') || createNotificationContainer();
+
+	const icons = {
+		success: 'check-circle-fill',
+		danger: 'x-circle-fill',
+		warning: 'exclamation-triangle-fill',
+		info: 'info-circle-fill',
+		primary: 'bell-fill'
+	};
+
+	const notification = document.createElement('div');
+	notification.className = `notification notification-${type}`;
+	notification.innerHTML = `
+		<div class="notification-icon">
+			<i class="bi bi-${icons[type] || icons.info}"></i>
+		</div>
+		<div class="notification-content">
+			<div class="notification-message">${message}</div>
+		</div>
+		<button class="notification-close" onclick="this.parentElement.remove()">
+			<i class="bi bi-x"></i>
+		</button>
 	`;
-	alertDiv.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-	document.body.appendChild(alertDiv);
+
+	container.appendChild(notification);
+
+	setTimeout(() => notification.classList.add('show'), 10);
 
 	setTimeout(() => {
-		alertDiv.classList.remove('show');
-		setTimeout(() => alertDiv.remove(), 150);
-	}, 3000);
+		notification.classList.remove('show');
+		setTimeout(() => notification.remove(), 300);
+	}, 4000);
+}
+
+function createNotificationContainer() {
+	const container = document.createElement('div');
+	container.id = 'notificationContainer';
+	container.className = 'notification-container';
+	document.body.appendChild(container);
+	return container;
 }
 
 async function sendMessageToChannel(channelId, channelName) {
