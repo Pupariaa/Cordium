@@ -7,3 +7,4 @@ config/config.env
 /src/files/downloads
 src/files/attachmentsIndex.json
 src/cordium.sqlite
+*.env
