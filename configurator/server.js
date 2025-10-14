@@ -743,9 +743,18 @@ app.post('/api/server/delete-role', async (req, res) => {
 			return res.json({ success: false, error: 'Role not found' });
 		}
 
+		console.log(`Deleting role: ${role.name} (${role.id})`);
 		await role.delete();
+		console.log(`Role deleted successfully: ${role.name}`);
+
+		setTimeout(() => {
+			const checkRole = global.guild.roles.cache.get(roleId);
+			console.log(`Cache check after deletion: ${checkRole ? 'Still in cache' : 'Removed from cache'}`);
+		}, 100);
+
 		res.json({ success: true });
 	} catch (err) {
+		console.error(`Error deleting role:`, err);
 		res.json({ success: false, error: err.message });
 	}
 });
