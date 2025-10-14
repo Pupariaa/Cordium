@@ -218,12 +218,12 @@ async function renderSetupWizard() {
 											<div class="row g-2 mb-2">
 												<div class="col-md-6">
 													<label class="form-label">Client ID</label>
-													<input type="text" class="form-control" id="wizard_client_id" value="${config.client_id || ''}" required>
+												<input type="text" class="form-control" id="wizard_client_id" value="${config.client_id || ''}" required>
 													<small class="form-text text-muted">General Information</small>
-												</div>
+											</div>
 												<div class="col-md-6">
 													<label class="form-label">Guild ID (Server ID)</label>
-													<input type="text" class="form-control" id="wizard_discord_guild_id" value="${config.discord_guild_id || ''}" required>
+												<input type="text" class="form-control" id="wizard_discord_guild_id" value="${config.discord_guild_id || ''}" required>
 													<small class="form-text text-muted">Right-click server</small>
 												</div>
 											</div>
@@ -270,55 +270,55 @@ async function renderSetupWizard() {
 													<div class="wizard-config-card mb-2">
 														<div class="wizard-config-header">
 															<i class="bi bi-database me-1"></i>MySQL
-														</div>
+												</div>
 														<div class="wizard-config-body">
 															<input type="text" class="form-control form-control-sm mb-2" id="wizard_db_host" value="${config.db_host || ''}" placeholder="Host (localhost)" required>
 															<input type="text" class="form-control form-control-sm mb-2" id="wizard_db_name" value="${config.db_name || ''}" placeholder="Database Name" required>
 															<div class="row g-2 mb-2">
 																<div class="col-4">
 																	<input type="number" class="form-control form-control-sm" id="wizard_db_port" value="${config.db_port || ''}" placeholder="Port" required>
-																</div>
+												</div>
 																<div class="col-4">
 																	<input type="text" class="form-control form-control-sm" id="wizard_db_user" value="${config.db_user || ''}" placeholder="User" required>
-																</div>
+											</div>
 																<div class="col-4">
 																	<input type="password" class="form-control form-control-sm" id="wizard_db_pass" value="${config.db_pass || ''}" placeholder="Pass" required>
-																</div>
-															</div>
+												</div>
+												</div>
 															<div id="wizardDbTestResult" style="display: none;" class="mb-2"></div>
 															<div class="d-flex gap-1">
 																<button type="button" class="btn btn-xs btn-outline-primary flex-fill" id="wizardTestDbBtn">
 																	<i class="bi bi-wifi"></i> Test
-																</button>
+												</button>
 																<button type="button" class="btn btn-xs btn-primary flex-fill" id="wizardCreateDbBtn">
 																	<i class="bi bi-database-add"></i> Create
-																</button>
-															</div>
-														</div>
-													</div>
-												</div>
-												
+												</button>
+											</div>
+									</div>
+								</div>
+							</div>
+
 												<div class="col-lg-6">
 													<div class="wizard-config-card mb-2">
 														<div class="wizard-config-header">
 															<i class="bi bi-lightning-charge me-1"></i>Redis
-														</div>
+												</div>
 														<div class="wizard-config-body">
 															<div class="row g-2 mb-2">
 																<div class="col-8">
 																	<input type="text" class="form-control form-control-sm" id="wizard_redis_host" value="${config.redis_host || ''}" placeholder="Host (localhost)" required>
-																</div>
+												</div>
 																<div class="col-4">
 																	<input type="number" class="form-control form-control-sm" id="wizard_redis_port" value="${config.redis_port || ''}" placeholder="Port" required>
-																</div>
-															</div>
+											</div>
+												</div>
 															<div class="row g-2 mb-2">
 																<div class="col-8">
 																	<input type="password" class="form-control form-control-sm" id="wizard_redis_password" value="${config.redis_password || ''}" placeholder="Password (optional)">
-																</div>
+												</div>
 																<div class="col-4">
 																	<input type="number" class="form-control form-control-sm" id="wizard_redis_db" value="${config.redis_db || '0'}" placeholder="DB">
-																</div>
+											</div>
 															</div>
 															<div id="wizardRedisTestResult" style="display: none;" class="mb-2"></div>
 															<button type="button" class="btn btn-xs btn-outline-info w-100" id="wizardTestRedisBtn">
@@ -2093,7 +2093,7 @@ async function loadCachedMessages() {
 				<label for="selectAllCheckbox">Select All</label>
 			</div>
 		`;
-		
+
 		data.messages.forEach(msg => {
 			const authorAvatar = msg.author?.avatarURL || msg.authorAvatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
 			const authorName = msg.author?.username || msg.authorName || 'Unknown';
@@ -4313,8 +4313,7 @@ async function createChannel(parentId = null) {
 		const data = await response.json();
 		if (data.success) {
 			showNotification('Channel created successfully!', 'success');
-			await loadPage('server');
-			document.getElementById('channels-tab').click();
+			await loadPage('channels');
 		} else {
 			showNotification('Failed: ' + data.error, 'danger');
 		}
@@ -4343,8 +4342,7 @@ async function editChannel(channelId, currentName, type, currentTopic) {
 		const data = await response.json();
 		if (data.success) {
 			showNotification('Channel updated successfully!', 'success');
-			await loadPage('server');
-			document.getElementById('channels-tab').click();
+			await loadPage('channels');
 		} else {
 			showNotification('Failed: ' + data.error, 'danger');
 		}
@@ -4366,8 +4364,7 @@ async function deleteChannel(channelId, channelName) {
 		const data = await response.json();
 		if (data.success) {
 			showNotification('Channel deleted successfully!', 'success');
-			await loadPage('server');
-			document.getElementById('channels-tab').click();
+			await loadPage('channels');
 		} else {
 			showNotification('Failed: ' + data.error, 'danger');
 		}
@@ -4393,8 +4390,7 @@ async function createRole() {
 		const data = await response.json();
 		if (data.success) {
 			showNotification('Role created successfully!', 'success');
-			await loadPage('server');
-			document.getElementById('roles-tab').click();
+			await loadPage('roles');
 		} else {
 			showNotification('Failed: ' + data.error, 'danger');
 		}
@@ -4420,8 +4416,7 @@ async function editRole(roleId, currentName, currentColor) {
 		const data = await response.json();
 		if (data.success) {
 			showNotification('Role updated successfully!', 'success');
-			await loadPage('server');
-			document.getElementById('roles-tab').click();
+			await loadPage('roles');
 		} else {
 			showNotification('Failed: ' + data.error, 'danger');
 		}
@@ -4433,6 +4428,8 @@ async function editRole(roleId, currentName, currentColor) {
 async function deleteRole(roleId, roleName) {
 	if (!confirm(`Delete role "${roleName}"?\n\nThis action cannot be undone!`)) return;
 
+	console.log('Deleting role:', roleId, roleName);
+
 	try {
 		const response = await fetch('/api/server/delete-role', {
 			method: 'POST',
@@ -4440,15 +4437,19 @@ async function deleteRole(roleId, roleName) {
 			body: JSON.stringify({ roleId })
 		});
 
+		console.log('Response status:', response.status);
 		const data = await response.json();
+		console.log('Response data:', data);
+
 		if (data.success) {
 			showNotification('Role deleted successfully!', 'success');
-			await loadPage('server');
-			document.getElementById('roles-tab').click();
+			await new Promise(resolve => setTimeout(resolve, 1000));
+			await loadPage('roles');
 		} else {
 			showNotification('Failed: ' + data.error, 'danger');
 		}
 	} catch (err) {
+		console.error('Error deleting role:', err);
 		showNotification('Error: ' + err.message, 'danger');
 	}
 }
@@ -4467,8 +4468,7 @@ async function assignRole(roleId, roleName) {
 		const data = await response.json();
 		if (data.success) {
 			showNotification('Role assigned successfully!', 'success');
-			await loadPage('server');
-			document.getElementById('members-tab').click();
+			await loadPage('members');
 		} else {
 			showNotification('Failed: ' + data.error, 'danger');
 		}
@@ -4634,8 +4634,7 @@ async function saveRoleChanges() {
 		await Promise.all(promises);
 		showNotification('Roles updated successfully!', 'success');
 		bootstrap.Modal.getInstance(document.getElementById('manageRolesModal')).hide();
-		await loadPage('server');
-		document.getElementById('members-tab').click();
+		await loadPage('members');
 	} catch (err) {
 		showNotification('Error updating roles: ' + err.message, 'danger');
 	}
@@ -4678,8 +4677,7 @@ async function saveNicknameChange() {
 		if (data.success) {
 			showNotification('Nickname changed successfully!', 'success');
 			bootstrap.Modal.getInstance(document.getElementById('changeNicknameModal')).hide();
-			await loadPage('server');
-			document.getElementById('members-tab').click();
+			await loadPage('members');
 		} else {
 			showNotification('Failed: ' + data.error, 'danger');
 		}
@@ -4743,8 +4741,7 @@ async function saveTimeout() {
 		if (data.success) {
 			showNotification(`${currentModalMemberName} timed out for ${duration} minutes!`, 'success');
 			bootstrap.Modal.getInstance(document.getElementById('timeoutModal')).hide();
-			await loadPage('server');
-			document.getElementById('members-tab').click();
+			await loadPage('members');
 		} else {
 			showNotification('Failed: ' + data.error, 'danger');
 		}
@@ -4793,8 +4790,7 @@ async function confirmKick() {
 		if (data.success) {
 			showNotification(`${currentModalMemberName} has been kicked!`, 'success');
 			bootstrap.Modal.getInstance(document.getElementById('kickModal')).hide();
-			await loadPage('server');
-			document.getElementById('members-tab').click();
+			await loadPage('members');
 		} else {
 			showNotification('Failed: ' + data.error, 'danger');
 		}
@@ -4849,8 +4845,7 @@ async function confirmBan() {
 		if (data.success) {
 			showNotification(`${currentModalMemberName} has been banned!`, 'success');
 			bootstrap.Modal.getInstance(document.getElementById('banModal')).hide();
-			await loadPage('server');
-			document.getElementById('members-tab').click();
+			await loadPage('members');
 		} else {
 			showNotification('Failed: ' + data.error, 'danger');
 		}
@@ -4867,7 +4862,7 @@ function toggleItemSelection(itemId, itemType) {
 		selectedItems.add(itemId);
 		document.querySelector(`[data-item-id="${itemId}"]`)?.classList.add('selected');
 	}
-	
+
 	selectionMode = itemType;
 	updateSelectionBar();
 }
@@ -4875,7 +4870,7 @@ function toggleItemSelection(itemId, itemType) {
 function selectAllItems(itemType) {
 	const checkboxes = document.querySelectorAll(`.item-checkbox[data-item-type="${itemType}"]`);
 	const selectAllCheckbox = document.getElementById('selectAllCheckbox');
-	
+
 	if (selectAllCheckbox && selectAllCheckbox.checked) {
 		checkboxes.forEach(cb => {
 			cb.checked = true;
@@ -4889,7 +4884,7 @@ function selectAllItems(itemType) {
 			document.querySelector(`[data-item-id="${cb.value}"]`)?.classList.remove('selected');
 		});
 	}
-	
+
 	selectionMode = selectedItems.size > 0 ? itemType : null;
 	updateSelectionBar();
 }
@@ -4908,20 +4903,20 @@ function updateSelectionBar() {
 	const selectionBar = document.getElementById('selectionBar');
 	const selectionCount = document.getElementById('selectionCount');
 	const selectionActions = document.getElementById('selectionActions');
-	
+
 	const count = selectedItems.size;
-	
+
 	if (count === 0) {
 		selectionBar.classList.remove('visible');
 		return;
 	}
-	
+
 	selectionCount.textContent = `${count} selected`;
 	selectionBar.classList.add('visible');
-	
+
 	let actionsHTML = '';
-	
-	switch(selectionMode) {
+
+	switch (selectionMode) {
 		case 'role':
 			actionsHTML = `
 				<button class="btn btn-danger" onclick="bulkDeleteRoles()">
@@ -4955,13 +4950,13 @@ function updateSelectionBar() {
 			`;
 			break;
 	}
-	
+
 	selectionActions.innerHTML = actionsHTML;
 }
 
 async function bulkDeleteRoles() {
 	if (!confirm(`Are you sure you want to delete ${selectedItems.size} role(s)?`)) return;
-	
+
 	const promises = Array.from(selectedItems).map(roleId =>
 		fetch('/api/server/delete-role', {
 			method: 'POST',
@@ -4969,13 +4964,13 @@ async function bulkDeleteRoles() {
 			body: JSON.stringify({ roleId })
 		})
 	);
-	
+
 	try {
 		await Promise.all(promises);
 		showNotification(`${selectedItems.size} role(s) deleted successfully!`, 'success');
 		clearSelection();
-		await loadPage('server');
-		document.getElementById('roles-tab').click();
+		await new Promise(resolve => setTimeout(resolve, 1000));
+		await loadPage('roles');
 	} catch (err) {
 		showNotification('Error deleting roles: ' + err.message, 'danger');
 	}
@@ -4983,7 +4978,7 @@ async function bulkDeleteRoles() {
 
 async function bulkDeleteChannels() {
 	if (!confirm(`Are you sure you want to delete ${selectedItems.size} channel(s)?`)) return;
-	
+
 	const promises = Array.from(selectedItems).map(channelId =>
 		fetch('/api/server/delete-channel', {
 			method: 'POST',
@@ -4991,13 +4986,12 @@ async function bulkDeleteChannels() {
 			body: JSON.stringify({ channelId })
 		})
 	);
-	
+
 	try {
 		await Promise.all(promises);
 		showNotification(`${selectedItems.size} channel(s) deleted successfully!`, 'success');
 		clearSelection();
-		await loadPage('server');
-		document.getElementById('channels-tab').click();
+		await loadPage('channels');
 	} catch (err) {
 		showNotification('Error deleting channels: ' + err.message, 'danger');
 	}
@@ -5005,7 +4999,7 @@ async function bulkDeleteChannels() {
 
 async function bulkDeleteMessages() {
 	if (!confirm(`Are you sure you want to delete ${selectedItems.size} message(s)?`)) return;
-	
+
 	const promises = Array.from(selectedItems).map(messageId =>
 		fetch('/api/server/delete-message', {
 			method: 'POST',
@@ -5013,13 +5007,12 @@ async function bulkDeleteMessages() {
 			body: JSON.stringify({ messageId })
 		})
 	);
-	
+
 	try {
 		await Promise.all(promises);
 		showNotification(`${selectedItems.size} message(s) deleted successfully!`, 'success');
 		clearSelection();
-		await loadPage('server');
-		document.getElementById('messages-tab').click();
+		await loadPage('messages');
 	} catch (err) {
 		showNotification('Error deleting messages: ' + err.message, 'danger');
 	}
@@ -5033,13 +5026,12 @@ async function bulkPinMessages() {
 			body: JSON.stringify({ messageId })
 		})
 	);
-	
+
 	try {
 		await Promise.all(promises);
 		showNotification(`${selectedItems.size} message(s) pinned successfully!`, 'success');
 		clearSelection();
-		await loadPage('server');
-		document.getElementById('messages-tab').click();
+		await loadPage('messages');
 	} catch (err) {
 		showNotification('Error pinning messages: ' + err.message, 'danger');
 	}
@@ -5053,13 +5045,12 @@ async function bulkUnpinMessages() {
 			body: JSON.stringify({ messageId })
 		})
 	);
-	
+
 	try {
 		await Promise.all(promises);
 		showNotification(`${selectedItems.size} message(s) unpinned successfully!`, 'success');
 		clearSelection();
-		await loadPage('server');
-		document.getElementById('messages-tab').click();
+		await loadPage('messages');
 	} catch (err) {
 		showNotification('Error unpinning messages: ' + err.message, 'danger');
 	}
