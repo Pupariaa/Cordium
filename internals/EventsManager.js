@@ -119,7 +119,9 @@ class EventsManager extends FilesManager {
 					//	 executorId: executor.id,
 					// });
 
-					global.messagesDatabase.bulkDelete(channel.id);
+					if (global.messagesDatabase) {
+						await global.messagesDatabase.bulkDelete(channel.id);
+					}
 
 					this.report('channel.name', channel.name, 'executor.tag', executor.tag, 'channel.type', global.guild.channelTypeStr(channel.type));
 				})?.listen();

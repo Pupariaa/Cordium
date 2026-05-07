@@ -1,1 +1,39 @@
-{}
+{
+  "autoRoles": [
+    "Lvl1"
+  ],
+  "extend-console": {
+    "formatErrors": true,
+    "colors": {
+      "Reset": "\u001b[0m",
+      "Bright": "\u001b[1m",
+      "Dim": "\u001b[2m",
+      "Underscore": "\u001b[4m",
+      "Blink": "\u001b[5m",
+      "Reverse": "\u001b[7m",
+      "Hidden": "\u001b[8m",
+      "FgBlack": "\u001b[30m",
+      "FgRed": "\u001b[31m",
+      "FgGreen": "\u001b[32m",
+      "FgYellow": "\u001b[33m",
+      "FgBlue": "\u001b[34m",
+      "FgMagenta": "\u001b[35m",
+      "FgCyan": "\u001b[36m",
+      "FgWhite": "\u001b[37m",
+      "BgBlack": "\u001b[40m",
+      "BgRed": "\u001b[41m",
+      "BgGreen": "\u001b[42m",
+      "BgYellow": "\u001b[43m",
+      "BgBlue": "\u001b[44m",
+      "BgMagenta": "\u001b[45m",
+      "BgCyan": "\u001b[46m",
+      "BgWhite": "\u001b[47m"
+    },
+    "logFilenamesFormat": "filename",
+    "logFunctionNameAnonymousObjectAlias": "module",
+    "errorFilenamesFormat": "relative",
+    "errorFunctionNameAnonymousObjectAlias": "",
+    "ignoreNodeModulesErrors": true,
+    "logLevel": 3
+  }
+}

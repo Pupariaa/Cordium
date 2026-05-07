@@ -1,0 +1,59 @@
+<div class="row">
+	<div class="col-12">
+		<h2 class="mb-4">
+			<i class="bi bi-person-plus me-2"></i>
+			Auto Roles
+		</h2>
+	</div>
+</div>
+
+<div class="row mb-4">
+	<div class="col-md-6">
+		<div class="card shadow-sm">
+			<div class="card-body">
+				<h6 class="card-title mb-2">
+					<i class="bi bi-shield-check me-2 text-success"></i>
+					Auto-assigned Roles
+				</h6>
+				<h3 class="mb-0" id="autoRolesCount">0</h3>
+			</div>
+		</div>
+	</div>
+	<div class="col-md-6">
+		<div class="card shadow-sm">
+			<div class="card-body">
+				<h6 class="card-title mb-2">
+					<i class="bi bi-shield me-2 text-primary"></i>
+					Total Roles
+				</h6>
+				<h3 class="mb-0" id="totalRolesCount">--</h3>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="row">
+	<div class="col-12">
+		<div class="card">
+			<div class="card-header">
+				<i class="bi bi-gear me-2"></i>Configure Auto-assigned Roles
+			</div>
+			<div class="card-body">
+				<p class="text-muted mb-3">Select which roles should be automatically assigned to new members when they
+					join the server.</p>
+				<div id="autoRolesList" class="mb-3">
+					<div class="text-center p-4">
+						<div class="cordium-spinner spinner-sm">
+							<img src="logo-base.png" alt="Loading" class="cordium-spinner-base">
+							<img src="logo-arrow.png" alt="Loading" class="cordium-spinner-arrow">
+						</div>
+					</div>
+				</div>
+				<button type="button" class="btn btn-primary" onclick="saveAutoRoles()">
+					<i class="bi bi-save me-2"></i>Save Configuration
+				</button>
+			</div>
+		</div>
+	</div>
+</div>
+

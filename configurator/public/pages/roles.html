@@ -48,16 +48,73 @@
 		<div class="card">
 			<div class="card-header d-flex justify-content-between align-items-center">
 				<span><i class="bi bi-shield me-2"></i>All Roles</span>
+				<button class="btn btn-sm btn-primary" onclick="showSetupRoleModal()">
+					<i class="bi bi-magic me-1"></i>Create Pre-configured Role
+				</button>
 			</div>
 			<div class="card-body p-0">
-			<div class="list-group list-group-flush" id="rolesList">
-				<div class="text-center p-4">
-					<div class="cordium-spinner spinner-sm">
-						<img src="logo-base.png" alt="Loading" class="cordium-spinner-base">
-						<img src="logo-arrow.png" alt="Loading" class="cordium-spinner-arrow">
+				<div class="list-group list-group-flush" id="rolesList">
+					<div class="text-center p-4">
+						<div class="cordium-spinner spinner-sm">
+							<img src="logo-base.png" alt="Loading" class="cordium-spinner-base">
+							<img src="logo-arrow.png" alt="Loading" class="cordium-spinner-arrow">
+						</div>
 					</div>
 				</div>
 			</div>
+		</div>
+	</div>
+</div>
+
+<div class="modal fade" id="setupRoleModal" tabindex="-1">
+	<div class="modal-dialog modal-lg">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title"><i class="bi bi-magic me-2"></i>Create Pre-configured Role</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+			</div>
+			<div class="modal-body">
+				<div class="mb-3">
+					<label class="form-label">Role Type</label>
+					<select class="form-select" id="setupRoleType">
+						<option value="administrator">Administrator</option>
+						<option value="moderator">Moderator</option>
+						<option value="member">Member</option>
+						<option value="friend">Friend</option>
+					</select>
+				</div>
+				<div class="mb-3">
+					<label class="form-label">Role Name</label>
+					<input type="text" class="form-control" id="setupRoleName" placeholder="Enter role name">
+				</div>
+				<div class="mb-3">
+					<label class="form-label">Role Color</label>
+					<input type="color" class="form-control form-control-color" id="setupRoleColor" value="#99AAB5"
+						title="Choose color">
+				</div>
+				<div class="mb-3">
+					<label class="form-label">Permissions</label>
+					<div class="permissions-grid" id="setupRolePermissions"></div>
+					<small class="text-muted">Select the permissions to assign to this role</small>
+				</div>
+				<div class="mb-3">
+					<label class="form-label">Channels (Read-Only)</label>
+					<select class="form-select" id="setupRoleChannelsRead" multiple size="5">
+						<option disabled>Loading channels...</option>
+					</select>
+					<small class="text-muted">Hold Ctrl/Cmd to select multiple channels</small>
+				</div>
+				<div class="mb-3">
+					<label class="form-label">Channels (Read/Write)</label>
+					<select class="form-select" id="setupRoleChannelsReadWrite" multiple size="5">
+						<option disabled>Loading channels...</option>
+					</select>
+					<small class="text-muted">Hold Ctrl/Cmd to select multiple channels</small>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+				<button type="button" class="btn btn-primary" onclick="createSetupRole()">Create Role</button>
 			</div>
 		</div>
 	</div>

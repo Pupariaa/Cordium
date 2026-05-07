@@ -227,6 +227,30 @@ async function renderSetupWizard() {
 													<small class="form-text text-muted">Right-click server</small>
 												</div>
 											</div>
+											<div class="mb-2">
+												<div class="d-flex justify-content-between align-items-center mb-2">
+													<label class="form-label mb-0">Bot Permissions</label>
+													<span class="badge bg-secondary" id="wizardBotPermissionsCount">0 selected</span>
+												</div>
+												<div class="permissions-actions mb-2">
+													<button type="button" class="btn btn-sm btn-outline-primary" onclick="selectWizardBotPermissionsPreset('recommended')">
+														<i class="bi bi-stars me-1"></i>Recommended
+													</button>
+													<button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectWizardBotPermissionsPreset('minimal')">
+														<i class="bi bi-sliders me-1"></i>Minimal
+													</button>
+													<button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectWizardBotPermissionsPreset('admin')">
+														<i class="bi bi-shield-lock me-1"></i>Administrator
+													</button>
+													<button type="button" class="btn btn-sm btn-outline-danger" onclick="selectWizardBotPermissionsPreset('none')">
+														<i class="bi bi-x-circle me-1"></i>Clear
+													</button>
+												</div>
+												<div class="permissions-grid" id="wizardBotPermissionsContainer"></div>
+												<div class="permissions-summary mt-2" id="wizardBotPermissionsSummary">
+													Permissions bitfield: 0 • No permissions selected
+												</div>
+											</div>
 											
 											<div class="alert alert-warning py-2 mb-2">
 												<i class="bi bi-exclamation-triangle me-2"></i>
@@ -373,7 +397,10 @@ async function renderSetupWizard() {
 		</div>
 	`;
 
+	renderWizardBotPermissions(config);
+
 	document.getElementById('wizard_client_id').addEventListener('input', updateWizardInviteLink);
+	document.getElementById('wizard_discord_guild_id').addEventListener('input', updateWizardInviteLink);
 	updateWizardInviteLink();
 
 	document.getElementById('wizardCopyInviteBtn').addEventListener('click', () => {
@@ -406,13 +433,18 @@ async function renderSetupWizard() {
 		e.preventDefault();
 
 		try {
-			await saveWizardConfig(['client_token', 'client_id', 'discord_guild_id'], 'wizard_');
+			await saveWizardConfig(
+				['client_token', 'client_id', 'discord_guild_id'],
+				'wizard_',
+				{ showLoading: false, showNotification: false, throwOnError: true }
+			);
+			await saveWizardBotPermissions({ showLoading: false, showNotification: false, throwOnError: true });
 
 			const response = await fetch('/api/config');
-			const config = await response.json();
-			const mode = config.wizard_mode || 'component';
+			const updatedConfig = await response.json();
+			const mode = updatedConfig.wizard_mode || 'component';
 
-			console.log('Wizard mode:', mode);
+			showNotification('Discord configuration saved', 'success');
 
 			if (mode === 'standalone') {
 				await saveStandaloneConfig();
@@ -477,8 +509,10 @@ function updateWizardInviteLink() {
 	const inviteLinkDiv = document.getElementById('wizardInviteLink');
 	const inviteLinkInput = document.getElementById('wizardInviteLinkInput');
 
+	const { bitfield } = updateWizardBotPermissionsSummary();
+	const permissions = bitfield > 0n ? bitfield.toString() : '0';
+
 	if (clientId) {
-		const permissions = '8';
 		const scopes = 'bot%20applications.commands';
 		const inviteUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&permissions=${permissions}&scope=${scopes}&integration_type=0`;
 		inviteLinkInput.value = inviteUrl;
@@ -594,9 +628,15 @@ async function clearWizardProgress() {
 	}
 }
 
-async function saveWizardConfig(fields, prefix) {
+async function saveWizardConfig(fields, prefix, options = {}) {
+	const {
+		showLoading: shouldShowLoading = true,
+		showNotification: shouldShowNotification = true,
+		throwOnError = false
+	} = options;
+
 	try {
-		showLoading();
+		if (shouldShowLoading) showLoading();
 		const response = await fetch('/api/config');
 		const currentConfig = await response.json();
 
@@ -615,14 +655,30 @@ async function saveWizardConfig(fields, prefix) {
 
 		const data = await saveResponse.json();
 		if (data.success) {
-			showNotification('Configuration saved!', 'success');
+			if (shouldShowNotification) {
+				showNotification('Configuration saved!', 'success');
+			}
+			return true;
 		} else {
-			showNotification('Error saving configuration', 'danger');
+			const errorMessage = data.error || 'Error saving configuration';
+			if (shouldShowNotification) {
+				showNotification(errorMessage, 'danger');
+			}
+			if (throwOnError) {
+				throw new Error(errorMessage);
+			}
+			return false;
 		}
 	} catch (err) {
-		showNotification('Error: ' + err.message, 'danger');
+		if (shouldShowNotification) {
+			showNotification('Error: ' + err.message, 'danger');
+		}
+		if (throwOnError) {
+			throw err;
+		}
+		return false;
 	} finally {
-		hideLoading();
+		if (shouldShowLoading) hideLoading();
 	}
 }
 
@@ -954,6 +1010,9 @@ async function loadPage(page) {
 				break;
 			case 'roles':
 				await initRolesPage();
+				break;
+			case 'auto-roles':
+				await initAutoRolesPage();
 				break;
 			case 'members':
 				await initMembersPage();
@@ -1323,6 +1382,85 @@ async function initRolesPage() {
 	}
 }
 
+async function initAutoRolesPage() {
+	try {
+		const response = await fetch('/api/server/info');
+		const serverInfo = await response.json();
+
+		if (serverInfo.error) {
+			throw new Error(serverInfo.error);
+		}
+
+		const configJsonResponse = await fetch('/api/config/json');
+		const configJson = await configJsonResponse.json();
+
+		const autoRoles = configJson.autoRoles || [];
+
+		document.getElementById('totalRolesCount').textContent = serverInfo.roles.length;
+		document.getElementById('autoRolesCount').textContent = autoRoles.length;
+
+		const autoRolesList = document.getElementById('autoRolesList');
+		let html = '<div class="row">';
+
+		serverInfo.roles.forEach(role => {
+			if (role.name !== '@everyone') {
+				const isChecked = autoRoles.includes(role.name);
+				html += `
+					<div class="col-md-6 mb-3">
+						<div class="form-check p-3 border rounded ${isChecked ? 'bg-success bg-opacity-10 border-success' : ''}">
+							<input class="form-check-input" type="checkbox" value="${role.name}" id="autoRole_${role.id}" ${isChecked ? 'checked' : ''}>
+							<label class="form-check-label d-flex align-items-center" for="autoRole_${role.id}">
+								<span class="badge me-2" style="background-color: ${role.hexColor};">&nbsp;</span>
+								<strong>${role.name}</strong>
+								<span class="text-muted small ms-2">(${role.memberCount} members)</span>
+							</label>
+						</div>
+					</div>
+				`;
+			}
+		});
+
+		html += '</div>';
+		autoRolesList.innerHTML = html;
+	} catch (err) {
+		console.error('Error loading auto roles page:', err);
+		showNotification('Error loading auto roles: ' + err.message, 'danger');
+	}
+}
+
+window.saveAutoRoles = async function () {
+	try {
+		const checkboxes = document.querySelectorAll('#autoRolesList input[type="checkbox"]');
+		const selectedRoles = Array.from(checkboxes)
+			.filter(cb => cb.checked)
+			.map(cb => cb.value);
+
+		showLoading('Saving configuration...');
+
+		const configData = {
+			autoRoles: selectedRoles
+		};
+
+		const saveResponse = await fetch('/api/config/json', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(configData)
+		});
+
+		const data = await saveResponse.json();
+		if (data.success) {
+			showNotification(`Auto roles configuration saved (${selectedRoles.length} role(s))`, 'success');
+			document.getElementById('autoRolesCount').textContent = selectedRoles.length;
+		} else {
+			showNotification('Error saving auto roles configuration', 'danger');
+		}
+	} catch (err) {
+		showNotification('Error: ' + err.message, 'danger');
+	} finally {
+		hideLoading();
+	}
+};
+
 async function initMembersPage() {
 	try {
 		const response = await fetch('/api/server/all-members');
@@ -1561,9 +1699,14 @@ function populateRolesList(roles) {
 		</div>
 		<div class="list-group-item bg-success text-white d-flex justify-content-between align-items-center">
 			<div><strong>Create New Role</strong></div>
-			<button class="btn btn-sm btn-light" onclick="createRole()" title="Create role">
-				<i class="bi bi-plus-circle"></i> New Role
-			</button>
+			<div>
+				<button class="btn btn-sm btn-light me-2" onclick="showSetupRoleModal()" title="Create pre-configured role">
+					<i class="bi bi-magic"></i> Pre-configured Role
+				</button>
+				<button class="btn btn-sm btn-light" onclick="createRole()" title="Create role">
+					<i class="bi bi-plus-circle"></i> New Role
+				</button>
+			</div>
 		</div>
 	`;
 
@@ -2062,6 +2205,70 @@ async function initMemberDetailsPage() {
 	}
 }
 
+function formatDiscordMessage(content, membersMap, rolesMap, channelsMap) {
+	if (!content) return '<em>No content</em>';
+
+	const placeholders = [];
+	let placeholderIndex = 0;
+
+	// Format user mentions: <@userId> or <@!userId>
+	let formatted = content.replace(/<@!?(\d+)>/g, (match, userId) => {
+		const member = membersMap.get(userId);
+		const placeholder = `__MENTION_USER_${placeholderIndex++}__`;
+		if (member) {
+			placeholders.push(`<span class="badge bg-primary mention">@${member.displayName || member.username}</span>`);
+		} else {
+			placeholders.push(`<span class="badge bg-secondary mention">@Unknown</span>`);
+		}
+		return placeholder;
+	});
+
+	// Format role mentions: <@&roleId>
+	formatted = formatted.replace(/<@&(\d+)>/g, (match, roleId) => {
+		const role = rolesMap.get(roleId);
+		const placeholder = `__MENTION_ROLE_${placeholderIndex++}__`;
+		if (role) {
+			const roleColor = role.color && role.color !== '#000000' ? role.color : '#99AAB5';
+			placeholders.push(`<span class="badge mention" style="background-color: ${roleColor};">@${role.name}</span>`);
+		} else {
+			placeholders.push(`<span class="badge bg-secondary mention">@Unknown Role</span>`);
+		}
+		return placeholder;
+	});
+
+	// Format channel mentions: <#channelId>
+	formatted = formatted.replace(/<#(\d+)>/g, (match, channelId) => {
+		const channel = channelsMap.get(channelId);
+		const placeholder = `__MENTION_CHANNEL_${placeholderIndex++}__`;
+		if (channel) {
+			placeholders.push(`<span class="badge bg-info mention">#${channel.name}</span>`);
+		} else {
+			placeholders.push(`<span class="badge bg-secondary mention">#Unknown Channel</span>`);
+		}
+		return placeholder;
+	});
+
+	// Escape HTML
+	formatted = formatted
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;');
+
+	// Restore placeholders
+	let restoreIndex = 0;
+	formatted = formatted.replace(/__(MENTION_USER|MENTION_ROLE|MENTION_CHANNEL)_(\d+)__/g, () => {
+		return placeholders[restoreIndex++];
+	});
+
+	// Format URLs
+	formatted = formatted.replace(/(https?:\/\/[^\s&lt;&gt;]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+
+	// Format line breaks
+	formatted = formatted.replace(/\n/g, '<br>');
+
+	return formatted;
+}
+
 async function loadCachedMessages() {
 	try {
 		const response = await fetch('/api/server/messages?limit=30');
@@ -2087,71 +2294,172 @@ async function loadCachedMessages() {
 			return;
 		}
 
-		let html = `
-			<div class="select-all-container">
-				<input type="checkbox" class="item-checkbox" id="selectAllCheckbox" onchange="selectAllItems('message')">
-				<label for="selectAllCheckbox">Select All</label>
-			</div>
+		// Load server info for members, roles, and channels
+		const serverInfoResponse = await fetch('/api/server/info');
+		const serverInfo = await serverInfoResponse.json();
+
+		const membersMap = new Map();
+		const rolesMap = new Map();
+		const channelsMap = new Map();
+
+		if (serverInfo.members) {
+			serverInfo.members.forEach(member => {
+				membersMap.set(member.id, member);
+			});
+		}
+
+		if (serverInfo.roles) {
+			serverInfo.roles.forEach(role => {
+				rolesMap.set(role.id, role);
+			});
+		}
+
+		if (serverInfo.channels) {
+			serverInfo.channels.forEach(channel => {
+				channelsMap.set(channel.id, channel);
+			});
+		}
+
+		messagesContainer.innerHTML = '';
+
+		const selectAllDiv = document.createElement('div');
+		selectAllDiv.className = 'select-all-container';
+		selectAllDiv.innerHTML = `
+			<input type="checkbox" class="item-checkbox" id="selectAllCheckbox" onchange="selectAllItems('message')">
+			<label for="selectAllCheckbox">Select All</label>
 		`;
+		messagesContainer.appendChild(selectAllDiv);
+
+		const fragment = document.createDocumentFragment();
 
 		data.messages.forEach(msg => {
 			const authorAvatar = msg.author?.avatarURL || msg.authorAvatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
-			const authorName = msg.author?.username || msg.authorName || 'Unknown';
+			const authorName = msg.author?.username || msg.authorDisplayName || msg.authorUsername || msg.authorName || 'Unknown';
 			const timestamp = msg.createdTimestamp || msg.timestamp || Date.now();
-			const content = msg.content || '<em>No content</em>';
+			const rawContent = msg.content || '';
+			const formattedContent = formatDiscordMessage(rawContent, membersMap, rolesMap, channelsMap);
 			const messageId = msg.id || msg.messageId;
+			const isDeleted = msg.deleted === true;
+			const deletedAt = msg.deletedAt ? new Date(msg.deletedAt).toLocaleString() : null;
 
-			html += `
-				<div class="list-group-item" data-message-id="${messageId}" data-item-id="${messageId}">
-					<div class="d-flex">
-						<input type="checkbox" class="item-checkbox" data-item-type="message" value="${messageId}" onchange="toggleItemSelection('${messageId}', 'message')" onclick="event.stopPropagation()">
-						<img src="${authorAvatar}" alt="${authorName}" class="rounded-circle me-3 ms-2" width="40" height="40">
+			const channelId = msg.channelId || msg.channel?.id;
+			const channelName = msg.channel?.name || msg.channelName || (channelId ? (channelsMap.get(channelId)?.name || 'Unknown') : 'Unknown');
+			const timeStr = new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+			const messageItem = document.createElement('div');
+			messageItem.className = 'list-group-item';
+			if (isDeleted) messageItem.classList.add('message-deleted');
+			messageItem.setAttribute('data-message-id', messageId);
+			messageItem.setAttribute('data-item-id', messageId);
+
+			let contentHTML = `
+				<div class="d-flex align-items-start justify-content-between">
+					<div class="d-flex align-items-start flex-grow-1">
+						<input type="checkbox" class="item-checkbox me-2" data-item-type="message" value="${messageId}" onchange="toggleItemSelection('${messageId}', 'message')" onclick="event.stopPropagation()">
+						<small class="text-muted me-2 flex-shrink-0" style="min-width: 45px;">${timeStr}</small>
+						<img src="${authorAvatar}" alt="${authorName}" class="rounded-circle me-2" width="40" height="40" loading="lazy" style="${isDeleted ? 'opacity: 0.5; filter: grayscale(100%);' : ''}">
 						<div class="flex-grow-1">
-							<div class="d-flex justify-content-between">
-								<strong>${authorName}</strong>
-								<small class="text-muted">${new Date(timestamp).toLocaleString()}</small>
+							<div class="mb-1 d-flex align-items-center flex-wrap gap-2">
+								<strong style="${isDeleted ? 'opacity: 0.6; text-decoration: line-through;' : ''}">${authorName}</strong>
+								<small class="text-muted">#${channelName}</small>
+								${msg.pinned ? '<i class="bi bi-pin-fill text-warning" title="Pinned"></i>' : ''}
+								${msg.edited ? '<span class="badge bg-secondary" title="Edited"><i class="bi bi-pencil-fill"></i> Edited</span>' : ''}
+								${isDeleted ? '<span class="badge bg-danger">Deleted</span>' : ''}
 							</div>
-							<div class="message-content">${content}</div>
+							${isDeleted && deletedAt ? `<small class="text-danger d-block mb-1">Deleted: ${deletedAt}</small>` : ''}
+							<div class="message-content" style="${isDeleted ? 'opacity: 0.6; font-style: italic;' : ''}">
+								${isDeleted && !rawContent ? '<em class="text-muted">Message content was deleted</em>' : formattedContent}
+							</div>`;
+
+			if (msg.attachments && msg.attachments.length > 0) {
+				contentHTML += '<div class="mt-2 message-attachments">';
+				msg.attachments.forEach(a => {
+					const imageUrl = a.savedLocally && a.localPath ? a.localPath : a.url;
+					const linkUrl = a.savedLocally && a.localPath ? a.localPath : a.url;
+					if (a.isImage) {
+						contentHTML += `
+							<div class="message-image mb-2 ${a.savedLocally ? 'saved-locally' : ''}">
+								<a href="${linkUrl}" target="_blank">
+									<img src="${imageUrl}" alt="${a.name}" class="img-fluid rounded" style="max-width: 400px; max-height: 300px; cursor: pointer;" loading="lazy">
+								</a>
+								${a.savedLocally ? '<span class="saved-badge"><i class="bi bi-check-circle-fill"></i> Saved</span>' : ''}
+							</div>
+						`;
+					} else {
+						contentHTML += `
+							<a href="${linkUrl}" target="_blank" class="badge ${a.savedLocally ? 'bg-success' : 'bg-secondary'} me-1 mb-1">
+								<i class="bi bi-${a.savedLocally ? 'check-circle-fill' : 'paperclip'}"></i> ${a.name}
+							</a>
+						`;
+					}
+				});
+				contentHTML += '</div>';
+			}
+
+			if (msg.embeds > 0) {
+				contentHTML += `<small class="badge bg-info mt-1">${msg.embeds} embed(s)</small>`;
+			}
+
+			if (msg.reactions && msg.reactions.length > 0) {
+				contentHTML += '<div class="message-reactions mt-2">';
+				msg.reactions.forEach(r => {
+					const emojiDisplay = r.isCustom && r.emojiUrl
+						? `<img src="${r.emojiUrl}" alt="${r.emoji}" width="18" height="18">`
+						: r.emoji;
+					contentHTML += `
+						<span class="reaction-badge" onclick="showReactionDetails('${messageId}', '${r.emoji}')" style="cursor: pointer;" title="Click to see who reacted">
+							${emojiDisplay}
+							<span class="reaction-count">${r.count}</span>
+						</span>
+					`;
+				});
+				contentHTML += '</div>';
+			}
+
+			contentHTML += `
 						</div>
-						<div class="item-menu">
-							<button class="item-menu-btn" onclick="toggleMenu(this)">
-								<i class="bi bi-three-dots-vertical"></i>
+					</div>
+					<div class="item-menu">
+						<button class="item-menu-btn" onclick="toggleMenu(this)">
+							<i class="bi bi-three-dots-vertical"></i>
+						</button>
+						<div class="item-menu-dropdown">
+							<button onclick="viewMessageHistory('${messageId}')">
+								<i class="bi bi-clock-history"></i>
+								<span>View History</span>
 							</button>
-							<div class="item-menu-dropdown">
-								<button onclick="viewMessageHistory('${messageId}')">
-									<i class="bi bi-clock-history"></i>
-									<span>View History</span>
-								</button>
-								<button onclick="copyMessageId('${messageId}')">
-									<i class="bi bi-clipboard"></i>
-									<span>Copy ID</span>
-								</button>
-								<button onclick="copyMessageContent('${content.replace(/'/g, "\\'")}')">
-									<i class="bi bi-clipboard-check"></i>
-									<span>Copy Content</span>
-								</button>
-								<div class="divider"></div>
-								<button onclick="addReactionToMessage('${messageId}')">
-									<i class="bi bi-emoji-smile"></i>
-									<span>Add Reaction</span>
-								</button>
-								<button class="text-warning" onclick="toggleMessagePriority('${messageId}')">
-									<i class="bi bi-star"></i>
-									<span>Toggle Priority</span>
-								</button>
-								<div class="divider"></div>
-								<button class="text-danger" onclick="deleteMessage('${messageId}')">
-									<i class="bi bi-trash"></i>
-									<span>Delete</span>
-								</button>
-							</div>
+							<button onclick="copyMessageId('${messageId}')">
+								<i class="bi bi-clipboard"></i>
+								<span>Copy ID</span>
+							</button>
+							<button onclick="copyMessageContent('${rawContent.replace(/'/g, "\\'")}')">
+								<i class="bi bi-clipboard-check"></i>
+								<span>Copy Content</span>
+							</button>
+							<div class="divider"></div>
+							<button onclick="addReactionToMessage('${messageId}')">
+								<i class="bi bi-emoji-smile"></i>
+								<span>Add Reaction</span>
+							</button>
+							<button class="text-warning" onclick="toggleMessagePriority('${messageId}')">
+								<i class="bi bi-star"></i>
+								<span>Toggle Priority</span>
+							</button>
+							<div class="divider"></div>
+							<button class="text-danger" onclick="deleteMessageFromCache('${messageId}', '${msg.channelId || ''}')">
+								<i class="bi bi-trash"></i>
+								<span>Delete</span>
+							</button>
 						</div>
 					</div>
 				</div>
 			`;
+
+			messageItem.innerHTML = contentHTML;
+			fragment.appendChild(messageItem);
 		});
 
-		messagesContainer.innerHTML = html;
+		messagesContainer.appendChild(fragment);
 		const statsElement = document.getElementById('messagesStats');
 		if (statsElement) statsElement.textContent = `${data.messages.length} messages`;
 	} catch (err) {
@@ -2205,8 +2513,670 @@ window.createChannel = function () {
 	showNotification('Channel creation not implemented yet', 'info');
 };
 
-window.createRole = function () {
-	showNotification('Role creation not implemented yet', 'info');
+window.createRole = async function () {
+	const name = prompt('Role name:');
+	if (name === null) return;
+
+	const color = prompt('Role color (hex code, e.g., #FF5733):', '#99AAB5');
+	if (color === null) return;
+
+	try {
+		const response = await fetch('/api/server/create-role', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ name, color })
+		});
+
+		const data = await response.json();
+		if (data.success) {
+			showNotification('Role created successfully!', 'success');
+			await loadPage('roles');
+		} else {
+			showNotification('Failed: ' + data.error, 'danger');
+		}
+	} catch (err) {
+		showNotification('Error: ' + err.message, 'danger');
+	}
+};
+
+const setupRolePermissionOptions = [
+	{ value: 'Administrator', label: 'Administrator', description: 'Grants every permission' },
+	{ value: 'ViewChannel', label: 'View Channels', description: 'See channels by default' },
+	{ value: 'ManageGuild', label: 'Manage Server', description: 'Manage server settings' },
+	{ value: 'ManageRoles', label: 'Manage Roles', description: 'Create, edit, and delete roles' },
+	{ value: 'ManageChannels', label: 'Manage Channels', description: 'Create, edit, and delete channels' },
+	{ value: 'ViewAuditLog', label: 'View Audit Log', description: 'See server audit logs' },
+	{ value: 'ManageMessages', label: 'Manage Messages', description: 'Delete and pin messages from others' },
+	{ value: 'ManageNicknames', label: 'Manage Nicknames', description: 'Change nicknames of members' },
+	{ value: 'KickMembers', label: 'Kick Members', description: 'Remove members from the server' },
+	{ value: 'BanMembers', label: 'Ban Members', description: 'Ban members from the server' },
+	{ value: 'ModerateMembers', label: 'Timeout Members', description: 'Time out members' },
+	{ value: 'MentionEveryone', label: 'Mention @everyone', description: 'Mention @everyone and @here' },
+	{ value: 'SendMessages', label: 'Send Messages', description: 'Send messages in text channels' },
+	{ value: 'ReadMessageHistory', label: 'Read Message History', description: 'Read past messages' },
+	{ value: 'AttachFiles', label: 'Attach Files', description: 'Upload files and images' },
+	{ value: 'EmbedLinks', label: 'Embed Links', description: 'Embed rich previews for links' },
+	{ value: 'AddReactions', label: 'Add Reactions', description: 'Add reactions to messages' },
+	{ value: 'UseExternalEmojis', label: 'Use External Emojis', description: 'Use emojis from other servers' },
+	{ value: 'UseExternalStickers', label: 'Use External Stickers', description: 'Use stickers from other servers' },
+	{ value: 'ManageWebhooks', label: 'Manage Webhooks', description: 'Create and manage webhooks' },
+	{ value: 'ManageThreads', label: 'Manage Threads', description: 'Manage existing threads' },
+	{ value: 'CreatePublicThreads', label: 'Create Public Threads', description: 'Start public threads' },
+	{ value: 'CreatePrivateThreads', label: 'Create Private Threads', description: 'Start private threads' },
+	{ value: 'ManageEvents', label: 'Manage Events', description: 'Create and manage scheduled events' },
+	{ value: 'Connect', label: 'Connect to Voice', description: 'Join voice channels' },
+	{ value: 'Speak', label: 'Speak in Voice', description: 'Talk in voice channels' },
+	{ value: 'Stream', label: 'Stream', description: 'Go live in voice channels' },
+	{ value: 'PrioritySpeaker', label: 'Priority Speaker', description: 'Use priority speaker in voice' },
+	{ value: 'MuteMembers', label: 'Mute Members', description: 'Mute other members in voice' },
+	{ value: 'DeafenMembers', label: 'Deafen Members', description: 'Deafen other members in voice' },
+	{ value: 'MoveMembers', label: 'Move Members', description: 'Move members between channels' }
+];
+
+const BOT_PERMISSION_BIT_VALUES = {
+	Administrator: 8n,
+	ViewChannel: 1024n,
+	ManageGuild: 32n,
+	ManageRoles: 268435456n,
+	ManageChannels: 16n,
+	ViewAuditLog: 128n,
+	ManageMessages: 8192n,
+	ManageNicknames: 134217728n,
+	KickMembers: 2n,
+	BanMembers: 4n,
+	ModerateMembers: 1099511627776n,
+	MentionEveryone: 131072n,
+	SendMessages: 2048n,
+	ReadMessageHistory: 65536n,
+	AttachFiles: 32768n,
+	EmbedLinks: 16384n,
+	AddReactions: 64n,
+	UseExternalEmojis: 262144n,
+	UseExternalStickers: 137438953472n,
+	ManageWebhooks: 536870912n,
+	ManageThreads: 17179869184n,
+	CreatePublicThreads: 34359738368n,
+	CreatePrivateThreads: 68719476736n,
+	ManageEvents: 8589934592n,
+	Connect: 1048576n,
+	Speak: 2097152n,
+	Stream: 512n,
+	PrioritySpeaker: 256n,
+	MuteMembers: 4194304n,
+	DeafenMembers: 8388608n,
+	MoveMembers: 16777216n
+};
+
+const botPermissionOptions = [
+	{ value: 'Administrator', label: 'Administrator', description: 'Full access to all permissions', bit: BOT_PERMISSION_BIT_VALUES.Administrator },
+	{ value: 'ViewChannel', label: 'View Channels', description: 'See all channels by default', bit: BOT_PERMISSION_BIT_VALUES.ViewChannel },
+	{ value: 'SendMessages', label: 'Send Messages', description: 'Send messages in text channels', bit: BOT_PERMISSION_BIT_VALUES.SendMessages },
+	{ value: 'ReadMessageHistory', label: 'Read Message History', description: 'Read previous messages in channels', bit: BOT_PERMISSION_BIT_VALUES.ReadMessageHistory },
+	{ value: 'AddReactions', label: 'Add Reactions', description: 'Add reactions to existing messages', bit: BOT_PERMISSION_BIT_VALUES.AddReactions },
+	{ value: 'EmbedLinks', label: 'Embed Links', description: 'Create rich embeds from links', bit: BOT_PERMISSION_BIT_VALUES.EmbedLinks },
+	{ value: 'AttachFiles', label: 'Attach Files', description: 'Upload files and media content', bit: BOT_PERMISSION_BIT_VALUES.AttachFiles },
+	{ value: 'MentionEveryone', label: 'Mention Everyone', description: 'Use @everyone and @here mentions', bit: BOT_PERMISSION_BIT_VALUES.MentionEveryone },
+	{ value: 'ManageMessages', label: 'Manage Messages', description: 'Delete or pin messages from other members', bit: BOT_PERMISSION_BIT_VALUES.ManageMessages },
+	{ value: 'ManageChannels', label: 'Manage Channels', description: 'Create, delete, or edit channels', bit: BOT_PERMISSION_BIT_VALUES.ManageChannels },
+	{ value: 'ManageGuild', label: 'Manage Server', description: 'Manage server settings and integrations', bit: BOT_PERMISSION_BIT_VALUES.ManageGuild },
+	{ value: 'ManageRoles', label: 'Manage Roles', description: 'Create and edit roles', bit: BOT_PERMISSION_BIT_VALUES.ManageRoles },
+	{ value: 'ManageNicknames', label: 'Manage Nicknames', description: 'Change other members’ nicknames', bit: BOT_PERMISSION_BIT_VALUES.ManageNicknames },
+	{ value: 'KickMembers', label: 'Kick Members', description: 'Remove members from the server', bit: BOT_PERMISSION_BIT_VALUES.KickMembers },
+	{ value: 'BanMembers', label: 'Ban Members', description: 'Ban members from the server', bit: BOT_PERMISSION_BIT_VALUES.BanMembers },
+	{ value: 'ModerateMembers', label: 'Timeout Members', description: 'Apply timeouts to members', bit: BOT_PERMISSION_BIT_VALUES.ModerateMembers },
+	{ value: 'ManageWebhooks', label: 'Manage Webhooks', description: 'Create and manage webhooks', bit: BOT_PERMISSION_BIT_VALUES.ManageWebhooks },
+	{ value: 'ViewAuditLog', label: 'View Audit Log', description: 'View server audit log entries', bit: BOT_PERMISSION_BIT_VALUES.ViewAuditLog },
+	{ value: 'ManageThreads', label: 'Manage Threads', description: 'Manage active threads', bit: BOT_PERMISSION_BIT_VALUES.ManageThreads },
+	{ value: 'CreatePublicThreads', label: 'Create Public Threads', description: 'Start public discussion threads', bit: BOT_PERMISSION_BIT_VALUES.CreatePublicThreads },
+	{ value: 'CreatePrivateThreads', label: 'Create Private Threads', description: 'Start private threads', bit: BOT_PERMISSION_BIT_VALUES.CreatePrivateThreads },
+	{ value: 'ManageEvents', label: 'Manage Events', description: 'Create and manage scheduled events', bit: BOT_PERMISSION_BIT_VALUES.ManageEvents },
+	{ value: 'UseExternalEmojis', label: 'Use External Emojis', description: 'Use emojis from other servers', bit: BOT_PERMISSION_BIT_VALUES.UseExternalEmojis },
+	{ value: 'UseExternalStickers', label: 'Use External Stickers', description: 'Use stickers from other servers', bit: BOT_PERMISSION_BIT_VALUES.UseExternalStickers },
+	{ value: 'Stream', label: 'Video/Screen Stream', description: 'Go live in voice channels', bit: BOT_PERMISSION_BIT_VALUES.Stream },
+	{ value: 'PrioritySpeaker', label: 'Priority Speaker', description: 'Use priority speaker mode', bit: BOT_PERMISSION_BIT_VALUES.PrioritySpeaker },
+	{ value: 'Connect', label: 'Connect to Voice', description: 'Join voice channels', bit: BOT_PERMISSION_BIT_VALUES.Connect },
+	{ value: 'Speak', label: 'Speak in Voice', description: 'Talk in voice channels', bit: BOT_PERMISSION_BIT_VALUES.Speak },
+	{ value: 'MuteMembers', label: 'Mute Members', description: 'Mute other members in voice channels', bit: BOT_PERMISSION_BIT_VALUES.MuteMembers },
+	{ value: 'DeafenMembers', label: 'Deafen Members', description: 'Deafen other members in voice channels', bit: BOT_PERMISSION_BIT_VALUES.DeafenMembers },
+	{ value: 'MoveMembers', label: 'Move Members', description: 'Move members between voice channels', bit: BOT_PERMISSION_BIT_VALUES.MoveMembers }
+];
+
+const defaultBotPermissionNames = [
+	'ViewChannel',
+	'SendMessages',
+	'ReadMessageHistory',
+	'AddReactions',
+	'EmbedLinks',
+	'AttachFiles',
+	'Connect',
+	'Speak'
+];
+
+const setupRolePermissionPresets = {
+	administrator: ['Administrator'],
+	moderator: [
+		'ViewChannel',
+		'ManageChannels',
+		'ManageRoles',
+		'ManageMessages',
+		'ManageNicknames',
+		'ViewAuditLog',
+		'KickMembers',
+		'BanMembers',
+		'ModerateMembers',
+		'MentionEveryone',
+		'SendMessages',
+		'ReadMessageHistory',
+		'AttachFiles',
+		'EmbedLinks',
+		'AddReactions',
+		'UseExternalEmojis',
+		'UseExternalStickers',
+		'ManageThreads',
+		'Connect',
+		'Speak',
+		'MuteMembers',
+		'DeafenMembers',
+		'MoveMembers'
+	],
+	member: [
+		'ViewChannel',
+		'SendMessages',
+		'ReadMessageHistory',
+		'AttachFiles',
+		'EmbedLinks',
+		'AddReactions',
+		'UseExternalEmojis',
+		'UseExternalStickers',
+		'Connect',
+		'Speak',
+		'Stream'
+	],
+	friend: [
+		'ViewChannel',
+		'SendMessages',
+		'ReadMessageHistory',
+		'AttachFiles',
+		'EmbedLinks',
+		'AddReactions',
+		'UseExternalEmojis',
+		'UseExternalStickers',
+		'Connect',
+		'Speak',
+		'Stream'
+	]
+};
+
+function applySetupRolePreset(roleType) {
+	const preset = setupRolePermissionPresets[roleType] || [];
+	const checkboxes = document.querySelectorAll('#setupRolePermissions input[type="checkbox"]');
+	checkboxes.forEach(input => {
+		input.checked = preset.includes(input.value);
+	});
+}
+
+function renderSetupRolePermissions(roleType) {
+	const container = document.getElementById('setupRolePermissions');
+	if (!container) return;
+	container.innerHTML = '';
+	setupRolePermissionOptions.forEach(option => {
+		const item = document.createElement('label');
+		item.className = 'form-check permissions-option';
+
+		const input = document.createElement('input');
+		input.type = 'checkbox';
+		input.className = 'form-check-input';
+		input.value = option.value;
+		input.id = `setupPerm${option.value}`;
+
+		const content = document.createElement('div');
+		content.className = 'permission-label';
+
+		const name = document.createElement('span');
+		name.className = 'permission-name';
+		name.textContent = option.label;
+
+		const description = document.createElement('span');
+		description.className = 'permission-description';
+		description.textContent = option.description;
+
+		content.appendChild(name);
+		content.appendChild(description);
+		item.appendChild(input);
+		item.appendChild(content);
+		container.appendChild(item);
+	});
+	applySetupRolePreset(roleType);
+}
+
+function getSavedBotPermissionNames(config) {
+	const saved = new Set();
+	if (config.bot_permission_names) {
+		config.bot_permission_names.split(',').map(name => name.trim()).filter(Boolean).forEach(name => saved.add(name));
+		return saved;
+	}
+
+	if (config.bot_permissions) {
+		try {
+			const bitfield = BigInt(config.bot_permissions);
+			botPermissionOptions.forEach(option => {
+				if ((bitfield & option.bit) === option.bit) {
+					saved.add(option.value);
+				}
+			});
+			if (saved.size > 0) {
+				return saved;
+			}
+		} catch (err) {
+			console.warn('Failed to parse bot_permissions bitfield:', err);
+		}
+	}
+
+	defaultBotPermissionNames.forEach(name => saved.add(name));
+	return saved;
+}
+
+function renderBotPermissions(config) {
+	const container = document.getElementById('botPermissionsContainer');
+	if (!container) return;
+
+	const savedNames = getSavedBotPermissionNames(config);
+	container.innerHTML = '';
+
+	botPermissionOptions.forEach(option => {
+		const item = document.createElement('label');
+		item.className = 'form-check permissions-option';
+
+		const input = document.createElement('input');
+		input.type = 'checkbox';
+		input.className = 'form-check-input';
+		input.dataset.permission = option.value;
+		input.checked = savedNames.has(option.value);
+
+		const content = document.createElement('div');
+		content.className = 'permission-label';
+
+		const name = document.createElement('span');
+		name.className = 'permission-name';
+		name.textContent = option.label;
+
+		const description = document.createElement('span');
+		description.className = 'permission-description';
+		description.textContent = option.description;
+
+		content.appendChild(name);
+		content.appendChild(description);
+		item.appendChild(input);
+		item.appendChild(content);
+		container.appendChild(item);
+
+		input.addEventListener('change', () => {
+			if (option.value === 'Administrator' && input.checked) {
+				container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+					if (cb !== input) cb.checked = false;
+				});
+			} else if (option.value !== 'Administrator' && input.checked) {
+				const adminCheckbox = container.querySelector('input[data-permission="Administrator"]');
+				if (adminCheckbox && adminCheckbox.checked) {
+					adminCheckbox.checked = false;
+				}
+			}
+			updateBotPermissionsSummary();
+		});
+	});
+
+	updateBotPermissionsSummary();
+}
+
+function updateBotPermissionsSummary() {
+	const container = document.getElementById('botPermissionsContainer');
+	const summary = document.getElementById('botPermissionsSummary');
+	const countBadge = document.getElementById('botPermissionsCount');
+
+	if (!container) {
+		return { selected: [], bitfield: 0n };
+	}
+
+	const selected = Array.from(container.querySelectorAll('input[type="checkbox"]:checked'))
+		.map(input => input.dataset.permission);
+
+	const bitfield = selected.reduce((acc, name) => {
+		const option = botPermissionOptions.find(opt => opt.value === name);
+		return option ? (acc | option.bit) : acc;
+	}, 0n);
+
+	if (summary) {
+		if (selected.length === 0) {
+			summary.textContent = 'Permissions bitfield: 0 • No permissions selected';
+		} else {
+			summary.textContent = `Permissions bitfield: ${bitfield.toString()} • ${selected.join(', ')}`;
+		}
+	}
+
+	if (countBadge) {
+		countBadge.textContent = `${selected.length} selected`;
+	}
+
+	return { selected, bitfield };
+}
+
+async function saveBotPermissions(options = {}) {
+	const { showLoading: shouldShowLoading = true, showNotification: shouldShowNotification = true, throwOnError = false } = options;
+	const container = document.getElementById('botPermissionsContainer');
+
+	if (!container) {
+		return true;
+	}
+
+	const { selected } = updateBotPermissionsSummary();
+
+	try {
+		if (shouldShowLoading) showLoading();
+
+		const response = await fetch('/api/config/bot-permissions', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ permissions: selected })
+		});
+
+		const data = await response.json();
+
+		if (response.ok && data.success) {
+			if (shouldShowNotification) {
+				showNotification('Bot permissions saved', 'success');
+			}
+			return true;
+		}
+
+		const errorMessage = data.error || 'Failed to save bot permissions';
+		if (shouldShowNotification) {
+			showNotification(errorMessage, 'danger');
+		}
+		if (throwOnError) {
+			throw new Error(errorMessage);
+		}
+		return false;
+	} catch (err) {
+		if (shouldShowNotification) {
+			showNotification('Error: ' + err.message, 'danger');
+		}
+		if (throwOnError) {
+			throw err;
+		}
+		return false;
+	} finally {
+		if (shouldShowLoading) hideLoading();
+	}
+}
+
+window.selectBotPermissionsPreset = function (preset) {
+	const container = document.getElementById('botPermissionsContainer');
+	if (!container) return;
+
+	const checkboxes = Array.from(container.querySelectorAll('input[type="checkbox"]'));
+	const names = {
+		recommended: defaultBotPermissionNames,
+		minimal: ['ViewChannel', 'SendMessages'],
+		admin: ['Administrator'],
+		none: []
+	}[preset] || [];
+
+	checkboxes.forEach(cb => {
+		cb.checked = names.includes(cb.dataset.permission);
+	});
+
+	updateBotPermissionsSummary();
+};
+
+function renderWizardBotPermissions(config) {
+	const container = document.getElementById('wizardBotPermissionsContainer');
+	if (!container) return;
+
+	const savedNames = getSavedBotPermissionNames(config);
+	container.innerHTML = '';
+
+	botPermissionOptions.forEach(option => {
+		const item = document.createElement('label');
+		item.className = 'form-check permissions-option';
+
+		const input = document.createElement('input');
+		input.type = 'checkbox';
+		input.className = 'form-check-input';
+		input.dataset.permission = option.value;
+		input.checked = savedNames.has(option.value);
+
+		const content = document.createElement('div');
+		content.className = 'permission-label';
+
+		const name = document.createElement('span');
+		name.className = 'permission-name';
+		name.textContent = option.label;
+
+		const description = document.createElement('span');
+		description.className = 'permission-description';
+		description.textContent = option.description;
+
+		content.appendChild(name);
+		content.appendChild(description);
+		item.appendChild(input);
+		item.appendChild(content);
+		container.appendChild(item);
+
+		input.addEventListener('change', () => {
+			if (option.value === 'Administrator' && input.checked) {
+				container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+					if (cb !== input) cb.checked = false;
+				});
+			} else if (option.value !== 'Administrator' && input.checked) {
+				const adminCheckbox = container.querySelector('input[data-permission="Administrator"]');
+				if (adminCheckbox && adminCheckbox.checked) {
+					adminCheckbox.checked = false;
+				}
+			}
+			updateWizardBotPermissionsSummary();
+			updateWizardInviteLink();
+		});
+	});
+
+	updateWizardBotPermissionsSummary();
+}
+
+function updateWizardBotPermissionsSummary() {
+	const container = document.getElementById('wizardBotPermissionsContainer');
+	const summary = document.getElementById('wizardBotPermissionsSummary');
+	const countBadge = document.getElementById('wizardBotPermissionsCount');
+
+	if (!container) {
+		return { selected: [], bitfield: 0n };
+	}
+
+	const selected = Array.from(container.querySelectorAll('input[type="checkbox"]:checked'))
+		.map(input => input.dataset.permission);
+
+	const bitfield = selected.reduce((acc, name) => {
+		const option = botPermissionOptions.find(opt => opt.value === name);
+		return option ? (acc | option.bit) : acc;
+	}, 0n);
+
+	if (summary) {
+		if (selected.length === 0) {
+			summary.textContent = 'Permissions bitfield: 0 • No permissions selected';
+		} else {
+			summary.textContent = `Permissions bitfield: ${bitfield.toString()} • ${selected.join(', ')}`;
+		}
+	}
+
+	if (countBadge) {
+		countBadge.textContent = `${selected.length} selected`;
+	}
+
+	return { selected, bitfield };
+}
+
+async function saveWizardBotPermissions(options = {}) {
+	const { showLoading: shouldShowLoading = true, showNotification: shouldShowNotification = true, throwOnError = false } = options;
+	const container = document.getElementById('wizardBotPermissionsContainer');
+
+	if (!container) {
+		return true;
+	}
+
+	const { selected } = updateWizardBotPermissionsSummary();
+
+	try {
+		if (shouldShowLoading) showLoading();
+
+		const response = await fetch('/api/config/bot-permissions', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ permissions: selected })
+		});
+
+		const data = await response.json();
+
+		if (response.ok && data.success) {
+			if (shouldShowNotification) {
+				showNotification('Bot permissions saved', 'success');
+			}
+			return true;
+		}
+
+		const errorMessage = data.error || 'Failed to save bot permissions';
+		if (shouldShowNotification) {
+			showNotification(errorMessage, 'danger');
+		}
+		if (throwOnError) {
+			throw new Error(errorMessage);
+		}
+		return false;
+	} catch (err) {
+		if (shouldShowNotification) {
+			showNotification('Error: ' + err.message, 'danger');
+		}
+		if (throwOnError) {
+			throw err;
+		}
+		return false;
+	} finally {
+		if (shouldShowLoading) hideLoading();
+	}
+}
+
+window.selectWizardBotPermissionsPreset = function (preset) {
+	const container = document.getElementById('wizardBotPermissionsContainer');
+	if (!container) return;
+
+	const checkboxes = Array.from(container.querySelectorAll('input[type="checkbox"]'));
+	const names = {
+		recommended: defaultBotPermissionNames,
+		minimal: ['ViewChannel', 'SendMessages'],
+		admin: ['Administrator'],
+		none: []
+	}[preset] || [];
+
+	checkboxes.forEach(cb => {
+		cb.checked = names.includes(cb.dataset.permission);
+	});
+
+	updateWizardBotPermissionsSummary();
+	updateWizardInviteLink();
+};
+
+window.showSetupRoleModal = async function () {
+	const modal = new bootstrap.Modal(document.getElementById('setupRoleModal'));
+
+	try {
+		const response = await fetch('/api/server/info');
+		const serverInfo = await response.json();
+
+		if (serverInfo.error) {
+			showNotification('Error loading channels: ' + serverInfo.error, 'danger');
+			return;
+		}
+
+		const textChannels = serverInfo.channels.filter(c => c.type === 0);
+
+		const channelsReadSelect = document.getElementById('setupRoleChannelsRead');
+		const channelsReadWriteSelect = document.getElementById('setupRoleChannelsReadWrite');
+
+		channelsReadSelect.innerHTML = '';
+		channelsReadWriteSelect.innerHTML = '';
+
+		textChannels.forEach(channel => {
+			const option1 = document.createElement('option');
+			option1.value = channel.name;
+			option1.textContent = `#${channel.name}`;
+			channelsReadSelect.appendChild(option1);
+
+			const option2 = document.createElement('option');
+			option2.value = channel.name;
+			option2.textContent = `#${channel.name}`;
+			channelsReadWriteSelect.appendChild(option2);
+		});
+
+		document.getElementById('setupRoleName').value = '';
+		document.getElementById('setupRoleColor').value = '#99AAB5';
+		document.getElementById('setupRoleType').value = 'member';
+
+		renderSetupRolePermissions('member');
+
+		const typeSelect = document.getElementById('setupRoleType');
+		typeSelect.onchange = (event) => {
+			applySetupRolePreset(event.target.value);
+		};
+
+		modal.show();
+	} catch (err) {
+		showNotification('Error: ' + err.message, 'danger');
+	}
+};
+
+window.createSetupRole = async function () {
+	const roleType = document.getElementById('setupRoleType').value;
+	const roleName = document.getElementById('setupRoleName').value.trim();
+	const roleColor = document.getElementById('setupRoleColor').value;
+	const channelsReadSelect = document.getElementById('setupRoleChannelsRead');
+	const channelsReadWriteSelect = document.getElementById('setupRoleChannelsReadWrite');
+	const permissionsSelect = document.querySelectorAll('#setupRolePermissions input[type="checkbox"]:checked');
+
+	if (!roleName) {
+		showNotification('Please enter a role name', 'warning');
+		return;
+	}
+
+	const channelsRead = Array.from(channelsReadSelect.selectedOptions).map(opt => opt.value);
+	const channelsReadWrite = Array.from(channelsReadWriteSelect.selectedOptions).map(opt => opt.value);
+	const selectedPermissions = Array.from(permissionsSelect).map(input => input.value);
+
+	try {
+		showLoading('Creating role...');
+		const response = await fetch('/api/server/create-setup-role', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				roleType,
+				roleName,
+				roleColor,
+				channelsRead,
+				channelsReadWrite,
+				permissions: selectedPermissions
+			})
+		});
+
+		const data = await response.json();
+		if (data.success) {
+			showNotification(data.message || 'Role created successfully!', 'success');
+			const modal = bootstrap.Modal.getInstance(document.getElementById('setupRoleModal'));
+			modal.hide();
+			await loadPage('roles');
+		} else {
+			showNotification('Failed: ' + data.error, 'danger');
+		}
+	} catch (err) {
+		showNotification('Error: ' + err.message, 'danger');
+	} finally {
+		hideLoading();
+	}
 };
 
 async function renderServerPage(container) {
@@ -3249,7 +4219,7 @@ async function toggleMessagePriority(messageId) {
 }
 
 async function deleteMessageFromCache(messageId, channelId) {
-	if (!confirm('Delete this message from Discord and cache?')) return;
+	if (!confirm('Delete this message from Discord? It will remain visible as deleted.')) return;
 
 	try {
 		const response = await fetch('/api/server/delete-message', {
@@ -3260,10 +4230,8 @@ async function deleteMessageFromCache(messageId, channelId) {
 
 		const data = await response.json();
 		if (data.success) {
-			const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
-			if (messageElement) {
-				messageElement.remove();
-			}
+			// Reload messages to show deleted status instead of removing
+			await loadCachedMessages();
 			showNotification('Message deleted!', 'success');
 		} else {
 			showNotification('Failed: ' + data.error, 'danger');
@@ -3290,6 +4258,8 @@ async function initConfigPage() {
 		if (document.getElementById('config_discord_guild_id')) {
 			document.getElementById('config_discord_guild_id').value = config.discord_guild_id || '';
 		}
+
+		renderBotPermissions(config);
 
 		const isStandalone = config.db_type === 'sqlite';
 
@@ -3334,7 +4304,21 @@ async function initConfigPage() {
 		if (discordForm) {
 			discordForm.addEventListener('submit', async (e) => {
 				e.preventDefault();
-				await saveConfigFields(['client_token', 'client_id', 'discord_guild_id'], 'config_');
+			try {
+				showLoading();
+				await saveConfigFields(
+					['client_token', 'client_id', 'discord_guild_id'],
+					'config_',
+					{ showLoading: false, showNotification: false, throwOnError: true }
+				);
+				await saveBotPermissions({ showLoading: false, showNotification: false, throwOnError: true });
+				showNotification('Discord configuration saved', 'success');
+			} catch (err) {
+				console.error('Error saving Discord configuration:', err);
+				showNotification('Error saving Discord configuration: ' + err.message, 'danger');
+			} finally {
+				hideLoading();
+			}
 			});
 		}
 
@@ -3373,6 +4357,7 @@ async function initConfigPage() {
 				showNotification('Advanced settings saved', 'success');
 			});
 		}
+
 	} catch (err) {
 		console.error('Error initializing config page:', err);
 		showNotification('Error loading configuration', 'danger');
@@ -3432,9 +4417,15 @@ async function updateConfigStatus(config) {
 	}
 }
 
-async function saveConfigFields(fields, prefix) {
+async function saveConfigFields(fields, prefix, options = {}) {
+	const {
+		showLoading: shouldShowLoading = true,
+		showNotification: shouldShowNotification = true,
+		throwOnError = false
+	} = options;
+
 	try {
-		showLoading();
+		if (shouldShowLoading) showLoading();
 		const response = await fetch('/api/config');
 		const currentConfig = await response.json();
 
@@ -3453,14 +4444,30 @@ async function saveConfigFields(fields, prefix) {
 
 		const data = await saveResponse.json();
 		if (data.success) {
-			showNotification('Configuration saved', 'success');
+			if (shouldShowNotification) {
+				showNotification('Configuration saved', 'success');
+			}
+			return true;
 		} else {
-			showNotification('Error saving configuration', 'danger');
+			const errorMessage = data.error || 'Error saving configuration';
+			if (shouldShowNotification) {
+				showNotification(errorMessage, 'danger');
+			}
+			if (throwOnError) {
+				throw new Error(errorMessage);
+			}
+			return false;
 		}
 	} catch (err) {
-		showNotification('Error: ' + err.message, 'danger');
+		if (shouldShowNotification) {
+			showNotification('Error: ' + err.message, 'danger');
+		}
+		if (throwOnError) {
+			throw err;
+		}
+		return false;
 	} finally {
-		hideLoading();
+		if (shouldShowLoading) hideLoading();
 	}
 }
 

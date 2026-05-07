@@ -308,29 +308,100 @@ class MessagesCache {
 		}
 	}
 
-	async deleteMessage(messageId) {
+	async deleteMessage(messageId, messageData = null) {
 		try {
+			const deletedTimestamp = Date.now();
+			let found = false;
+
 			if (global.redisOnline) {
 				const allMessages = await global.redisManager.client.zRange(this.messagesList, 0, -1);
 
 				for (const msg of allMessages) {
 					const parsed = JSON.parse(msg);
 					if (parsed.id === messageId) {
+						// Mark as deleted instead of removing - preserve all data
+						parsed.deleted = true;
+						parsed.deletedAt = deletedTimestamp;
 						await global.redisManager.client.zRem(this.messagesList, msg);
-						return true;
+						await global.redisManager.client.zAdd(this.messagesList, {
+							score: parsed.timestamp,
+							value: JSON.stringify(parsed)
+						});
+						found = true;
+						break;
 					}
+				}
+
+				// If message not found in cache and we have messageData, add it as deleted
+				if (!found && messageData) {
+					const deletedMessage = {
+						id: messageId,
+						content: messageData.content || '[Message content unavailable]',
+						authorId: messageData.authorId || messageData.author?.id,
+						authorUsername: messageData.authorUsername || messageData.author?.username || 'Unknown',
+						authorDisplayName: messageData.authorDisplayName || messageData.author?.displayName || messageData.author?.username || 'Unknown',
+						authorAvatar: messageData.authorAvatar || messageData.author?.displayAvatarURL?.({ size: 64 }) || 'https://cdn.discordapp.com/embed/avatars/0.png',
+						channelId: messageData.channelId || messageData.channel?.id,
+						channelName: messageData.channelName || messageData.channel?.name || 'Unknown',
+						timestamp: messageData.timestamp || messageData.createdTimestamp || Date.now(),
+						attachments: messageData.attachments || [],
+						embeds: messageData.embeds || 0,
+						hasThread: messageData.hasThread || false,
+						pinned: messageData.pinned || false,
+						type: messageData.type || 0,
+						reactions: messageData.reactions || [],
+						deleted: true,
+						deletedAt: deletedTimestamp
+					};
+
+					await global.redisManager.client.zAdd(this.messagesList, {
+						score: deletedMessage.timestamp,
+						value: JSON.stringify(deletedMessage)
+					});
+					found = true;
 				}
 			} else {
 				const idx = this.ramCache.messages.findIndex(m => m.id === messageId);
 				if (idx !== -1) {
-					this.ramCache.messages.splice(idx, 1);
-					return true;
+					// Mark as deleted instead of removing - preserve all data
+					this.ramCache.messages[idx].deleted = true;
+					this.ramCache.messages[idx].deletedAt = deletedTimestamp;
+					found = true;
+				} else if (messageData) {
+					// Add message as deleted if not in cache
+					const deletedMessage = {
+						id: messageId,
+						content: messageData.content || '[Message content unavailable]',
+						authorId: messageData.authorId || messageData.author?.id,
+						authorUsername: messageData.authorUsername || messageData.author?.username || 'Unknown',
+						authorDisplayName: messageData.authorDisplayName || messageData.author?.displayName || messageData.author?.username || 'Unknown',
+						authorAvatar: messageData.authorAvatar || messageData.author?.displayAvatarURL?.({ size: 64 }) || 'https://cdn.discordapp.com/embed/avatars/0.png',
+						channelId: messageData.channelId || messageData.channel?.id,
+						channelName: messageData.channelName || messageData.channel?.name || 'Unknown',
+						timestamp: messageData.timestamp || messageData.createdTimestamp || Date.now(),
+						attachments: messageData.attachments || [],
+						embeds: messageData.embeds || 0,
+						hasThread: messageData.hasThread || false,
+						pinned: messageData.pinned || false,
+						type: messageData.type || 0,
+						reactions: messageData.reactions || [],
+						deleted: true,
+						deletedAt: deletedTimestamp
+					};
+
+					this.ramCache.messages.push(deletedMessage);
+					this.ramCache.messages.sort((a, b) => b.timestamp - a.timestamp);
+
+					if (this.ramCache.messages.length > 10000) {
+						this.ramCache.messages = this.ramCache.messages.slice(0, 10000);
+					}
+					found = true;
 				}
 			}
 
-			return false;
+			return found;
 		} catch (err) {
-			console.reportError('Error deleting message from cache:', err);
+			console.reportError('Error marking message as deleted in cache:', err);
 			return false;
 		}
 	}

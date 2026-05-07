@@ -8,6 +8,7 @@ const { Client, Events, GatewayIntentBits, Partials } = require('discord.js');
 
 global.projectRoot = __dirname;
 global.utilsPath = path.join(global.projectRoot, 'internals', 'Utils.js');
+require(path.join(global.projectRoot, 'internals', 'ensureExtendConsoleJson.js')).ensureExtendConsoleJson(global.projectRoot);
 const { set, walkDirSync, toCamelCase, setReportFunctions } = require(global.utilsPath);
 
 // Nice to have, avoids path.join with relative paths everywhere
@@ -41,6 +42,36 @@ const { set, walkDirSync, toCamelCase, setReportFunctions } = require(global.uti
 		global.defaultConfigManager = new DefaultConfigManager();
 		await global.defaultConfigManager.loadAll();
 		await global.defaultConfigManager.watchAll();
+
+		const { loadJsonConfig } = require(global.configManagerPath);
+		const configJsonPath = path.join(global.projectRoot, 'config/config.json');
+		const configJsonResult = loadJsonConfig(configJsonPath, { autoRoles: [] });
+		if (configJsonResult && !global.configJson) {
+			global.configJson = configJsonResult.content;
+			if (global.configJson.autoRole && !global.configJson.autoRoles) {
+				global.configJson.autoRoles = [global.configJson.autoRole];
+				delete global.configJson.autoRole;
+			}
+			if (!global.configJson.autoRoles) {
+				global.configJson.autoRoles = [];
+			}
+		}
+
+		fs.watchFile(configJsonPath, { interval: 1000 }, () => {
+			try {
+				const content = fs.existsSync(configJsonPath) ? JSON.parse(fs.readFileSync(configJsonPath, 'utf8')) : { autoRoles: [] };
+				if (content.autoRole && !content.autoRoles) {
+					content.autoRoles = [content.autoRole];
+					delete content.autoRole;
+				}
+				if (!content.autoRoles) {
+					content.autoRoles = [];
+				}
+				global.configJson = content;
+			} catch (err) {
+				console.reportError('Error reloading config.json:', err);
+			}
+		});
 
 		// mkdir gitignored folders
 
@@ -142,15 +173,34 @@ const { set, walkDirSync, toCamelCase, setReportFunctions } = require(global.uti
 		process.exit(1);
 	}
 
+	global.guild = null;
+	global.guildUnavailable = false;
+	global.guildUnavailableReason = null;
+
 	async function onReady() {
 		console.report('Client ready');
 
-		// Get guild
-		global.guild = global.client.guilds.cache.get(global.discordGuildId);
-		if (!global.guild) {
-			console.reportError(`Guild of id ${global.discordGuildId} not found`);
-			process.exit(1);
+		try {
+			if (global.discordGuildId) {
+				global.guild = global.client.guilds.cache.get(global.discordGuildId) ||
+					await global.client.guilds.fetch(global.discordGuildId);
+			}
+		} catch (err) {
+			console.reportError(`Failed to fetch guild ${global.discordGuildId}:`, err);
 		}
+
+		if (!global.guild) {
+			const reason = global.discordGuildId
+				? `Guild "${global.discordGuildId}" not found or bot is not a member.`
+				: 'discord_guild_id is not configured.';
+			global.guildUnavailable = true;
+			global.guildUnavailableReason = reason;
+			console.reportWarn(`${reason} Running in limited mode. Update the configuration or invite the bot, then restart.`);
+			return;
+		}
+
+		global.guildUnavailable = false;
+		global.guildUnavailableReason = null;
 
 		// Init Redis cache
 		try {

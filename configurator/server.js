@@ -10,6 +10,24 @@ const PORT = 3001;
 
 const projectRoot = path.join(__dirname, '..');
 const configPath = path.join(projectRoot, 'config', 'config.env');
+const { ensureExtendConsoleJson, mergeConfigJsonObjects, readJsonFile } = require(path.join(projectRoot, 'internals', 'ensureExtendConsoleJson.js'));
+
+function getGuildUnavailableMessage() {
+	if (global.guildUnavailableReason) return global.guildUnavailableReason;
+	if (!global.discordGuildId) return 'discord_guild_id is not configured.';
+	return 'Bot is not running or not connected to the configured guild.';
+}
+
+function buildGuildUnavailableResponse(includeSuccess = true) {
+	const payload = {
+		error: getGuildUnavailableMessage(),
+		code: 'GUILD_UNAVAILABLE'
+	};
+	if (includeSuccess) {
+		payload.success = false;
+	}
+	return payload;
+}
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -90,6 +108,44 @@ app.get('/api/config', (req, res) => {
 		const content = fs.readFileSync(configPath, 'utf8');
 		const config = parseEnvFile(content);
 		res.json(config);
+	} catch (err) {
+		res.status(500).json({ error: err.message });
+	}
+});
+
+app.get('/api/config/json', (req, res) => {
+	try {
+		const configJsonPath = path.join(projectRoot, 'config', 'config.json');
+		ensureExtendConsoleJson(projectRoot);
+		let config = {};
+		if (fs.existsSync(configJsonPath)) {
+			config = readJsonFile(configJsonPath);
+		}
+
+		if (config.autoRole && !config.autoRoles) {
+			config.autoRoles = [config.autoRole];
+			delete config.autoRole;
+		}
+
+		if (!config.autoRoles) {
+			config.autoRoles = [];
+		}
+
+		res.json(config);
+	} catch (err) {
+		res.status(500).json({ error: err.message });
+	}
+});
+
+app.post('/api/config/json', (req, res) => {
+	try {
+		const configJsonPath = path.join(projectRoot, 'config', 'config.json');
+		const existing = fs.existsSync(configJsonPath) ? readJsonFile(configJsonPath) : {};
+		const merged = mergeConfigJsonObjects(existing, req.body);
+		fs.mkdirSync(path.dirname(configJsonPath), { recursive: true });
+		fs.writeFileSync(configJsonPath, JSON.stringify(merged, null, 2), 'utf8');
+		ensureExtendConsoleJson(projectRoot);
+		res.json({ success: true });
 	} catch (err) {
 		res.status(500).json({ error: err.message });
 	}
@@ -269,6 +325,56 @@ app.post('/api/config', async (req, res) => {
 		res.json({ success: true, configured: isConfigured() });
 	} catch (err) {
 		res.status(500).json({ error: err.message });
+	}
+});
+
+app.post('/api/config/bot-permissions', (req, res) => {
+	try {
+		const permissions = Array.isArray(req.body.permissions) ? Array.from(new Set(req.body.permissions)) : null;
+		if (!permissions) {
+			return res.status(400).json({ success: false, error: 'permissions must be an array' });
+		}
+
+		const { PermissionFlagsBits } = require('discord.js');
+		let bitfield = 0n;
+		const validPermissions = [];
+		const invalidPermissions = [];
+
+		permissions.forEach(name => {
+			if (typeof name !== 'string') return;
+			const trimmed = name.trim();
+			if (!trimmed) return;
+			const value = PermissionFlagsBits[trimmed];
+			if (typeof value === 'bigint') {
+				bitfield |= value;
+				validPermissions.push(trimmed);
+			} else {
+				invalidPermissions.push(trimmed);
+			}
+		});
+
+		if (invalidPermissions.length > 0) {
+			return res.status(400).json({
+				success: false,
+				error: `Unknown permission(s): ${invalidPermissions.join(', ')}`
+			});
+		}
+
+		const existingContent = fs.existsSync(configPath) ? fs.readFileSync(configPath, 'utf8') : '';
+		const config = parseEnvFile(existingContent);
+		config.bot_permissions = bitfield.toString();
+		config.bot_permission_names = validPermissions.join(',');
+
+		const content = stringifyEnvConfig(config);
+		fs.writeFileSync(configPath, content, 'utf8');
+
+		res.json({
+			success: true,
+			permissions: validPermissions,
+			bitfield: bitfield.toString()
+		});
+	} catch (err) {
+		res.status(500).json({ success: false, error: err.message });
 	}
 });
 
@@ -461,7 +567,7 @@ app.post('/api/bot/start', (req, res) => {
 app.get('/api/server/info', (req, res) => {
 	try {
 		if (!global.guild) {
-			return res.json({ error: 'Bot is not running or not connected to a guild' });
+			return res.json(buildGuildUnavailableResponse(false));
 		}
 
 		const guild = global.guild;
@@ -578,7 +684,7 @@ app.post('/api/server/send-message', async (req, res) => {
 		const { channelId, message } = req.body;
 
 		if (!global.guild) {
-			return res.json({ success: false, error: 'Bot is not running' });
+			return res.json(buildGuildUnavailableResponse());
 		}
 
 		const channel = global.guild.channels.cache.get(channelId);
@@ -602,7 +708,7 @@ app.get('/api/server/role-members', (req, res) => {
 		const { roleId } = req.query;
 
 		if (!global.guild) {
-			return res.json({ error: 'Bot is not running' });
+			return res.json(buildGuildUnavailableResponse(false));
 		}
 
 		const role = global.guild.roles.cache.get(roleId);
@@ -631,7 +737,7 @@ app.post('/api/server/create-channel', async (req, res) => {
 		const { name, type, parentId } = req.body;
 
 		if (!global.guild) {
-			return res.json({ success: false, error: 'Bot is not running' });
+			return res.json(buildGuildUnavailableResponse());
 		}
 
 		const channelData = { name, type };
@@ -649,7 +755,7 @@ app.post('/api/server/edit-channel', async (req, res) => {
 		const { channelId, name, topic } = req.body;
 
 		if (!global.guild) {
-			return res.json({ success: false, error: 'Bot is not running' });
+			return res.json(buildGuildUnavailableResponse());
 		}
 
 		const channel = global.guild.channels.cache.get(channelId);
@@ -673,7 +779,7 @@ app.post('/api/server/delete-channel', async (req, res) => {
 		const { channelId } = req.body;
 
 		if (!global.guild) {
-			return res.json({ success: false, error: 'Bot is not running' });
+			return res.json(buildGuildUnavailableResponse());
 		}
 
 		const channel = global.guild.channels.cache.get(channelId);
@@ -693,7 +799,7 @@ app.post('/api/server/create-role', async (req, res) => {
 		const { name, color } = req.body;
 
 		if (!global.guild) {
-			return res.json({ success: false, error: 'Bot is not running' });
+			return res.json(buildGuildUnavailableResponse());
 		}
 
 		await global.guild.roles.create({
@@ -706,12 +812,161 @@ app.post('/api/server/create-role', async (req, res) => {
 	}
 });
 
+app.post('/api/server/create-setup-role', async (req, res) => {
+	try {
+		const { roleType, roleName, roleColor, channelsRead, channelsReadWrite, permissions } = req.body;
+
+		if (!global.guild) {
+			return res.json(buildGuildUnavailableResponse());
+		}
+
+		if (!roleName || !roleName.trim()) {
+			return res.json({ success: false, error: 'Role name is required' });
+		}
+
+		const { PermissionFlagsBits } = require('discord.js');
+
+		const roleConfigs = {
+			administrator: {
+				permissions: ['Administrator']
+			},
+			moderator: {
+				permissions: [
+					'ViewChannel',
+					'ManageChannels',
+					'ManageRoles',
+					'ManageMessages',
+					'ManageNicknames',
+					'ViewAuditLog',
+					'KickMembers',
+					'BanMembers',
+					'ModerateMembers',
+					'MentionEveryone',
+					'SendMessages',
+					'ReadMessageHistory',
+					'AttachFiles',
+					'EmbedLinks',
+					'AddReactions',
+					'UseExternalEmojis',
+					'UseExternalStickers',
+					'ManageThreads',
+					'Connect',
+					'Speak',
+					'MuteMembers',
+					'DeafenMembers',
+					'MoveMembers'
+				]
+			},
+			member: {
+				permissions: [
+					'ViewChannel',
+					'SendMessages',
+					'ReadMessageHistory',
+					'AttachFiles',
+					'EmbedLinks',
+					'AddReactions',
+					'UseExternalEmojis',
+					'UseExternalStickers',
+					'Connect',
+					'Speak',
+					'Stream'
+				]
+			},
+			friend: {
+				permissions: [
+					'ViewChannel',
+					'SendMessages',
+					'ReadMessageHistory',
+					'AttachFiles',
+					'EmbedLinks',
+					'AddReactions',
+					'UseExternalEmojis',
+					'UseExternalStickers',
+					'Connect',
+					'Speak',
+					'Stream'
+				]
+			}
+		};
+
+		const config = roleConfigs[roleType];
+		if (!config) {
+			return res.json({ success: false, error: 'Invalid role type' });
+		}
+
+		let permissionNames = [];
+
+		if (Array.isArray(permissions) && permissions.length > 0) {
+			permissionNames = permissions;
+		} else {
+			permissionNames = config.permissions;
+		}
+
+		const permissionValues = permissionNames
+			.map(name => PermissionFlagsBits[name])
+			.filter(value => typeof value === 'bigint');
+
+		const permissionBitfield = permissionValues.reduce((acc, value) => acc | value, 0n);
+
+		const role = await global.guild.roles.create({
+			name: roleName.trim(),
+			color: roleColor || '#99AAB5',
+			permissions: permissionBitfield,
+			hoist: true,
+			mentionable: false
+		});
+
+		let configuredChannels = 0;
+
+		if (channelsRead && channelsRead.length > 0) {
+			for (const channelName of channelsRead) {
+				const channel = global.guild.channels.cache.find(c => c.name === channelName && c.isTextBased());
+				if (channel) {
+					await channel.permissionOverwrites.edit(role.id, {
+						ViewChannel: true,
+						ReadMessageHistory: true,
+						SendMessages: false
+					});
+					configuredChannels++;
+				}
+			}
+		}
+
+		if (channelsReadWrite && channelsReadWrite.length > 0) {
+			for (const channelName of channelsReadWrite) {
+				const channel = global.guild.channels.cache.find(c => c.name === channelName && c.isTextBased());
+				if (channel) {
+					await channel.permissionOverwrites.edit(role.id, {
+						ViewChannel: true,
+						ReadMessageHistory: true,
+						SendMessages: true,
+						AttachFiles: true,
+						EmbedLinks: true,
+						AddReactions: true
+					});
+					configuredChannels++;
+				}
+			}
+		}
+
+		let message = `Role "${roleName}" created successfully!`;
+		if (configuredChannels > 0) {
+			message += ` Configured ${configuredChannels} channel(s).`;
+		}
+
+		res.json({ success: true, message });
+	} catch (err) {
+		console.reportError('Error creating setup role:', err);
+		res.json({ success: false, error: err.message });
+	}
+});
+
 app.post('/api/server/edit-role', async (req, res) => {
 	try {
 		const { roleId, name, color } = req.body;
 
 		if (!global.guild) {
-			return res.json({ success: false, error: 'Bot is not running' });
+			return res.json(buildGuildUnavailableResponse());
 		}
 
 		const role = global.guild.roles.cache.get(roleId);
@@ -735,7 +990,7 @@ app.post('/api/server/delete-role', async (req, res) => {
 		const { roleId } = req.body;
 
 		if (!global.guild) {
-			return res.json({ success: false, error: 'Bot is not running' });
+			return res.json(buildGuildUnavailableResponse());
 		}
 
 		const role = global.guild.roles.cache.get(roleId);
@@ -764,7 +1019,7 @@ app.post('/api/server/assign-role', async (req, res) => {
 		const { roleId, userId } = req.body;
 
 		if (!global.guild) {
-			return res.json({ success: false, error: 'Bot is not running' });
+			return res.json(buildGuildUnavailableResponse());
 		}
 
 		const role = global.guild.roles.cache.get(roleId);
@@ -789,7 +1044,7 @@ app.post('/api/server/add-member-role', async (req, res) => {
 		const { memberId, roleId } = req.body;
 
 		if (!global.guild) {
-			return res.json({ success: false, error: 'Bot is not running' });
+			return res.json(buildGuildUnavailableResponse());
 		}
 
 		const member = await global.guild.members.fetch(memberId);
@@ -810,7 +1065,7 @@ app.post('/api/server/remove-member-role', async (req, res) => {
 		const { memberId, roleId } = req.body;
 
 		if (!global.guild) {
-			return res.json({ success: false, error: 'Bot is not running' });
+			return res.json(buildGuildUnavailableResponse());
 		}
 
 		const member = await global.guild.members.fetch(memberId);
@@ -831,7 +1086,7 @@ app.post('/api/server/change-nickname', async (req, res) => {
 		const { memberId, nickname } = req.body;
 
 		if (!global.guild) {
-			return res.json({ success: false, error: 'Bot is not running' });
+			return res.json(buildGuildUnavailableResponse());
 		}
 
 		const member = await global.guild.members.fetch(memberId);
@@ -849,7 +1104,7 @@ app.post('/api/server/timeout-member', async (req, res) => {
 		const { memberId, duration, reason } = req.body;
 
 		if (!global.guild) {
-			return res.json({ success: false, error: 'Bot is not running' });
+			return res.json(buildGuildUnavailableResponse());
 		}
 
 		const member = await global.guild.members.fetch(memberId);
@@ -868,7 +1123,7 @@ app.post('/api/server/kick-member', async (req, res) => {
 		const { memberId, reason } = req.body;
 
 		if (!global.guild) {
-			return res.json({ success: false, error: 'Bot is not running' });
+			return res.json(buildGuildUnavailableResponse());
 		}
 
 		const member = await global.guild.members.fetch(memberId);
@@ -886,7 +1141,7 @@ app.post('/api/server/ban-member', async (req, res) => {
 		const { memberId, reason, deleteMessageDays } = req.body;
 
 		if (!global.guild) {
-			return res.json({ success: false, error: 'Bot is not running' });
+			return res.json(buildGuildUnavailableResponse());
 		}
 
 		await global.guild.members.ban(memberId, {
@@ -1145,7 +1400,7 @@ app.get('/api/server/roles', async (req, res) => {
 		const guild = global.guild;
 
 		if (!guild) {
-			return res.json({ error: 'Guild not available' });
+			return res.json(buildGuildUnavailableResponse(false));
 		}
 
 		const roles = guild.roles.cache
@@ -1172,7 +1427,7 @@ app.get('/api/server/all-members', async (req, res) => {
 		const allMembers = [];
 
 		if (!guild) {
-			return res.json({ error: 'Bot is not running or not connected to a guild', members: [] });
+			return res.json({ ...buildGuildUnavailableResponse(false), members: [] });
 		}
 
 		const currentMemberIds = new Set();
@@ -1398,38 +1653,72 @@ app.post('/api/server/delete-message', async (req, res) => {
 		const { messageId, channelId } = req.body;
 
 		if (!global.guild) {
-			return res.json({ success: false, error: 'Bot is not running' });
+			return res.json(buildGuildUnavailableResponse());
 		}
 
+		let messageToDelete = null;
+		let messageData = null;
+
+		// First, try to fetch the message to get its data before deletion
 		if (channelId) {
 			const channel = global.guild.channels.cache.get(channelId);
 			if (channel && channel.isTextBased()) {
 				try {
-					const message = await channel.messages.fetch(messageId);
-					if (message) {
-						await message.delete();
-					}
+					messageToDelete = await channel.messages.fetch(messageId);
 				} catch (err) {
+					// Message might already be deleted or not found
 				}
 			}
 		} else {
-			let messageDeleted = false;
 			for (const [cId, channel] of global.guild.channels.cache) {
 				if (!channel.isTextBased()) continue;
 				try {
-					const message = await channel.messages.fetch(messageId);
-					if (message) {
-						await message.delete();
-						messageDeleted = true;
-						break;
-					}
+					messageToDelete = await channel.messages.fetch(messageId);
+					if (messageToDelete) break;
 				} catch (err) {
+					// Continue searching
 				}
 			}
 		}
 
+		// Prepare message data for cache before deletion
+		if (messageToDelete) {
+			messageData = {
+				content: messageToDelete.content,
+				author: messageToDelete.author,
+				authorId: messageToDelete.author?.id,
+				authorUsername: messageToDelete.author?.username,
+				authorDisplayName: messageToDelete.author?.displayName || messageToDelete.author?.username,
+				authorAvatar: messageToDelete.author?.displayAvatarURL?.({ size: 64 }),
+				channel: messageToDelete.channel,
+				channelId: messageToDelete.channel?.id,
+				channelName: messageToDelete.channel?.name,
+				timestamp: messageToDelete.createdTimestamp,
+				attachments: messageToDelete.attachments?.map(a => ({
+					url: a.url,
+					name: a.name,
+					contentType: a.contentType
+				})) || [],
+				embeds: messageToDelete.embeds?.length || 0,
+				hasThread: messageToDelete.hasThread || false,
+				pinned: messageToDelete.pinned || false,
+				type: messageToDelete.type || 0,
+				reactions: []
+			};
+		}
+
+		// Delete from Discord (this will trigger MessageDelete event)
+		if (messageToDelete) {
+			try {
+				await messageToDelete.delete();
+			} catch (err) {
+				// Message might already be deleted
+			}
+		}
+
+		// Mark as deleted in cache (MessageDelete event should handle this, but do it here too as backup)
 		if (global.messagesCache) {
-			await global.messagesCache.deleteMessage(messageId);
+			await global.messagesCache.deleteMessage(messageId, messageData);
 		}
 
 		res.json({ success: true });
@@ -1443,7 +1732,7 @@ app.post('/api/server/pin-message', async (req, res) => {
 		const { messageId } = req.body;
 
 		if (!global.guild) {
-			return res.json({ success: false, error: 'Bot is not running' });
+			return res.json(buildGuildUnavailableResponse());
 		}
 
 		let message = null;
@@ -1472,7 +1761,7 @@ app.post('/api/server/unpin-message', async (req, res) => {
 		const { messageId } = req.body;
 
 		if (!global.guild) {
-			return res.json({ success: false, error: 'Bot is not running' });
+			return res.json(buildGuildUnavailableResponse());
 		}
 
 		let message = null;
